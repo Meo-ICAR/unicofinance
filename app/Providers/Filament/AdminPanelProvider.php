@@ -57,14 +57,14 @@ class AdminPanelProvider extends PanelProvider
                         Provider::make('microsoft')
                             ->label('Microsoft')
                             ->icon('fab-microsoft')
-                            ->color(Color::hex('#2f2a6b'))
-                            ->outlined(false)
+                            ->color(Color::hex('#0078D4'))
+                            ->outlined(true)
                             ->stateless(false),
                         Provider::make('google')
                             ->label('Google')
                             ->icon('fab-google')
-                            ->color(Color::hex('#2f2a6b'))
-                            ->outlined(false)
+                            ->color(Color::hex('#4285F4'))
+                            ->outlined(true)
                             ->stateless(false)
                         //    ->scopes(['...'])
                         //    ->with(['...']),
