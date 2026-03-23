@@ -37,7 +37,7 @@ return [
     'microsoft' => [
         'client_id' => env('AZURE_CLIENT_ID'),
         'client_secret' => env('AZURE_CLIENT_SECRET'),
-        'redirect' => env('AZURE_REDIRECT_URI')
+        'redirect' => env('MICROSOFT_REDIRECT_URI')
     ],
     'azure' => [
         'client_id' => env('AZURE_CLIENT_ID'),
