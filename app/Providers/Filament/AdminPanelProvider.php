@@ -33,6 +33,13 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            // --- AGGIUNGI QUESTE RIGHE ---
+            // Imposta il logo rettangolare (in alto a sinistra)
+            ->brandLogo(asset('images/unicofinance_logo.png'))
+            // Opzionale: imposta un'altezza fissa se ti sembra troppo grande o piccolo
+            ->brandLogoHeight('3rem')
+            // Imposta l'icona del browser (favicon)
+            ->favicon(asset('images/unicofinance_icona.png'))
             ->colors([
                 'primary' => Color::Amber,
             ])
@@ -47,21 +54,15 @@ class AdminPanelProvider extends PanelProvider
                     // (required) Add providers corresponding with providers in `config/services.php`.
                     ->providers([
                         // Create a provider 'gitlab' corresponding to the Socialite driver with the same name.
-                        Provider::make('azure')
-                            ->label('Azure')
-                            //   ->icon('fab-microsoft')
-                            ->color(Color::hex('#2f2a6b'))
-                            ->outlined(false)
-                            ->stateless(false),
                         Provider::make('microsoft')
                             ->label('Microsoft')
-                            //   ->icon('fab-microsoft')
+                            ->icon('fab-microsoft')
                             ->color(Color::hex('#2f2a6b'))
                             ->outlined(false)
                             ->stateless(false),
                         Provider::make('google')
                             ->label('Google')
-                            //   ->icon('fab-microsoft')
+                            ->icon('fab-google')
                             ->color(Color::hex('#2f2a6b'))
                             ->outlined(false)
                             ->stateless(false)
