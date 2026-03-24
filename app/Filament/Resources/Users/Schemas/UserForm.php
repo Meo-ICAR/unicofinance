@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Users\Schemas;
 
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
 
@@ -22,6 +23,23 @@ class UserForm
                 TextInput::make('password')
                     ->password()
                     ->required(),
+                // Campo Ruolo (Virtuale, non esiste su 'users' ma lo salveremo nella pivot)
+                Select::make('tenant_role')
+                    ->label('Ruolo Aziendale')
+                    ->options([
+                        'admin' => 'Admin',
+                        'inspector' => 'Inspector',
+                        'user' => 'User',
+                    ])
+                    ->default('user')
+                    ->required()
+                    ->dehydrated(false),  // Diciamo a Filament di NON provare a salvarlo nella tabella users
+                // Campo visibile SOLO ai Super Admin per assegnare più aziende
+                Select::make('companies')
+                    ->relationship('companies', 'name')
+                    ->multiple()
+                    ->preload()
+                    ->visible(fn() => auth()->user()->is_super_admin),
             ]);
     }
 }

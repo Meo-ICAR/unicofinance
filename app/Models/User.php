@@ -62,4 +62,29 @@ class User extends Authenticatable implements FilamentUser, HasTenants, HasAvata
     {
         return $this->companies()->whereKey($tenant)->exists();
     }
+
+    // --- HELPER PER I RUOLI ---
+
+    // Ottiene il ruolo dell'utente nell'azienda attualmente attiva in Filament
+    public function getCurrentTenantRole(): ?string
+    {
+        $tenant = Filament::getTenant();
+
+        if (!$tenant) {
+            return null;
+        }
+
+        // Cerca l'utente nella pivot per questo tenant e restituisce il ruolo
+        return $this->companies()->whereKey($tenant->id)->first()?->pivot->role;
+    }
+
+    public function isTenantAdmin(): bool
+    {
+        return $this->getCurrentTenantRole() === 'admin';
+    }
+
+    public function isTenantInspector(): bool
+    {
+        return $this->getCurrentTenantRole() === 'inspector';
+    }
 }
