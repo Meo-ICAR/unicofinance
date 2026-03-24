@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Models\Company;
 use DutchCodingCompany\FilamentSocialite\FilamentSocialitePlugin;
 use DutchCodingCompany\FilamentSocialite\Provider;
 use Filament\Http\Middleware\Authenticate;
@@ -43,6 +44,10 @@ class AdminPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Amber,
             ])
+            // Abilita la multi-tenancy
+            ->tenant(Company::class)
+            // Opzionale: se hai un menu per passare da un'azienda all'altra
+            // ->tenantMenu(true)
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([
