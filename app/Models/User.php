@@ -35,6 +35,7 @@ class User extends Authenticatable implements FilamentUser, HasTenants, HasAvata
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_super_admin' => 'boolean',  // <-- AGGIUNGI QUESTA RIGA
         ];
     }
 

@@ -3,9 +3,10 @@
 namespace App\Filament\Resources\Companies\Schemas;
 
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
 
@@ -31,11 +32,11 @@ class CompanyForm
                 TextInput::make('sponsor'),
                 Select::make('company_type')
                     ->options([
-            'mediatore' => 'Mediatore',
-            'call center' => 'Call center',
-            'hotel' => 'Hotel',
-            'sw house' => 'Sw house',
-        ]),
+                        'mediatore' => 'Mediatore',
+                        'call center' => 'Call center',
+                        'hotel' => 'Hotel',
+                        'sw house' => 'Sw house',
+                    ]),
                 Textarea::make('page_header')
                     ->columnSpanFull(),
                 Textarea::make('page_footer')
@@ -54,6 +55,27 @@ class CompanyForm
                     ->required(),
                 Toggle::make('smtp_verify_ssl')
                     ->required(),
+                // SEZIONE 2: Dati del nuovo Admin (Campi Virtuali)
+                Section::make('Amministratore Principale')
+                    ->description('Verrà creato un nuovo utente e impostato come Admin di questa azienda.')
+                    ->schema([
+                        TextInput::make('admin_name')
+                            ->label('Nome')
+                            ->required()
+                            ->dehydrated(false),  // Importante: non provare a salvarlo in 'companies'
+                        TextInput::make('admin_email')
+                            ->label('Email')
+                            ->email()
+                            ->required()
+                            ->unique('users', 'email')  // Controlla che l'email non esista già negli utenti
+                            ->dehydrated(false),
+                        TextInput::make('admin_password')
+                            ->label('Password')
+                            ->password()
+                            ->required()
+                            ->dehydrated(false),
+                    ])
+                    ->hiddenOn('edit'),  // Mostriamo questa sezione solo quando creiamo l'azienda
             ]);
     }
 }

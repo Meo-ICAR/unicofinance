@@ -14,7 +14,8 @@
         "laravel/tinker": "^3.0",
         "owenvoke/blade-fontawesome": "^3.2",
         "socialiteproviders/google": "^4.1",
-        "socialiteproviders/microsoft": "^4.9"
+        "socialiteproviders/microsoft": "^4.9",
+        "stechstudio/filament-impersonate": "^5.1"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
