@@ -48,6 +48,7 @@ class AdminPanelProvider extends PanelProvider
             ->tenant(Company::class, ownershipRelationship: 'companies')
             // Menu per passare da un'azienda all'altra
             ->tenantMenu()
+            ->databaseNotifications() // <-- Aggiungi questo!
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([
@@ -83,7 +84,7 @@ class AdminPanelProvider extends PanelProvider
                     ->socialiteUserModelClass(\App\Models\SocialiteUser::class)
                     ->createUserUsing(function (string $provider, \Laravel\Socialite\Contracts\User $oauthUser, FilamentSocialitePlugin $plugin) {
                         $email = $oauthUser->getEmail();
-                        
+
                         $user = \App\Models\User::create([
                             'name' => $oauthUser->getName() ?? $oauthUser->getNickname() ?? 'Utente Social',
                             'email' => $email,

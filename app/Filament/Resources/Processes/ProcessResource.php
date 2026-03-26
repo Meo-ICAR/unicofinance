@@ -54,6 +54,16 @@ class ProcessResource extends Resource
                     ->searchable()
                     ->preload()
                     ->nullable(),
+                Select::make('target_model')
+                    ->label('Modello di Destinazione (Contesto)')
+                    ->helperText('Seleziona da quale tabella si potrà avviare questo processo. Lascia vuoto per renderlo avviabile da ovunque.')
+                    ->options([
+                        'App\Models\Employee' => 'Dipendenti (Employee)',
+                        'App\Models\Client' => 'Consulenti/Clienti (Client)',
+                        // Aggiungi qui altre tabelle future (es. 'App\Models\Project' => 'Progetti')
+                    ])
+                    ->clearable() // Permette di svuotare la tendina per farlo tornare NULL
+                    ->searchable(),
                 Toggle::make('is_active')
                     ->label('Attivo')
                     ->default(true),

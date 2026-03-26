@@ -64,6 +64,29 @@ class StartProcessAction extends Action
                         'target_id' => $record->getKey(),
                     ]);
 
+
+                // --- GESTIONE NOTIFICHE ---
+                    if (false) {
+
+                        // CASO 1: Dipendente Interno (Ha un account User collegato)
+                        if ($execution->employee && $execution->employee->user) {
+                            // Invia Email + Campanellina in Filament
+                            $execution->employee->user->notify(new TaskAssignedNotification($execution));
+                        }
+
+                        // CASO 2: Consulente (Ha un account User collegato)
+                        elseif ($execution->client && $execution->client->user) {
+                            $execution->client->user->notify(new TaskAssignedNotification($execution));
+                        }
+
+                        // CASO 3: Destinatario Esterno Volante (es. se nel Target c'è una mail o se vogliamo avvisare un cliente specifico)
+                        // Usiamo il routing "On-Demand" di Laravel. Non serve che questa persona esista nel database users!
+                        if ($record->getMorphClass() === 'App\Models\Customer' && $record->email) {
+                            // Invia SOLO l'email a questo indirizzo
+                            Notification::route('mail', $record->email)
+                                ->notify(new TaskAssignedNotification($execution));
+                        }
+                    }
                     $taskCount++;
                 }
 

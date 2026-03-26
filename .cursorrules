@@ -1,0 +1,64 @@
+# CONTESTO DEL PROGETTO: GESTIONALE BPM E SOP
+Agisci come un Senior Software Engineer e Architetto Laravel/Filament. Sto sviluppando un'applicazione di Business Process Management (BPM) e Standard Operating Procedures (SOP) per gestire le procedure aziendali, assegnare responsabilità e tracciare l'esecuzione operativa.
+
+## STACK TECNOLOGICO
+- Framework: Laravel 11/12
+- Pannello Admin: Filament v3
+- Database: MySQL/PostgreSQL (Relazionale)
+
+## PARADIGMA ARCHITETTURALE PRINCIPALE
+Il sistema è diviso in due macro-aree rigorosamente separate:
+1. **TEMPLATE (Il Manuale):** Definizione teorica di funzioni, processi, task, RACI e checklist.
+2. **ESECUZIONE (La Scrivania Operativa):** Istanze fisiche dei task generate dal template, assegnate agli utenti per l'esecuzione quotidiana.
+
+---
+
+## SCHEMA DEL DATABASE E RELAZIONI (Livello Template)
+
+1. **Users & Employees/Clients:**
+   - La tabella `users` gestisce solo l'autenticazione.
+   - Esiste una relazione 1:1 tra `User` ed `Employee` (tramite `user_id` in `employees`).
+   - Esistono `Employee` (dipendenti interni) e `Client` (consulenti esterni).
+
+2. **Business Functions (Organigramma):**
+   - Tabella `business_functions` (es. HR, IT, Admin).
+   - Pivot `business_function_employee` e `business_function_client` (con `id` autoincrementante) per storicizzare i ruoli. Campi pivot: `is_manager`, `start_date`, `end_date`, `temporary_reason`.
+
+3. **Processes & Tasks (Le Procedure):**
+   - Tabella `processes` (es. Onboarding). Ha un campo `target_model` (es. 'App\Models\Employee') per definire su quale entità ha senso lanciare questo processo (filtro contestuale).
+   - Tabella `process_tasks` (es. Creare email aziendale), collegati 1:N ai processi.
+
+4. **Matrice RACI:**
+   - Tabella `raci_assignments` collegata ai task.
+   - Contiene il ruolo (`R`, `A`, `C`, `I`) e chiavi esterne nullable (`employee_id`, `client_id`) per assegnare il ruolo a interni o esterni.
+
+5. **Checklist (Il "Come" fare):**
+   - Tabella `checklists` collegata ai task.
+   - Tabella `checklist_items` (le singole istruzioni) collegata alle checklist.
+
+---
+
+## SCHEMA DEL DATABASE (Livello Esecuzione)
+
+1. **Task Executions (Il lavoro assegnato):**
+   - Tabella `task_executions`. Rappresenta l'istanza di un task da fare oggi.
+   - Campi principali: `process_task_id`, `employee_id` / `client_id` (chi esegue, preso dal RACI 'R'), `status` (todo, in_progress, completed).
+   - Relazione **Polimorfica**: `target_type` e `target_id` (es. puntano all'impiegato Mario Rossi per indicare *su chi* si sta eseguendo l'Onboarding).
+
+2. **Task Execution Checklist Items (Le spunte):**
+   - Tabella `task_execution_checklist_items`.
+   - Generata in automatico tramite un **Observer/Booted method** su `TaskExecution` che clona le voci dal template impostando `is_checked = false`.
+
+---
+
+## LOGICHE FILAMENT IMPLEMENTATE
+- **Checklist Builder:** Uso di Nested Repeaters all'interno del form di `ProcessTask` per creare checklist e voci rapidamente in un'unica pagina.
+- **RACI Builder:** Repeater con un campo radio virtuale (`dehydrated(false)`) per far scegliere all'utente se assegnare il ruolo a un dipendente o a un consulente, mostrando dinamicamente la tendina corretta.
+- **My Tasks Dashboard (`TaskExecutionResource`):** Una schermata filtrata sull'utente loggato (`employee_id`). Il form è blindato: l'utente vede il testo delle istruzioni (tramite `Placeholder`) e può solo cliccare un `Toggle` per smarcare il lavoro fatto. Non può aggiungere/rimuovere voci.
+- **StartProcessAction:** Una Custom Table Action polimorfica. Inserita nei vari Resource (es. Employees), permette di lanciare un processo. Genera i `TaskExecution`, li assegna a chi ha la "R" nel RACI, e setta il MorphTarget (es. il dipendente da cui si è cliccato). La tendina di selezione mostra solo i processi pertinenti al modello attuale (tramite il campo `target_model`).
+
+## REGOLE DI RISPOSTA PER I PROSSIMI TASK
+- Rispetta sempre la divisione tra Template ed Execution.
+- Usa le API e i componenti di Filament v3.
+- Se proponi nuovo codice, assicurati di seguire il principio DRY e di sfruttare le funzionalità native di Laravel (Eloquent, Polimorfismo, Actions di Filament).
+- Attendi le mie prossime istruzioni sulle nuove feature da implementare.
