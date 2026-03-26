@@ -9,6 +9,18 @@ use Illuminate\Auth\Access\Response;
 class CompanyPolicy
 {
     /**
+     * Intercetta tutte le autorizzazioni. Se è un super admin, bypassa sempre i controlli successivi.
+     */
+    public function before(User $user, $ability): ?bool
+    {
+        if ($user->is_super_admin) {
+            return true;
+        }
+
+        return null;
+    }
+
+    /**
      * Determine whether the user can view any models.
      */
     public function viewAny(User $user): bool

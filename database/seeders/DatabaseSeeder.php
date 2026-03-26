@@ -47,6 +47,7 @@ class DatabaseSeeder extends Seeder
             CompanySeeder::class,
             CompanyUserSeeder::class,
             BusinessFunctionSeeder::class,
+            CompanyBranchSeeder::class,
         ]);
     }
 }

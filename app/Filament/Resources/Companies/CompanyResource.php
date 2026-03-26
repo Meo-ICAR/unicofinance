@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\Companies;
 
-use App\Filament\Resources\Companies\CompanyResource\RelationManagers\UsersRelationManager;
+use App\Filament\Resources\Companies\RelationManagers\UsersRelationManager;
 use App\Filament\Resources\Companies\Pages\CreateCompany;
 use App\Filament\Resources\Companies\Pages\EditCompany;
 use App\Filament\Resources\Companies\Pages\ListCompanies;
@@ -44,6 +44,7 @@ class CompanyResource extends Resource
     {
         return [
             UsersRelationManager::class,
+            BranchesRelationManager::class,
         ];
     }
 

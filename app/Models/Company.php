@@ -63,6 +63,11 @@ class Company extends Model implements HasName, HasAvatar, HasMedia
         return $this->belongsToMany(User::class);
     }
 
+    public function branches(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(CompanyBranch::class);
+    }
+
     /**
      * Verifica se un'email appartiene al dominio aziendale.
      */
