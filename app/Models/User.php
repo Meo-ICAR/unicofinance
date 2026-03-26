@@ -18,7 +18,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Collection;
 
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['name', 'email', 'password', 'is_approved'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser, HasTenants, HasAvatar
 {
@@ -41,7 +41,21 @@ class User extends Authenticatable implements FilamentUser, HasTenants, HasAvata
 
     public function getFilamentAvatarUrl(): ?string
     {
-        return $this->avatar_url;
+        if ($this->avatar_url) {
+            return $this->avatar_url;
+        }
+
+        $socialUser = $this->socialiteUsers()->whereNotNull('avatar')->first();
+        if ($socialUser) {
+            return $socialUser->avatar;
+        }
+
+        return null;
+    }
+
+    public function socialiteUsers(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(SocialiteUser::class);
     }
 
     public function companies(): BelongsToMany
@@ -51,16 +65,30 @@ class User extends Authenticatable implements FilamentUser, HasTenants, HasAvata
 
     public function canAccessPanel(Panel $panel): bool
     {
-        return true;
+        return $this->is_super_admin || $this->is_approved;
     }
 
+    // Ritorna le aziende visibili nel menu a tendina dell'utente
     public function getTenants(Panel $panel): Collection
     {
+        // Se è Super Admin, carica e mostra TUTTE le aziende nel sistema
+        if ($this->is_super_admin) {
+            return Company::all();
+        }
+
+        // Altrimenti, mostra solo le aziende a cui l'utente è collegato
         return $this->companies;
     }
 
+    // Verifica se l'utente ha il permesso di entrare in un'azienda specifica
     public function canAccessTenant(Model $tenant): bool
     {
+        // Il Super Admin può accedere sempre e ovunque
+        if ($this->is_super_admin) {
+            return true;
+        }
+
+        // Gli utenti normali possono accedere solo se esiste il record nella pivot
         return $this->companies()->whereKey($tenant)->exists();
     }
 

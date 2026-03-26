@@ -47,7 +47,7 @@ class AdminPanelProvider extends PanelProvider
             // Abilita la multi-tenancy
             ->tenant(Company::class)
             // Opzionale: se hai un menu per passare da un'azienda all'altra
-            // ->tenantMenu(true)
+            ->tenantMenu(true)
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([
@@ -80,7 +80,32 @@ class AdminPanelProvider extends PanelProvider
                     // ->slug('admin')
                     // (optional) Enable/disable registration of new (socialite-) users.
                     ->registration(true)
-                // (optional) Enable/disable registration of new (socialite-) users using a callback.
+                    ->socialiteUserModelClass(\App\Models\SocialiteUser::class)
+                    ->createUserUsing(function (string $provider, \Laravel\Socialite\Contracts\User $oauthUser, FilamentSocialitePlugin $plugin) {
+                        $email = $oauthUser->getEmail();
+                        
+                        $user = \App\Models\User::create([
+                            'name' => $oauthUser->getName() ?? $oauthUser->getNickname() ?? 'Utente Social',
+                            'email' => $email,
+                            'password' => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(24)),
+                            'is_approved' => false,
+                        ]);
+
+                        $emailParts = explode('@', $email);
+                        if (count($emailParts) === 2) {
+                            $domain = end($emailParts);
+                            $company = \App\Models\Company::where('domain', strtolower($domain))->first();
+                            if ($company) {
+                                $user->companies()->attach($company->id);
+                            }
+                        }
+
+                        return $user;
+                    })
+                    ->resolveUserUsing(function (string $provider, \Laravel\Socialite\Contracts\User $oauthUser, FilamentSocialitePlugin $plugin) {
+                        return \App\Models\User::where('email', $oauthUser->getEmail())->first();
+                    })
+
                 // In this example, a login flow can only continue if there exists a user (Authenticatable) already.
                 //  ->registration(fn(string $provider, SocialiteUserContract $oauthUser, ?Authenticatable $user) => (bool) $user)
                 // (optional) Change the associated model class.

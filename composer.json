@@ -15,6 +15,7 @@
         "owenvoke/blade-fontawesome": "^3.2",
         "socialiteproviders/google": "^4.1",
         "socialiteproviders/microsoft": "^4.9",
+        "spatie/laravel-medialibrary": "^11.21",
         "stechstudio/filament-impersonate": "^5.1"
     },
     "require-dev": {
