@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Filament\Resources;
+namespace App\Filament\Resources\Processes;
 
-use App\Filament\Resources\ProcessResource\Pages;
-use App\Filament\Resources\ProcessResource\RelationManagers\ProcessTasksRelationManager;
+use App\Filament\Resources\Processes\Pages;
+use App\Filament\Resources\Processes\RelationManagers\ProcessTasksRelationManager;
 use App\Models\Process;
 use App\Models\BusinessFunction;
 use Filament\Resources\Resource;
@@ -17,8 +17,8 @@ use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\Select;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\IconColumn;
-use Filament\Tables\Actions\EditAction;
-use Filament\Tables\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteBulkAction;
 use BackedEnum;
 use UnitEnum;
 

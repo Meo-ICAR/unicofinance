@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Resources\ProcessResource\RelationManagers;
+namespace App\Filament\Resources\Processes\RelationManagers;
 
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;

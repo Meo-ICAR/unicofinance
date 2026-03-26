@@ -20,6 +20,10 @@ class ProcessTask extends Model
         'description',
     ];
 
+    public function checklists(): HasMany
+{
+    return $this->hasMany(Checklist::class)->orderBy('sort_order');
+}
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);

@@ -14,7 +14,6 @@ class BusinessFunctionsTable
     {
         return $table
             ->columns([
-
                 TextColumn::make('code')
                     ->searchable(),
                 TextColumn::make('macro_area')
@@ -28,10 +27,8 @@ class BusinessFunctionsTable
                 TextColumn::make('outsourcable_status')
                     ->badge()
                     ->searchable(),
-                TextColumn::make('managed_by_id')
-                    ->numeric()
-                    ->sortable(),
-
+                TextColumn::make('manager.code')
+                    ->searchable(),
             ])
             ->filters([
                 //
