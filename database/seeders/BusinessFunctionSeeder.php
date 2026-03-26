@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\BusinessFunction;
+use App\Models\Company;
 use App\Enums\MacroArea;
 use App\Enums\BusinessFunctionType;
 use App\Enums\OutsourcableStatus;
@@ -195,22 +196,25 @@ class BusinessFunctionSeeder extends Seeder
             // Fase 3: Associazione Company
             $companies = Company::all();
             foreach ($companies as $company) {
-                $functions = BusinessFunction::where('company_id', null)->get();
-                foreach ($functions as $function) {
-                    BusinessFunction::CreateorUpdate([
-                        'company_id' => $company->id,
-                        'code' => $function['code'],
-                        'macro_area' => $function['macro_area'],
-                        'name' => $function['name'],
-                    'type' => $company->type,
-                    'description' => $company->description,
-                    'outsourcable_status' => $company->outsourcable_status,
-                    'managed_by_id' => $company->managed_by_id,
-                    'mission' => $company->mission,
-                    'responsibility' => $company->responsibility,
-                ]);
+                $base_functions = BusinessFunction::where('company_id', null)->get();
+                foreach ($base_functions as $f) {
+                    BusinessFunction::updateOrCreate(
+                        [
+                            'company_id' => $company->id,
+                            'code' => $f->code,
+                        ],
+                        [
+                            'macro_area' => $f->macro_area->value,
+                            'name' => $f->name,
+                            'type' => $f->type->value,
+                            'description' => $f->description,
+                            'outsourcable_status' => $f->outsourcable_status->value,
+                            'mission' => $f->mission,
+                            'responsibility' => $f->responsibility,
+                        ]
+                    );
+                }
             }
-        }
         });
     }
 }

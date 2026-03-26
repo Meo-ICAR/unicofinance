@@ -3,10 +3,10 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Model;
 
 class Client extends Model
 {
@@ -19,32 +19,32 @@ class Client extends Model
         'consent_sic_at', 'consent_marketing_at', 'consent_profiling_at',
         'status', 'is_company', 'is_lead', 'leadsource_id', 'acquired_at', 'contoCOGE',
         'privacy_consent', 'is_client', 'subfornitori', 'is_requiredApprovation', 'is_approved',
-        'is_anonymous', 'blacklist_at', 'blacklisted_by', 'salary', 'salary_quote', 'is_art108',
+        'is_anonymous', 'blacklist_at', 'blacklisted_by', 'salary', 'salary_quote', 'is_art108', 'user_id'
     ];
 
     protected $casts = [
-        'is_person'                    => 'boolean',
-        'is_pep'                       => 'boolean',
-        'is_sanctioned'                => 'boolean',
-        'is_remote_interaction'        => 'boolean',
-        'is_company'                   => 'boolean',
-        'is_lead'                      => 'boolean',
-        'privacy_consent'              => 'boolean',
-        'is_client'                    => 'boolean',
-        'is_approved'                  => 'boolean',
-        'is_requiredApprovation'       => 'boolean',
-        'is_anonymous'                 => 'boolean',
-        'is_art108'                    => 'boolean',
-        'general_consent_at'           => 'datetime',
-        'privacy_policy_read_at'       => 'datetime',
-        'consent_special_categories_at'=> 'datetime',
-        'consent_sic_at'               => 'datetime',
-        'consent_marketing_at'         => 'datetime',
-        'consent_profiling_at'         => 'datetime',
-        'blacklist_at'                 => 'datetime',
-        'acquired_at'                  => 'datetime',
-        'salary'                       => 'decimal:2',
-        'salary_quote'                 => 'decimal:2',
+        'is_person' => 'boolean',
+        'is_pep' => 'boolean',
+        'is_sanctioned' => 'boolean',
+        'is_remote_interaction' => 'boolean',
+        'is_company' => 'boolean',
+        'is_lead' => 'boolean',
+        'privacy_consent' => 'boolean',
+        'is_client' => 'boolean',
+        'is_approved' => 'boolean',
+        'is_requiredApprovation' => 'boolean',
+        'is_anonymous' => 'boolean',
+        'is_art108' => 'boolean',
+        'general_consent_at' => 'datetime',
+        'privacy_policy_read_at' => 'datetime',
+        'consent_special_categories_at' => 'datetime',
+        'consent_sic_at' => 'datetime',
+        'consent_marketing_at' => 'datetime',
+        'consent_profiling_at' => 'datetime',
+        'blacklist_at' => 'datetime',
+        'acquired_at' => 'datetime',
+        'salary' => 'decimal:2',
+        'salary_quote' => 'decimal:2',
     ];
 
     // Relations
@@ -73,7 +73,8 @@ class Client extends Model
      */
     public function businessFunctions(): BelongsToMany
     {
-        return $this->belongsToMany(BusinessFunction::class, 'business_function_client')
+        return $this
+            ->belongsToMany(BusinessFunction::class, 'business_function_client')
             ->withPivot('start_date', 'end_date', 'temporary_reason')
             ->withTimestamps()
             ->orderByPivot('start_date', 'desc');

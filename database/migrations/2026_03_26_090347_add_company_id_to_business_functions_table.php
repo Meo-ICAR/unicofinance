@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::table('business_functions', function (Blueprint $table) {
             $table->foreignUuid('company_id')->nullable()->after('id')->constrained()->cascadeOnDelete();
+            $table->unique(['company_id', 'code']);
         });
     }
 

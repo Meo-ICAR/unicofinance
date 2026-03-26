@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('business_functions', function (Blueprint $table) {
             $table->id('id')->comment('ID univoco funzione business');
-            $table->string('code')->unique()->comment('Codice identificativo univoco funzione');
+            $table->string('code')->comment('Codice identificativo funzione');
             $table->string('macro_area')->comment('Macro area di appartenenza');
             $table->string('name')->comment('Nome specifico funzione business');
             $table->string('type')->comment('Tipologia funzione');

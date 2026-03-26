@@ -7,6 +7,7 @@ use App\Filament\Resources\Clients\Pages\EditClient;
 use App\Filament\Resources\Clients\Pages\ListClients;
 use App\Models\Client;
 use App\Models\ClientType;
+use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
@@ -14,11 +15,10 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
-use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Schema;
-use Filament\Tables\Actions\DeleteBulkAction;
 use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -53,7 +53,6 @@ class ClientResource extends Resource
     {
         return $schema->schema([
             Tabs::make('client_tabs')->tabs([
-
                 Tab::make('Anagrafica')->schema([
                     Section::make('Dati Anagrafici')->schema([
                         Toggle::make('is_person')
@@ -61,18 +60,18 @@ class ClientResource extends Resource
                             ->default(true)
                             ->reactive(),
                         TextInput::make('name')
-                            ->label(fn ($get) => $get('is_person') ? 'Cognome' : 'Ragione Sociale')
+                            ->label(fn($get) => $get('is_person') ? 'Cognome' : 'Ragione Sociale')
                             ->required(),
                         TextInput::make('first_name')
                             ->label('Nome')
-                            ->visible(fn ($get) => $get('is_person')),
+                            ->visible(fn($get) => $get('is_person')),
                         TextInput::make('tax_code')
                             ->label('Codice Fiscale')
                             ->maxLength(16),
                         TextInput::make('vat_number')
                             ->label('Partita IVA')
                             ->maxLength(20)
-                            ->visible(fn ($get) => !$get('is_person')),
+                            ->visible(fn($get) => !$get('is_person')),
                         TextInput::make('email')->label('Email')->email(),
                         TextInput::make('phone')->label('Telefono')->maxLength(50),
                         Select::make('client_type_id')
@@ -83,16 +82,15 @@ class ClientResource extends Resource
                         Select::make('status')
                             ->label('Stato')
                             ->options([
-                                'raccolta_dati'  => '📋 Raccolta Dati',
-                                'valutazione_aml'=> '🔍 Valutazione AML',
-                                'approvata'      => '✅ Approvata',
-                                'sos_inviata'    => '🚨 SOS Inviata',
-                                'chiusa'         => '🔒 Chiusa',
+                                'raccolta_dati' => '📋 Raccolta Dati',
+                                'valutazione_aml' => '🔍 Valutazione AML',
+                                'approvata' => '✅ Approvata',
+                                'sos_inviata' => '🚨 SOS Inviata',
+                                'chiusa' => '🔒 Chiusa',
                             ])
                             ->default('raccolta_dati'),
                         TextInput::make('contoCOGE')->label('Conto COGE'),
                     ])->columns(2),
-
                     Section::make('Flags')->schema([
                         Toggle::make('is_lead')->label('Lead (non convertito)'),
                         Toggle::make('is_company')->label('Azienda Fornitore'),
@@ -105,7 +103,6 @@ class ClientResource extends Resource
                         TextInput::make('salary_quote')->label('Quota Retribuzione')->numeric()->prefix('€'),
                     ])->columns(3),
                 ]),
-
                 Tab::make('AML / Rischio')->schema([
                     Section::make('Valutazione Antiriciclaggio')->schema([
                         Toggle::make('is_pep')->label('PEP (Persona Politicamente Esposta)'),
@@ -116,7 +113,6 @@ class ClientResource extends Resource
                         Textarea::make('subfornitori')->label('Subfornitori')->rows(3),
                     ])->columns(2),
                 ]),
-
                 Tab::make('Consensi Privacy')->schema([
                     Section::make('Consensi Trattamento Dati')->schema([
                         Toggle::make('privacy_consent')->label('Consenso Privacy Generico'),
@@ -129,7 +125,6 @@ class ClientResource extends Resource
                         DateTimePicker::make('acquired_at')->label('Data Acquisizione Contatto'),
                     ])->columns(2),
                 ]),
-
             ])->columnSpanFull(),
         ]);
     }
@@ -140,7 +135,7 @@ class ClientResource extends Resource
             ->columns([
                 TextColumn::make('name')
                     ->label('Nominativo')
-                    ->description(fn (Client $r) => $r->is_person ? $r->first_name : null)
+                    ->description(fn(Client $r) => $r->is_person ? $r->first_name : null)
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('clientType.name')
@@ -150,12 +145,12 @@ class ClientResource extends Resource
                 TextColumn::make('status')
                     ->label('Stato')
                     ->badge()
-                    ->color(fn ($state) => match($state) {
-                        'approvata'       => 'success',
+                    ->color(fn($state) => match ($state) {
+                        'approvata' => 'success',
                         'valutazione_aml' => 'warning',
-                        'sos_inviata'     => 'danger',
-                        'chiusa'          => 'gray',
-                        default           => 'info',
+                        'sos_inviata' => 'danger',
+                        'chiusa' => 'gray',
+                        default => 'info',
                     }),
                 TextColumn::make('email')
                     ->label('Email')
@@ -181,9 +176,9 @@ class ClientResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index'  => ListClients::route('/'),
+            'index' => ListClients::route('/'),
             'create' => CreateClient::route('/create'),
-            'edit'   => EditClient::route('/{record}/edit'),
+            'edit' => EditClient::route('/{record}/edit'),
         ];
     }
 }

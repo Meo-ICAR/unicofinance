@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('clients', function (Blueprint $table) {
@@ -49,6 +48,7 @@ return new class extends Migration
             $table->decimal('salary', 10, 2)->nullable()->comment('Retribuzione annuale');
             $table->decimal('salary_quote', 10, 2)->nullable()->comment('Quota retribuzione');
             $table->boolean('is_art108')->default(false)->comment('Esente art.108');
+            $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete()->comment('ID utente collegato');
             $table->timestamps();
 
             // Indexes
