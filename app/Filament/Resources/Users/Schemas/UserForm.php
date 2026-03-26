@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Users\Schemas;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
 
 class UserForm
@@ -39,6 +40,13 @@ class UserForm
                     ->relationship('companies', 'name')
                     ->multiple()
                     ->preload()
+                    ->visible(fn() => auth()->user()->is_super_admin),
+                Toggle::make('is_approved')
+                    ->label('Approvato')
+                    ->helperText('Abilità l\'accesso al pannello per questo utente.')
+                    ->default(false),
+                Toggle::make('is_super_admin')
+                    ->label('Super Admin')
                     ->visible(fn() => auth()->user()->is_super_admin),
             ]);
     }

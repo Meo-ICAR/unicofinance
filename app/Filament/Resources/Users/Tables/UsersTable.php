@@ -10,6 +10,8 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use STS\FilamentImpersonate\Actions\Impersonate;
 use Filament\Tables\Filters\Filter;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Actions\Action;
 
 class UsersTable
 {
@@ -22,6 +24,14 @@ class UsersTable
                 TextColumn::make('email')
                     ->label('Email address')
                     ->searchable(),
+                IconColumn::make('is_approved')
+                    ->label('Approvato')
+                    ->boolean()
+                    ->sortable(),
+                IconColumn::make('is_super_admin')
+                    ->label('S.Admin')
+                    ->boolean()
+                    ->visible(fn() => auth()->user()->is_super_admin),
                 TextColumn::make('email_verified_at')
                     ->dateTime()
                     ->sortable(),
@@ -43,8 +53,23 @@ class UsersTable
                         // Cerca nella tabella pivot company_user
                         $q->where('company_user.role', 'admin');
                     })),
+                Filter::make('in_attesa')
+                    ->label('In Attesa di Approvazione')
+                    ->query(fn(Builder $query): Builder => $query->where('is_approved', false)),
             ])
             ->recordActions([
+                Action::make('approva')
+                    ->label('Approva')
+                    ->icon('heroicon-o-check-circle')
+                    ->color('success')
+                    ->hidden(fn($record) => $record->is_approved)
+                    ->action(fn($record) => $record->update(['is_approved' => true])),
+                Action::make('sospendi')
+                    ->label('Sospendi')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->visible(fn($record) => $record->is_approved && !$record->is_super_admin)
+                    ->action(fn($record) => $record->update(['is_approved' => false])),
                 Impersonate::make()
                     // Fondamentale: SOLO il super admin può impersonare altri!
                     ->visible(fn() => auth()->user()->is_super_admin)

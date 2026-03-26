@@ -26,31 +26,7 @@ class CompanySeeder extends Seeder
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
         // Insert/update the sample company
-        Company::updateOrCreate([
-            'name' => 'Hassisto'
-        ], [
-            'id' => Str::uuid(),
-            'name' => 'Hassisto',
-            'vat_number' => '0901836367764',
-            'vat_name' => 'Hassisto',
-            'ivass' => null,
-            'ivass_at' => null,
-            'ivass_name' => null,
-            'ivass_section' => null,
-            'sponsor' => null,
-            'page_header' => '<p></p>',
-            'page_footer' => '<p></p>',
-            'smtp_host' => null,
-            'smtp_port' => null,
-            'smtp_username' => null,
-            'smtp_password' => null,
-            'smtp_encryption' => null,
-            'smtp_from_email' => null,
-            'smtp_from_name' => null,
-            'smtp_enabled' => false,
-            'smtp_verify_ssl' => true,
-        ]);
-        Company::updateOrCreate([
+         Company::updateOrCreate([
             'name' => 'Races Finance S.r.l.'
         ], [
             'id' => Str::uuid(),
@@ -79,5 +55,30 @@ class CompanySeeder extends Seeder
             'smtp_enabled' => false,
             'smtp_verify_ssl' => true,
         ]);
+        Company::updateOrCreate([
+            'name' => 'Hassisto'
+        ], [
+            'id' => Str::uuid(),
+            'name' => 'Hassisto',
+            'vat_number' => '0901836367764',
+            'vat_name' => 'Hassisto',
+            'ivass' => null,
+            'ivass_at' => null,
+            'ivass_name' => null,
+            'ivass_section' => null,
+            'sponsor' => null,
+            'page_header' => '<p></p>',
+            'page_footer' => '<p></p>',
+            'smtp_host' => null,
+            'smtp_port' => null,
+            'smtp_username' => null,
+            'smtp_password' => null,
+            'smtp_encryption' => null,
+            'smtp_from_email' => null,
+            'smtp_from_name' => null,
+            'smtp_enabled' => false,
+            'smtp_verify_ssl' => true,
+        ]);
+
     }
 }

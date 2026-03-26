@@ -174,7 +174,7 @@ class BusinessFunctionSeeder extends Seeder
             foreach ($functions as $data) {
                 $payload = $data;
                 unset($payload['managed_by_code']);
-                
+
                 BusinessFunction::updateOrCreate(
                     ['code' => $data['code']],
                     $payload
@@ -192,6 +192,25 @@ class BusinessFunctionSeeder extends Seeder
                     }
                 }
             }
+            // Fase 3: Associazione Company
+            $companies = Company::all();
+            foreach ($companies as $company) {
+                $functions = BusinessFunction::where('company_id', null)->get();
+                foreach ($functions as $function) {
+                    BusinessFunction::CreateorUpdate([
+                        'company_id' => $company->id,
+                        'code' => $function['code'],
+                        'macro_area' => $function['macro_area'],
+                        'name' => $function['name'],
+                    'type' => $company->type,
+                    'description' => $company->description,
+                    'outsourcable_status' => $company->outsourcable_status,
+                    'managed_by_id' => $company->managed_by_id,
+                    'mission' => $company->mission,
+                    'responsibility' => $company->responsibility,
+                ]);
+            }
+        }
         });
     }
 }

@@ -45,9 +45,9 @@ class AdminPanelProvider extends PanelProvider
                 'primary' => Color::Amber,
             ])
             // Abilita la multi-tenancy
-            ->tenant(Company::class)
-            // Opzionale: se hai un menu per passare da un'azienda all'altra
-            ->tenantMenu(true)
+            ->tenant(Company::class, ownershipRelationship: 'companies')
+            // Menu per passare da un'azienda all'altra
+            ->tenantMenu()
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([

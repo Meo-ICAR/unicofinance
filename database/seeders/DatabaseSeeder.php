@@ -48,6 +48,8 @@ class DatabaseSeeder extends Seeder
             CompanyUserSeeder::class,
             BusinessFunctionSeeder::class,
             CompanyBranchSeeder::class,
+            EmployeeSeeder::class,
+            ClientTypeSeeder::class,
         ]);
     }
 }

@@ -10,6 +10,11 @@ class EditCompany extends EditRecord
 {
     protected static string $resource = CompanyResource::class;
 
+    public function getTitle(): string
+    {
+        return $this->record->name;
+    }
+
     protected function getHeaderActions(): array
     {
         return [
