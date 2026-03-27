@@ -9,7 +9,7 @@ return new class extends Migration {
     {
         Schema::create('processes', function (Blueprint $table) {
             $table->id();
-            $table->foreignUuid('company_id')->constrained('companies')->cascadeOnDelete();
+            $table->foreignUuid('company_id')->nullable()->constrained('companies')->cascadeOnDelete();
             $table->foreignId('business_function_id')->constrained('business_functions')->cascadeOnDelete();
             $table->foreignId('owner_function_id')->nullable()->constrained('business_functions')->nullOnDelete();
 

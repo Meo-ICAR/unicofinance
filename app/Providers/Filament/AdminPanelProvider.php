@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use AlizHarb\ActivityLog\ActivityLogPlugin;
 use App\Models\Company;
 use DutchCodingCompany\FilamentSocialite\FilamentSocialitePlugin;
 use DutchCodingCompany\FilamentSocialite\Provider;
@@ -48,7 +49,7 @@ class AdminPanelProvider extends PanelProvider
             ->tenant(Company::class, ownershipRelationship: 'companies')
             // Menu per passare da un'azienda all'altra
             ->tenantMenu()
-            ->databaseNotifications() // <-- Aggiungi questo!
+            ->databaseNotifications()  // <-- Aggiungi questo!
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([
@@ -56,6 +57,11 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->plugin(
+                ActivityLogPlugin::make()
+                    ->label('Log')
+                    ->pluralLabel('Logs')
+                    ->navigationGroup('System'),
+                //   ->cluster('System'),  // Optional: Group inside a cluster
                 FilamentSocialitePlugin::make()
                     // (required) Add providers corresponding with providers in `config/services.php`.
                     ->providers([
@@ -106,7 +112,6 @@ class AdminPanelProvider extends PanelProvider
                     ->resolveUserUsing(function (string $provider, \Laravel\Socialite\Contracts\User $oauthUser, FilamentSocialitePlugin $plugin) {
                         return \App\Models\User::where('email', $oauthUser->getEmail())->first();
                     })
-
                 // In this example, a login flow can only continue if there exists a user (Authenticatable) already.
                 //  ->registration(fn(string $provider, SocialiteUserContract $oauthUser, ?Authenticatable $user) => (bool) $user)
                 // (optional) Change the associated model class.

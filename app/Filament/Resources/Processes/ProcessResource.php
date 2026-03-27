@@ -2,23 +2,24 @@
 
 namespace App\Filament\Resources\Processes;
 
-use App\Filament\Resources\Processes\Pages;
 use App\Filament\Resources\Processes\RelationManagers\ProcessTasksRelationManager;
-use App\Models\Process;
+use App\Filament\Resources\Processes\Pages;
 use App\Models\BusinessFunction;
+use App\Models\Process;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
-use Filament\Tables;
-use Filament\Tables\Table;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\Toggle;
-use Filament\Forms\Components\Select;
-use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\IconColumn;
-use Filament\Actions\EditAction;
-use Filament\Actions\DeleteBulkAction;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
+use Filament\Tables;
+use Illuminate\Database\Eloquent\Builder;
 use BackedEnum;
 use UnitEnum;
 
@@ -33,6 +34,29 @@ class ProcessResource extends Resource
     protected static ?string $recordTitleAttribute = 'name';
 
     protected static ?string $tenantOwnershipRelationshipName = 'company';
+
+    /**
+     * QUESTO METODO FILTRA TUTTA LA RISORSA
+     */
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+        $user = auth()->user();
+        $companyId = Filament::getCurrentPanel()->getId();
+
+        // 1. Se l'utente è un SUPER ADMIN tuo (es. tu che sviluppi),
+        // fagli vedere tutto per poter fare manutenzione.
+        if ($user->is_super_admin) {
+            return $query;
+        }
+
+        // 2. Se è un utente normale/cliente, filtra!
+        return $query->where(function (Builder $q) use ($user, $companyId) {
+            $q
+                ->whereNull('company_id')  // Mostra i template GLOBALI
+                ->orWhere('company_id', $companyId);  // Mostra i template CUSTOM della sua azienda
+        });
+    }
 
     public static function form(Schema $schema): Schema
     {
@@ -62,7 +86,7 @@ class ProcessResource extends Resource
                         'App\Models\Client' => 'Consulenti/Clienti (Client)',
                         // Aggiungi qui altre tabelle future (es. 'App\Models\Project' => 'Progetti')
                     ])
-                    ->clearable() // Permette di svuotare la tendina per farlo tornare NULL
+                    ->clearable()  // Permette di svuotare la tendina per farlo tornare NULL
                     ->searchable(),
                 Toggle::make('is_active')
                     ->label('Attivo')

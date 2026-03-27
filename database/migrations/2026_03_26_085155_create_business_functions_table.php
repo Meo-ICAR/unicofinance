@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -22,11 +21,13 @@ return new class extends Migration
             $table->foreignId('managed_by_id')->nullable()->constrained('business_functions')->nullOnDelete()->comment('Riferimento alla funzione padre (Manager)');
             $table->longText('mission')->nullable()->comment('What does the function do');
             $table->longText('responsibility')->nullable()->comment('List of activities and responsibilities');
+            $table->foreignUuid('company_id')->nullable()->after('id')->constrained()->cascadeOnDelete();
+            $table->unique(['company_id', 'code']);
             $table->timestamps();
         });
 
         Schema::table('business_functions', function (Blueprint $table) {
-            $table->comment = "Funzioni aziendali (Template Funzionogramma globale)";
+            $table->comment = 'Funzioni aziendali (Template Funzionogramma globale)';
         });
     }
 

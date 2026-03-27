@@ -1,0 +1,43 @@
+<?php
+
+namespace App\Filament\Auditor\Resources;
+
+use App\Models\TaskExecution;
+use Filament\Resources\Resource;
+use Filament\Tables\Table;
+use Filament\Tables;
+
+class AuditResource extends Resource
+{
+    protected static ?string $model = TaskExecution::class;
+
+    // Disabilitiamo COMPLETAMENTE la creazione, modifica e cancellazione
+    public static function canCreate(): bool
+    {
+        return false;
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        return false;
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        return false;
+    }
+
+    public static function table(Table $table): Table
+    {
+        return $table
+            ->columns([
+                Tables\Columns\TextColumn::make('reference_number')->label('Cod. Pratica')->searchable(),
+                Tables\Columns\TextColumn::make('client.full_name')->label('Cliente'),
+                Tables\Columns\TextColumn::make('status')->badge(),
+            ])
+            ->actions([
+                // L'unica azione permessa è VEDERE il log
+                Tables\Actions\ViewAction::make()->label('Esamina Log (Audit Trail)'),
+            ]);
+    }
+}

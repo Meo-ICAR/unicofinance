@@ -2,12 +2,14 @@
 
 namespace App\Filament\Resources\Processes\RelationManagers;
 
+use App\Services\BpmRegistryService;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Schemas\Schema;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Schema;
 use Filament\Tables\Actions\CreateAction;
 use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Actions\EditAction;
@@ -22,6 +24,7 @@ class ProcessTasksRelationManager extends RelationManager
 
     public function form(Schema $schema): Schema
     {
+        $companyId = Filament::getCurrentPanel()->getId();
         return $schema
             ->schema([
                 TextInput::make('sequence_number')
@@ -42,7 +45,17 @@ class ProcessTasksRelationManager extends RelationManager
                 Textarea::make('description')
                     ->label('Descrizione Operativa')
                     ->columnSpanFull(),
-                
+                Select::make('action_class')
+                    ->label('Azione Automatica al Completamento')
+                    ->searchable()
+                    ->clearable()
+                    // Richiamiamo la nostra magia!
+                    ->options(fn() => BpmRegistryService::getOptionsForFilament('actions', $companyId)),
+                Select::make('skip_condition_class')
+                    ->label('Escludi la voce se...')
+                    ->searchable()
+                    ->clearable()
+                    ->options(fn() => BpmRegistryService::getOptionsForFilament('conditions', $companyId)),
                 Repeater::make('raciAssignments')
                     ->relationship()
                     ->label('Matrice RACI (Responsabilità)')
