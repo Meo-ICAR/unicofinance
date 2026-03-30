@@ -48,7 +48,7 @@ class TaskDeadline extends Model
      */
     public function isWarning(): bool
     {
-        return $this->status === 'warning' || 
+        return $this->status === 'warning' ||
                ($this->status === 'active' && now() >= $this->warning_at);
     }
 
@@ -57,7 +57,7 @@ class TaskDeadline extends Model
      */
     public function isBreached(): bool
     {
-        return $this->status === 'breached' || 
+        return $this->status === 'breached' ||
                ($this->status !== 'completed' && now() >= $this->due_at);
     }
 
@@ -66,7 +66,7 @@ class TaskDeadline extends Model
      */
     public function isCompleted(): bool
     {
-        return $this->status === 'completed' || !is_null($this->completed_at);
+        return $this->status === 'completed' || ! is_null($this->completed_at);
     }
 
     /**
@@ -83,7 +83,7 @@ class TaskDeadline extends Model
         } else {
             $this->status = 'active';
         }
-        
+
         $this->save();
     }
 
@@ -95,7 +95,7 @@ class TaskDeadline extends Model
         if ($this->isCompleted()) {
             return 0;
         }
-        
+
         return max(0, now()->diffInMinutes($this->due_at, false));
     }
 
@@ -106,7 +106,7 @@ class TaskDeadline extends Model
     {
         $totalMinutes = $this->start_time->diffInMinutes($this->due_at);
         $usedMinutes = $this->start_time->diffInMinutes(now());
-        
+
         return min(100, max(0, ($usedMinutes / $totalMinutes) * 100));
     }
 
@@ -148,6 +148,6 @@ class TaskDeadline extends Model
     public function scopeDueWithin($query, int $minutes)
     {
         return $query->where('due_at', '<=', now()->addMinutes($minutes))
-                    ->where('status', '!=', 'completed');
+            ->where('status', '!=', 'completed');
     }
 }

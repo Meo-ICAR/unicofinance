@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use App\Models\Company;
 use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -33,7 +32,7 @@ class CompanyUserSeeder extends Seeder
                     ->where('company_id', $company->id)
                     ->exists();
 
-                if (!$exists) {
+                if (! $exists) {
                     // Use the model relationship to attach
                     $user->companies()->attach($company->id, ['role' => 'admin']);
 

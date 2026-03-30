@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\Company;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -26,8 +25,8 @@ class CompanySeeder extends Seeder
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
         // Insert/update the sample company
-         Company::updateOrCreate([
-            'name' => 'Races Finance S.r.l.'
+        Company::updateOrCreate([
+            'name' => 'Races Finance S.r.l.',
         ], [
             'id' => Str::uuid(),
             'name' => 'Races Finance S.r.l.',
@@ -56,7 +55,7 @@ class CompanySeeder extends Seeder
             'smtp_verify_ssl' => true,
         ]);
         Company::updateOrCreate([
-            'name' => 'Hassisto'
+            'name' => 'Hassisto',
         ], [
             'id' => Str::uuid(),
             'name' => 'Hassisto',

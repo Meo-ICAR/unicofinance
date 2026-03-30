@@ -37,7 +37,7 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($users as $userData) {
-            if (!User::where('email', $userData['email'])->exists()) {
+            if (! User::where('email', $userData['email'])->exists()) {
                 $user = User::factory()->create($userData);
                 $user->save();
             }

@@ -10,7 +10,7 @@ enum SupervisorType: string
 
     public function getLabel(): string
     {
-        return match($this) {
+        return match ($this) {
             self::NO => 'No',
             self::SI => 'Sì (Azienda)',
             self::FILIALE => 'Sì (Filiale)',

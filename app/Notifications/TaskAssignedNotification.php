@@ -45,8 +45,8 @@ class TaskAssignedNotification extends Notification implements ShouldQueue
     {
         return [
             // Filament usa questi campi di default per le notifiche native
-            'title' => 'Nuovo Task: ' . $this->task->templateTask->name,
-            'body' => 'Hai un nuovo task in scadenza il ' . ($this->task->due_date ? $this->task->due_date->format('d/m/Y') : 'N/D'),
+            'title' => 'Nuovo Task: '.$this->task->templateTask->name,
+            'body' => 'Hai un nuovo task in scadenza il '.($this->task->due_date ? $this->task->due_date->format('d/m/Y') : 'N/D'),
             'icon' => 'heroicon-o-clipboard-document-check',
             'iconColor' => 'success',
             'url' => '/admin/task-executions', // Link cliccabile dalla notifica

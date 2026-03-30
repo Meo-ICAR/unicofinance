@@ -5,17 +5,17 @@ namespace App\Models;
 use App\Enums\EmployeeType;
 use App\Enums\SupervisorType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class Employee extends Model
 {
-    use HasFactory, SoftDeletes, LogsActivity;  // Aggiungi LogsActivity se vuoi tracciare le modifiche ai dipendenti
+    use HasFactory, LogsActivity, SoftDeletes;  // Aggiungi LogsActivity se vuoi tracciare le modifiche ai dipendenti
 
     protected $guarded = ['id'];
 

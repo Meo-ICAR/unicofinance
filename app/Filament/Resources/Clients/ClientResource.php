@@ -7,6 +7,7 @@ use App\Filament\Resources\Clients\Pages\EditClient;
 use App\Filament\Resources\Clients\Pages\ListClients;
 use App\Models\Client;
 use App\Models\ClientType;
+use BackedEnum;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DateTimePicker;
@@ -15,16 +16,14 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
-use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
+use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Schema;
-use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use BackedEnum;
 use UnitEnum;
 
 class ClientResource extends Resource
@@ -60,23 +59,23 @@ class ClientResource extends Resource
                             ->default(true)
                             ->reactive(),
                         TextInput::make('name')
-                            ->label(fn($get) => $get('is_person') ? 'Cognome' : 'Ragione Sociale')
+                            ->label(fn ($get) => $get('is_person') ? 'Cognome' : 'Ragione Sociale')
                             ->required(),
                         TextInput::make('first_name')
                             ->label('Nome')
-                            ->visible(fn($get) => $get('is_person')),
+                            ->visible(fn ($get) => $get('is_person')),
                         TextInput::make('tax_code')
                             ->label('Codice Fiscale')
                             ->maxLength(16),
                         TextInput::make('vat_number')
                             ->label('Partita IVA')
                             ->maxLength(20)
-                            ->visible(fn($get) => !$get('is_person')),
+                            ->visible(fn ($get) => ! $get('is_person')),
                         TextInput::make('email')->label('Email')->email(),
                         TextInput::make('phone')->label('Telefono')->maxLength(50),
                         Select::make('client_type_id')
                             ->label('Tipo Cliente')
-                            ->options(fn() => ClientType::pluck('name', 'id'))
+                            ->options(fn () => ClientType::pluck('name', 'id'))
                             ->searchable()
                             ->nullable(),
                         Select::make('status')
@@ -135,7 +134,7 @@ class ClientResource extends Resource
             ->columns([
                 TextColumn::make('name')
                     ->label('Nominativo')
-                    ->description(fn(Client $r) => $r->is_person ? $r->first_name : null)
+                    ->description(fn (Client $r) => $r->is_person ? $r->first_name : null)
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('clientType.name')
@@ -145,7 +144,7 @@ class ClientResource extends Resource
                 TextColumn::make('status')
                     ->label('Stato')
                     ->badge()
-                    ->color(fn($state) => match ($state) {
+                    ->color(fn ($state) => match ($state) {
                         'approvata' => 'success',
                         'valutazione_aml' => 'warning',
                         'sos_inviata' => 'danger',

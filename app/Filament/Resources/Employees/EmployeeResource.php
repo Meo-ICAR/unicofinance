@@ -10,12 +10,9 @@ use App\Filament\Resources\Employees\Pages\ListEmployees;
 use App\Filament\Resources\Employees\RelationManagers\BusinessFunctionsRelationManager;
 use App\Models\CompanyBranch;
 use App\Models\Employee;
-use Filament\Actions\BulkActionGroup;
+use BackedEnum;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Tables\Columns\IconColumn;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Table;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -26,9 +23,9 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Schema;
-use Filament\Support\Icons\Heroicon;
-use Filament\Tables\Columns\BadgeColumn;
-use BackedEnum;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
 use UnitEnum;
 
 class EmployeeResource extends Resource
@@ -64,11 +61,11 @@ class EmployeeResource extends Resource
                     Section::make('Contratto e Sede')->schema([
                         Select::make('employee_types')
                             ->label('Tipo Dipendente')
-                            ->options(collect(EmployeeType::cases())->mapWithKeys(fn($e) => [$e->value => $e->getLabel()]))
+                            ->options(collect(EmployeeType::cases())->mapWithKeys(fn ($e) => [$e->value => $e->getLabel()]))
                             ->required(),
                         Select::make('supervisor_type')
                             ->label('Supervisore?')
-                            ->options(collect(SupervisorType::cases())->mapWithKeys(fn($e) => [$e->value => $e->getLabel()]))
+                            ->options(collect(SupervisorType::cases())->mapWithKeys(fn ($e) => [$e->value => $e->getLabel()]))
                             ->required(),
                         DatePicker::make('hiring_date')->label('Data Assunzione'),
                         DatePicker::make('termination_date')->label('Data Fine Rapporto'),
@@ -160,9 +157,9 @@ class EmployeeResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index'  => ListEmployees::route('/'),
+            'index' => ListEmployees::route('/'),
             'create' => CreateEmployee::route('/create'),
-            'edit'   => EditEmployee::route('/{record}/edit'),
+            'edit' => EditEmployee::route('/{record}/edit'),
         ];
     }
 }

@@ -11,9 +11,9 @@ class BpmRegistryService
 {
     /**
      * Restituisce le opzioni filtrate e raggruppate per Filament
+     *
      * * @param string $type 'actions' o 'conditions'
-     * @param int $currentCompanyId L'ID dell'azienda attualmente loggata
-     * @return array
+     * @param  int  $currentCompanyId  L'ID dell'azienda attualmente loggata
      */
     public static function getOptionsForFilament(string $type, char $currentCompanyId): array
     {
@@ -26,7 +26,7 @@ class BpmRegistryService
             // 2. Controllo Multi-Tenant: Questa classe è permessa a questa azienda?
             $allowedCompanies = $data['companies'];
 
-            if (is_array($allowedCompanies) && !in_array($currentCompanyId, $allowedCompanies)) {
+            if (is_array($allowedCompanies) && ! in_array($currentCompanyId, $allowedCompanies)) {
                 continue;  // Salta! L'azienda non ha i permessi per vedere questa azione
             }
 
@@ -79,7 +79,7 @@ class BpmRegistryService
                 'id' => $item->id,
                 'instruction' => $item->instruction,
                 'is_mandatory' => $isMandatory,
-                'original_item' => $item
+                'original_item' => $item,
             ];
         })->filter();  // Rimuove gli elementi nulli (quelli "skippati")
     }

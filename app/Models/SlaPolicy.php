@@ -2,10 +2,11 @@
 
 namespace App\Models;
 
+use App\Services\SlaService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SlaPolicy extends Model
 {
@@ -108,7 +109,7 @@ class SlaPolicy extends Model
 
     public function calculateDeadline(Carbon $startDate)
     {
-        $service = new \App\Services\SlaService();
+        $service = new SlaService;
 
         // Calcoliamo la scadenza critica
         $dueAt = $service->calculateBusinessDeadline($startDate, $this->duration_minutes);
@@ -119,7 +120,7 @@ class SlaPolicy extends Model
 
         return [
             'due_at' => $dueAt,
-            'warning_at' => $warningAt
+            'warning_at' => $warningAt,
         ];
     }
 }

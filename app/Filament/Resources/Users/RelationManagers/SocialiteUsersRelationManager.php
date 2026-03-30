@@ -2,19 +2,18 @@
 
 namespace App\Filament\Resources\Users\RelationManagers;
 
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Toggle;
-use Filament\Schemas\Schema;
-use Filament\Resources\RelationManagers\RelationManager;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
+use Filament\Actions\EditAction;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
+use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Support\Str;
 
 class SocialiteUsersRelationManager extends RelationManager
 {
@@ -35,7 +34,9 @@ class SocialiteUsersRelationManager extends RelationManager
                     ->disabled(fn (string $operation): bool => $operation === 'edit'),
                 TextInput::make('provider_id')
                     ->label('Provider ID')
-                    ->default(function () { return \Illuminate\Support\Str::random(10); })
+                    ->default(function () {
+                        return Str::random(10);
+                    })
                     ->required()
                     ->disabled(fn (string $operation): bool => $operation === 'edit'),
                 TextInput::make('email')
@@ -79,6 +80,7 @@ class SocialiteUsersRelationManager extends RelationManager
                     ->mutateFormDataUsing(function (array $data): array {
                         // Impedisce di cambiare email/provider
                         unset($data['provider'], $data['email']);
+
                         return $data;
                     }),
                 DeleteAction::make(),

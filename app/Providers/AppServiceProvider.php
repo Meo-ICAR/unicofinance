@@ -2,12 +2,12 @@
 
 namespace App\Providers;
 
+use App\Models\SocialiteUser;
 use DutchCodingCompany\FilamentSocialite\Events\Login;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use SocialiteProviders\Manager\SocialiteWasCalled;
-use SocialiteProviders\Microsoft\MicrosoftExtendSocialite;
-use Spatie\Activitylog\Facades\CauserResolver;
+use SocialiteProviders\Microsoft\Provider;
 use Spatie\Activitylog\Models\Activity;
 
 class AppServiceProvider extends ServiceProvider
@@ -30,14 +30,14 @@ class AppServiceProvider extends ServiceProvider
             $activity->properties = $activity->properties->put('user_agent', request()->userAgent());
         });
         Event::listen(function (SocialiteWasCalled $event) {
-            $event->extendSocialite('microsoft', \SocialiteProviders\Microsoft\Provider::class);
+            $event->extendSocialite('microsoft', Provider::class);
         });
 
         Event::listen(function (Login $event) {
             $socialiteUser = $event->socialiteUser;
             $oauthUser = $event->oauthUser;
 
-            if ($socialiteUser instanceof \App\Models\SocialiteUser) {
+            if ($socialiteUser instanceof SocialiteUser) {
                 // Mantiene aggiornati l'avatar e l'email presi dal provider ad ogni login
                 $socialiteUser->update([
                     'email' => $oauthUser->getEmail(),

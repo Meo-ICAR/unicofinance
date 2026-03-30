@@ -3,9 +3,8 @@
 namespace App\Filament\Resources\Processes;
 
 use App\Filament\Resources\Processes\RelationManagers\ProcessTasksRelationManager;
-use App\Filament\Resources\Processes\Pages;
-use App\Models\BusinessFunction;
 use App\Models\Process;
+use BackedEnum;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
@@ -15,12 +14,11 @@ use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Filament\Tables;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Filament\Tables;
 use Illuminate\Database\Eloquent\Builder;
-use BackedEnum;
 use UnitEnum;
 
 class ProcessResource extends Resource
@@ -51,7 +49,7 @@ class ProcessResource extends Resource
         }
 
         // 2. Se è un utente normale/cliente, filtra!
-        return $query->where(function (Builder $q) use ($user, $companyId) {
+        return $query->where(function (Builder $q) use ($companyId) {
             $q
                 ->whereNull('company_id')  // Mostra i template GLOBALI
                 ->orWhere('company_id', $companyId);  // Mostra i template CUSTOM della sua azienda

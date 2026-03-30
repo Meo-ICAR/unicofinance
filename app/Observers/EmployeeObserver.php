@@ -20,7 +20,7 @@ class EmployeeObserver
                     'employee_id' => $employee->id,  // Il neo-assunto è l'esecutore
                     'status' => 'todo',
                     'due_date' => now()->addDays(7),
-                    'reference_number' => "ONB-{$employee->id}-" . now()->format('Ymd'),
+                    'reference_number' => "ONB-{$employee->id}-".now()->format('Ymd'),
                 ]);
             }
         }

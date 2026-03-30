@@ -2,19 +2,13 @@
 
 namespace Database\Seeders;
 
-use App\Enums\BusinessFunctionType;
-use App\Enums\MacroArea;
-use App\Enums\OutsourcableStatus;
 use App\Models\BusinessFunction;
-use App\Models\Checklist;
-use App\Models\ChecklistItem;
 use App\Models\Company;
 use App\Models\PrivacyDataType;
 use App\Models\Process;
 use App\Models\ProcessTask;
 use App\Models\RaciAssignment;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 
 class PrivacyBpmSeeder extends Seeder
 {
@@ -27,15 +21,17 @@ class PrivacyBpmSeeder extends Seeder
         $dpoFunction = BusinessFunction::where('code', 'DPO')->first();
         $legalFunction = BusinessFunction::where('code', 'LEGAL')->first();
 
-        if (!$dpoFunction || !$legalFunction) {
+        if (! $dpoFunction || ! $legalFunction) {
             $this->command->warn('DPO or Legal business functions not found. Skipping PrivacyBpmSeeder.');
+
             return;
         }
 
         // Find an existing process or create a sample one
         $process = Process::first();
-        if (!$process) {
+        if (! $process) {
             $this->command->warn('No processes found. Skipping PrivacyBpmSeeder.');
+
             return;
         }
 

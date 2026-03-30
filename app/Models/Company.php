@@ -6,16 +6,18 @@ use Filament\Models\Contracts\HasAvatar;
 use Filament\Models\Contracts\HasName;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
-class Company extends Model implements HasName, HasAvatar, HasMedia
+class Company extends Model implements HasAvatar, HasMedia, HasName
 {
     use HasFactory, HasUuids, InteractsWithMedia;
 
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     protected $fillable = [
@@ -63,7 +65,7 @@ class Company extends Model implements HasName, HasAvatar, HasMedia
         return $this->belongsToMany(User::class);
     }
 
-    public function branches(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function branches(): HasMany
     {
         return $this->hasMany(CompanyBranch::class);
     }
@@ -79,7 +81,7 @@ class Company extends Model implements HasName, HasAvatar, HasMedia
 
         $emailDomain = explode('@', $email);
         $emailDomain = end($emailDomain);
-        
+
         return strtolower($emailDomain) === strtolower($this->domain);
     }
 

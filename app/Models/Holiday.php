@@ -58,11 +58,11 @@ class Holiday extends Model
     public static function isHoliday(\DateTime $date): bool
     {
         return static::where('holiday_date', $date->format('Y-m-d'))
-                    ->orWhere(function ($query) use ($date) {
-                        $query->where('is_recurring', true)
-                              ->whereRaw("DATE_FORMAT(holiday_date, '%m-%d') = ?", [$date->format('m-d')]);
-                    })
-                    ->exists();
+            ->orWhere(function ($query) use ($date) {
+                $query->where('is_recurring', true)
+                    ->whereRaw("DATE_FORMAT(holiday_date, '%m-%d') = ?", [$date->format('m-d')]);
+            })
+            ->exists();
     }
 
     /**
@@ -71,14 +71,15 @@ class Holiday extends Model
     public static function getHolidaysByYear(int $year): array
     {
         $holidays = static::byYear($year)->pluck('holiday_date')->toArray();
-        
+
         // Aggiungi festività ricorrenti da altri anni
         $recurring = static::recurring()
             ->whereYear('holiday_date', '!=', $year)
             ->get()
             ->map(function ($holiday) use ($year) {
                 $date = \DateTime::createFromFormat('Y-m-d', $holiday->holiday_date);
-                $date->setDate($year, (int)$date->format('m'), (int)$date->format('d'));
+                $date->setDate($year, (int) $date->format('m'), (int) $date->format('d'));
+
                 return $date->format('Y-m-d');
             })
             ->toArray();
@@ -93,7 +94,7 @@ class Holiday extends Model
     {
         foreach ($years as $year) {
             $date = "$year-$monthDay";
-            
+
             static::firstOrCreate([
                 'holiday_date' => $date,
                 'name' => $name,
@@ -108,11 +109,11 @@ class Holiday extends Model
     public static function getHolidayName(\DateTime $date): ?string
     {
         $holiday = static::where('holiday_date', $date->format('Y-m-d'))
-                        ->orWhere(function ($query) use ($date) {
-                            $query->where('is_recurring', true)
-                                  ->whereRaw("DATE_FORMAT(holiday_date, '%m-%d') = ?", [$date->format('m-d')]);
-                        })
-                        ->first();
+            ->orWhere(function ($query) use ($date) {
+                $query->where('is_recurring', true)
+                    ->whereRaw("DATE_FORMAT(holiday_date, '%m-%d') = ?", [$date->format('m-d')]);
+            })
+            ->first();
 
         return $holiday?->name;
     }

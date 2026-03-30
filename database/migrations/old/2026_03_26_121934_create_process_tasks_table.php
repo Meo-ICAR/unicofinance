@@ -13,11 +13,11 @@ return new class extends Migration
             $table->foreignUuid('company_id')->constrained('companies')->cascadeOnDelete();
             $table->foreignId('process_id')->constrained('processes')->cascadeOnDelete();
             $table->foreignId('business_function_id')->constrained('business_functions')->cascadeOnDelete();
-            
+
             $table->unsignedInteger('sequence_number')->default(0);
             $table->string('name');
             $table->text('description')->nullable();
-            
+
             $table->timestamps();
         });
     }

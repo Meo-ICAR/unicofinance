@@ -2,7 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Models\Holiday;
 use App\Models\SlaPolicy;
+use App\Services\SlaService;
 use Illuminate\Database\Seeder;
 
 class SlaPolicySeeder extends Seeder
@@ -61,12 +63,12 @@ class SlaPolicySeeder extends Seeder
             );
         }
 
-        $service = new \App\Services\SlaService();
+        $service = new SlaService;
         $years = [2024, 2025, 2026];
 
         foreach ($years as $year) {
             foreach ($service->getItalianHolidays($year) as $date) {
-                \App\Models\Holiday::firstOrCreate([
+                Holiday::firstOrCreate([
                     'holiday_date' => $date,
                     'name' => 'Festività Nazionale',
                 ]);

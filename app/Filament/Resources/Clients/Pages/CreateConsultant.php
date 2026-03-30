@@ -13,6 +13,7 @@ class CreateConsultant extends CreateRecord
     {
         // Assicura che i nuovi record creati da questo resource siano sempre consulenti
         $data['is_company'] = true;
+
         return $data;
     }
 }

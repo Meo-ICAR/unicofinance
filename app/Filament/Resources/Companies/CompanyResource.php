@@ -2,24 +2,18 @@
 
 namespace App\Filament\Resources\Companies;
 
-use App\Filament\Resources\Companies\RelationManagers\UsersRelationManager;
-use App\Filament\Resources\Companies\RelationManagers\BranchesRelationManager;
 use App\Filament\Resources\Companies\Pages\CreateCompany;
 use App\Filament\Resources\Companies\Pages\EditCompany;
 use App\Filament\Resources\Companies\Pages\ListCompanies;
+use App\Filament\Resources\Companies\RelationManagers\BranchesRelationManager;
+use App\Filament\Resources\Companies\RelationManagers\UsersRelationManager;
 use App\Filament\Resources\Companies\Schemas\CompanyForm;
 use App\Filament\Resources\Companies\Tables\CompaniesTable;
-use App\Filament\Resources\CompanyResource\Pages;
 use App\Models\Company;
-use Filament\Forms\Form;
+use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
-use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
-use Filament\Forms;
-use Filament\Tables;
-use BackedEnum;
-use UnitEnum;
 
 class CompanyResource extends Resource
 {

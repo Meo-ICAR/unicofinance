@@ -26,6 +26,7 @@ class ProcessTasksRelationManager extends RelationManager
     public function form(Schema $schema): Schema
     {
         $companyId = Filament::getCurrentPanel()->getId();
+
         return $schema
             ->schema([
                 TextInput::make('sequence_number')
@@ -51,12 +52,12 @@ class ProcessTasksRelationManager extends RelationManager
                     ->searchable()
                     ->clearable()
                     // Richiamiamo la nostra magia!
-                    ->options(fn() => BpmRegistryService::getOptionsForFilament('actions', $companyId)),
+                    ->options(fn () => BpmRegistryService::getOptionsForFilament('actions', $companyId)),
                 Select::make('skip_condition_class')
                     ->label('Escludi la voce se...')
                     ->searchable()
                     ->clearable()
-                    ->options(fn() => BpmRegistryService::getOptionsForFilament('conditions', $companyId)),
+                    ->options(fn () => BpmRegistryService::getOptionsForFilament('conditions', $companyId)),
                 Repeater::make('raciAssignments')
                     ->relationship()
                     ->label('Matrice RACI (Responsabilità)')
@@ -84,7 +85,7 @@ class ProcessTasksRelationManager extends RelationManager
                     ->relationship(
                         name: 'privacyDataTypes',
                         titleAttribute: 'name',
-                        modifyQueryUsing: fn($query) => $query->orderBy('category')->orderBy('name')
+                        modifyQueryUsing: fn ($query) => $query->orderBy('category')->orderBy('name')
                     )
                     ->descriptions([
                         'HEALTH_DATA' => 'Richiede misure di sicurezza elevate (Crittografia).',
@@ -92,7 +93,7 @@ class ProcessTasksRelationManager extends RelationManager
                         'CRIMINAL_REC' => 'Dati relativi a condanne penali o reati.',
                     ])
                     ->columns(2)
-                    ->bulkToggleable()  // Comodo per l'utente
+                    ->bulkToggleable(),  // Comodo per l'utente
             ]);
     }
 

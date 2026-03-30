@@ -2,24 +2,24 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Mattiverse\Userstamps\Traits\Userstamps;
-use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class TaskExecution extends Model
 {
-    use SoftDeletes, LogsActivity;
+    use LogsActivity, SoftDeletes;
     use Userstamps;
 
     protected $guarded = ['id'];
 
     protected $fillable = [
         'process_task_id', 'employee_id', 'client_id',
-        'status', 'due_date', 'started_at', 'completed_at', 'previous_task_execution_id'
+        'status', 'due_date', 'started_at', 'completed_at', 'previous_task_execution_id',
     ];
 
     protected $casts = [
@@ -90,7 +90,7 @@ class TaskExecution extends Model
             ->logOnly(['status', 'employee_id', 'audit_dms_id'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
-            ->setDescriptionForEvent(fn(string $eventName) => "Pratica {$eventName}");
+            ->setDescriptionForEvent(fn (string $eventName) => "Pratica {$eventName}");
     }
 
     public function processTask(): BelongsTo

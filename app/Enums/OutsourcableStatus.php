@@ -10,7 +10,7 @@ enum OutsourcableStatus: string
 
     public function getLabel(): string
     {
-        return match($this) {
+        return match ($this) {
             self::YES => 'Sì',
             self::NO => 'No',
             self::PARTIAL => 'Parziale',

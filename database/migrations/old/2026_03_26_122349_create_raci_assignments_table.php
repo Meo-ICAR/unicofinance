@@ -13,9 +13,9 @@ return new class extends Migration
             $table->foreignUuid('company_id')->constrained('companies')->cascadeOnDelete();
             $table->foreignId('process_task_id')->constrained('process_tasks')->cascadeOnDelete();
             $table->foreignId('business_function_id')->constrained('business_functions')->cascadeOnDelete();
-            
+
             $table->enum('role', ['R', 'A', 'C', 'I'])->comment('R=Responsible, A=Accountable, C=Consulted, I=Informed');
-            
+
             $table->unique(['process_task_id', 'business_function_id'], 'unique_raci_task');
             $table->timestamps();
         });

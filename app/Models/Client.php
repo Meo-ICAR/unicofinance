@@ -3,17 +3,17 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class Client extends Model
 {
-    use HasFactory, SoftDeletes, LogsActivity;
+    use HasFactory, LogsActivity, SoftDeletes;
 
     protected $guarded = ['id'];
 
@@ -24,7 +24,7 @@ class Client extends Model
         'consent_sic_at', 'consent_marketing_at', 'consent_profiling_at',
         'status', 'is_company', 'is_lead', 'leadsource_id', 'acquired_at', 'contoCOGE',
         'privacy_consent', 'is_client', 'subfornitori', 'is_requiredApprovation', 'is_approved',
-        'is_anonymous', 'blacklist_at', 'blacklisted_by', 'salary', 'salary_quote', 'is_art108', 'user_id'
+        'is_anonymous', 'blacklist_at', 'blacklisted_by', 'salary', 'salary_quote', 'is_art108', 'user_id',
     ];
 
     protected $casts = [

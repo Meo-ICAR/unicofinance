@@ -39,6 +39,7 @@ class TaskExecutionForm
                     ->options(function () {
                         // Ottieni le azioni disponibili dal registry
                         $actions = BpmEngineService::getAvailableActions();
+
                         return collect($actions)->mapWithKeys(function ($action) {
                             return [$action['id'] => $action['label']];
                         })->toArray();
@@ -53,8 +54,9 @@ class TaskExecutionForm
                             ->content(function (TaskExecution $record, BpmEngineService $engine) {
                                 $items = $engine->getEvaluatedChecklist($record);
 
-                                if ($items->isEmpty())
+                                if ($items->isEmpty()) {
                                     return 'Nessun controllo richiesto.';
+                                }
 
                                 // Genera una lista HTML semplice per il placeholder
                                 $html = '<ul class="list-disc ml-5">';
@@ -67,7 +69,7 @@ class TaskExecutionForm
                                 $html .= '</ul>';
 
                                 return new HtmlString($html);
-                            })
+                            }),
                     ]),
                 TextInput::make('previous_task_execution_id')
                     ->numeric(),

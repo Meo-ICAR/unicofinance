@@ -16,6 +16,7 @@ class CreateUser extends CreateRecord
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         $this->tenantRole = $data['tenant_role'] ?? 'user';
+
         return $data;
     }
 

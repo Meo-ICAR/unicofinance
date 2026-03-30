@@ -4,6 +4,8 @@ namespace App\Providers\Filament;
 
 use AlizHarb\ActivityLog\ActivityLogPlugin;
 use App\Models\Company;
+use App\Models\SocialiteUser;
+use App\Models\User;
 use DutchCodingCompany\FilamentSocialite\FilamentSocialitePlugin;
 use DutchCodingCompany\FilamentSocialite\Provider;
 use Filament\Http\Middleware\Authenticate;
@@ -11,18 +13,19 @@ use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Pages\Dashboard;
-use Filament\Support\Colors\Color;
-use Filament\Support\Colors;
-use Filament\Widgets\AccountWidget;
-use Filament\Widgets\FilamentInfoWidget;
 use Filament\Panel;
 use Filament\PanelProvider;
+use Filament\Support\Colors\Color;
+use Filament\Widgets\AccountWidget;
+use Filament\Widgets\FilamentInfoWidget;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Laravel\Socialite\Contracts\User as SocialiteUserContract;
 
@@ -77,7 +80,7 @@ class AdminPanelProvider extends PanelProvider
                             ->icon('fab-google')
                             ->color(Color::hex('#4285F4'))
                             ->outlined(true)
-                            ->stateless(false)
+                            ->stateless(false),
                         //    ->scopes(['...'])
                         //    ->with(['...']),
                         //    ->scopes(['...'])
@@ -87,21 +90,21 @@ class AdminPanelProvider extends PanelProvider
                     // ->slug('admin')
                     // (optional) Enable/disable registration of new (socialite-) users.
                     ->registration(true)
-                    ->socialiteUserModelClass(\App\Models\SocialiteUser::class)
-                    ->createUserUsing(function (string $provider, \Laravel\Socialite\Contracts\User $oauthUser, FilamentSocialitePlugin $plugin) {
+                    ->socialiteUserModelClass(SocialiteUser::class)
+                    ->createUserUsing(function (string $provider, SocialiteUserContract $oauthUser, FilamentSocialitePlugin $plugin) {
                         $email = $oauthUser->getEmail();
 
-                        $user = \App\Models\User::create([
+                        $user = User::create([
                             'name' => $oauthUser->getName() ?? $oauthUser->getNickname() ?? 'Utente Social',
                             'email' => $email,
-                            'password' => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(24)),
+                            'password' => Hash::make(Str::random(24)),
                             'is_approved' => false,
                         ]);
 
                         $emailParts = explode('@', $email);
                         if (count($emailParts) === 2) {
                             $domain = end($emailParts);
-                            $company = \App\Models\Company::where('domain', strtolower($domain))->first();
+                            $company = Company::where('domain', strtolower($domain))->first();
                             if ($company) {
                                 $user->companies()->attach($company->id);
                             }
@@ -109,8 +112,8 @@ class AdminPanelProvider extends PanelProvider
 
                         return $user;
                     })
-                    ->resolveUserUsing(function (string $provider, \Laravel\Socialite\Contracts\User $oauthUser, FilamentSocialitePlugin $plugin) {
-                        return \App\Models\User::where('email', $oauthUser->getEmail())->first();
+                    ->resolveUserUsing(function (string $provider, SocialiteUserContract $oauthUser, FilamentSocialitePlugin $plugin) {
+                        return User::where('email', $oauthUser->getEmail())->first();
                     })
                 // In this example, a login flow can only continue if there exists a user (Authenticatable) already.
                 //  ->registration(fn(string $provider, SocialiteUserContract $oauthUser, ?Authenticatable $user) => (bool) $user)

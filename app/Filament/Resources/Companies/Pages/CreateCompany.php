@@ -36,7 +36,7 @@ class CreateCompany extends CreateRecord
 
         // Lo colleghiamo all'azienda assegnandogli il ruolo di 'admin' nella tabella pivot
         $this->record->users()->attach($user->id, [
-            'role' => 'admin'
+            'role' => 'admin',
         ]);
     }
 }

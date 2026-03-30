@@ -8,6 +8,7 @@ use App\Filament\Resources\Clients\Pages\ListConsultants;
 use App\Filament\Resources\Clients\RelationManagers\BusinessFunctionsRelationManager;
 use App\Models\Client;
 use App\Models\ClientType;
+use BackedEnum;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DateTimePicker;
@@ -22,7 +23,6 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use BackedEnum;
 use UnitEnum;
 
 class ConsultantResource extends Resource
@@ -61,14 +61,14 @@ class ConsultantResource extends Resource
                     ->required(),
                 TextInput::make('first_name')
                     ->label('Nome')
-                    ->visible(fn($get) => $get('is_person')),
+                    ->visible(fn ($get) => $get('is_person')),
                 TextInput::make('tax_code')->label('Codice Fiscale')->maxLength(16),
                 TextInput::make('vat_number')->label('Partita IVA')->maxLength(20),
                 TextInput::make('email')->label('Email')->email(),
                 TextInput::make('phone')->label('Telefono')->maxLength(50),
                 Select::make('client_type_id')
                     ->label('Tipo')
-                    ->options(fn() => ClientType::pluck('name', 'id'))
+                    ->options(fn () => ClientType::pluck('name', 'id'))
                     ->searchable()
                     ->nullable(),
                 Select::make('status')
@@ -116,7 +116,7 @@ class ConsultantResource extends Resource
                 TextColumn::make('status')
                     ->label('Stato')
                     ->badge()
-                    ->color(fn($state) => match ($state) {
+                    ->color(fn ($state) => match ($state) {
                         'approvata' => 'success',
                         'valutazione_aml' => 'warning',
                         'sos_inviata' => 'danger',

@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use App\Enums\BusinessFunctionType;
 use App\Enums\MacroArea;
-use App\Enums\OutsourcableStatus;
 use App\Models\BusinessFunction;
 use App\Models\Checklist;
 use App\Models\ChecklistItem;
@@ -13,7 +12,6 @@ use App\Models\Process;
 use App\Models\ProcessTask;
 use App\Models\RaciAssignment;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 
 class BusinessPrivacySeeder extends Seeder
 {

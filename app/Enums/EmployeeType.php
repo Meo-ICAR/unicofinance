@@ -12,7 +12,7 @@ enum EmployeeType: string
 
     public function getLabel(): string
     {
-        return match($this) {
+        return match ($this) {
             self::DIPENDENTE => 'Dipendente',
             self::COLLABORATORE => 'Collaboratore',
             self::STAGISTA => 'Stagista',

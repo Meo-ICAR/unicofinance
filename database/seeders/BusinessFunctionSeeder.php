@@ -2,11 +2,11 @@
 
 namespace Database\Seeders;
 
+use App\Enums\BusinessFunctionType;
+use App\Enums\MacroArea;
+use App\Enums\OutsourcableStatus;
 use App\Models\BusinessFunction;
 use App\Models\Company;
-use App\Enums\MacroArea;
-use App\Enums\BusinessFunctionType;
-use App\Enums\OutsourcableStatus;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -110,7 +110,7 @@ class BusinessFunctionSeeder extends Seeder
                 'description' => 'Profilatura rischio, tenuta AUI, analisi operazioni sospette e segnalazioni SOS.',
                 'outsourcable_status' => OutsourcableStatus::YES,
                 'managed_by_code' => 'GOV-CDA',
-                'mission' => "Garantire gli adempimenti previsti in materia di antiriciclaggio.",
+                'mission' => 'Garantire gli adempimenti previsti in materia di antiriciclaggio.',
                 'responsibility' => "• Segnalazione sos.\n• Tenuta AUI.\n• Formazione reti e dipendenti.",
             ],
             [
@@ -121,7 +121,7 @@ class BusinessFunctionSeeder extends Seeder
                 'description' => 'Ispezioni indipendenti e test a campione su tutto l’impianto organizzativo.',
                 'outsourcable_status' => OutsourcableStatus::YES,
                 'managed_by_code' => 'GOV-CDA',
-                'mission' => "Garantire il monitoraggio e la corretta amministrazione dell’Azienda nel pieno rispetto delle norme.",
+                'mission' => 'Garantire il monitoraggio e la corretta amministrazione dell’Azienda nel pieno rispetto delle norme.',
                 'responsibility' => "• Audit ispettivi.\n• Reporting anomalie.\n• Esame costante dei processi aziendali.",
             ],
             [
@@ -132,8 +132,8 @@ class BusinessFunctionSeeder extends Seeder
                 'description' => null,
                 'outsourcable_status' => OutsourcableStatus::NO,
                 'managed_by_code' => 'GOV-CEO',
-                'mission' => "Regolamento Privacy e Registro Trattamento.",
-                'responsibility' => "• Monitoraggio adempimenti GDPR.",
+                'mission' => 'Regolamento Privacy e Registro Trattamento.',
+                'responsibility' => '• Monitoraggio adempimenti GDPR.',
             ],
             [
                 'code' => 'SUP-LEG-AMM',
@@ -143,7 +143,7 @@ class BusinessFunctionSeeder extends Seeder
                 'description' => null,
                 'outsourcable_status' => OutsourcableStatus::NO,
                 'managed_by_code' => 'GOV-CEO',
-                'mission' => "Supporto societario e registrazione contabile.",
+                'mission' => 'Supporto societario e registrazione contabile.',
                 'responsibility' => "• Gestione polizze.\n• Precontenzioso.",
             ],
             [
@@ -154,8 +154,8 @@ class BusinessFunctionSeeder extends Seeder
                 'description' => null,
                 'outsourcable_status' => OutsourcableStatus::NO,
                 'managed_by_code' => 'GOV-CEO',
-                'mission' => "Eseguire una efficiente gestione del personale (CCNL).",
-                'responsibility' => "• Manutenzione policy aziendali.",
+                'mission' => 'Eseguire una efficiente gestione del personale (CCNL).',
+                'responsibility' => '• Manutenzione policy aziendali.',
             ],
             [
                 'code' => 'SUP-PLAN',
@@ -165,8 +165,8 @@ class BusinessFunctionSeeder extends Seeder
                 'description' => null,
                 'outsourcable_status' => OutsourcableStatus::NO,
                 'managed_by_code' => 'GOV-CEO',
-                'mission' => "Garantire il processo di pianificazione strategica.",
-                'responsibility' => "• Condivisione Piano Strategico.",
+                'mission' => 'Garantire il processo di pianificazione strategica.',
+                'responsibility' => '• Condivisione Piano Strategico.',
             ],
         ];
 
@@ -184,11 +184,11 @@ class BusinessFunctionSeeder extends Seeder
 
             // Fase 2: Costruzione Albero Gerarchico Relazionale
             foreach ($functions as $data) {
-                if (!empty($data['managed_by_code'])) {
+                if (! empty($data['managed_by_code'])) {
                     $parent = BusinessFunction::where('code', $data['managed_by_code'])->first();
                     if ($parent) {
                         BusinessFunction::where('code', $data['code'])->update([
-                            'managed_by_id' => $parent->id
+                            'managed_by_id' => $parent->id,
                         ]);
                     }
                 }

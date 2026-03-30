@@ -40,14 +40,14 @@ class UserForm
                     ->relationship('companies', 'name')
                     ->multiple()
                     ->preload()
-                    ->visible(fn() => auth()->user()->is_super_admin),
+                    ->visible(fn () => auth()->user()->is_super_admin),
                 Toggle::make('is_approved')
                     ->label('Approvato')
                     ->helperText('Abilità l\'accesso al pannello per questo utente.')
                     ->default(false),
                 Toggle::make('is_super_admin')
                     ->label('Super Admin')
-                    ->visible(fn() => auth()->user()->is_super_admin),
+                    ->visible(fn () => auth()->user()->is_super_admin),
             ]);
     }
 }
