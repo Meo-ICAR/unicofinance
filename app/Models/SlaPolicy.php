@@ -2,9 +2,10 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Model;
 
 class SlaPolicy extends Model
 {
@@ -35,57 +36,57 @@ class SlaPolicy extends Model
     /**
      * Calcola la data di scadenza basata sulla data di inizio.
      */
-    public function calculateDueAt(\DateTime $startTime): \DateTime
+    public function calculateDueAt(Carbon $startTime): Carbon
     {
-        $dueAt = clone $startTime;
-        
+        $dueAt = $startTime->copy();
+
         // Aggiungi i minuti di durata
-        $dueAt->add(new \DateInterval("PT{$this->duration_minutes}M"));
-        
+        $dueAt->addMinutes($this->duration_minutes);
+
         // Se exclude_weekends è true, escludi weekend
         if ($this->exclude_weekends) {
             $dueAt = $this->excludeWeekends($startTime, $dueAt);
         }
-        
+
         return $dueAt;
     }
 
     /**
      * Calcola la data di warning basata sulla data di inizio.
      */
-    public function calculateWarningAt(\DateTime $startTime): \DateTime
+    public function calculateWarningAt(Carbon $startTime): Carbon
     {
-        $warningAt = clone $startTime;
-        
+        $warningAt = $startTime->copy();
+
         // Aggiungi i minuti di warning threshold
-        $warningAt->add(new \DateInterval("PT{$this->warning_threshold_minutes}M"));
-        
+        $warningAt->addMinutes($this->warning_threshold_minutes);
+
         // Se exclude_weekends è true, escludi weekend
         if ($this->exclude_weekends) {
             $warningAt = $this->excludeWeekends($startTime, $warningAt);
         }
-        
+
         return $warningAt;
     }
 
     /**
      * Escludi weekend dal calcolo delle date.
      */
-    private function excludeWeekends(\DateTime $start, \DateTime $end): \DateTime
+    private function excludeWeekends(Carbon $start, Carbon $end): Carbon
     {
-        $current = clone $start;
+        $current = $start->copy();
         $weekendDays = 0;
-        
+
         while ($current <= $end) {
-            if ($current->format('N') >= 6) { // 6 = Saturday, 7 = Sunday
+            if ($current->isWeekend()) {  // 6 = Saturday, 7 = Sunday
                 $weekendDays++;
             }
-            $current->add(new \DateInterval('P1D'));
+            $current->addDay();
         }
-        
+
         // Aggiungi i weekend giorni alla fine
-        $end->add(new \DateInterval("P{$weekendDays}D"));
-        
+        $end->addDays($weekendDays);
+
         return $end;
     }
 
@@ -103,5 +104,22 @@ class SlaPolicy extends Model
     public function scopeExcludeWeekends($query)
     {
         return $query->where('exclude_weekends', true);
+    }
+
+    public function calculateDeadline(Carbon $startDate)
+    {
+        $service = new \App\Services\SlaService();
+
+        // Calcoliamo la scadenza critica
+        $dueAt = $service->calculateBusinessDeadline($startDate, $this->duration_minutes);
+
+        // Il warning lo calcoliamo a ritroso dalla scadenza
+        // (Oppure puoi usare lo stesso metodo Business a ritroso)
+        $warningAt = $dueAt->copy()->subMinutes($this->warning_threshold_minutes);
+
+        return [
+            'due_at' => $dueAt,
+            'warning_at' => $warningAt
+        ];
     }
 }
