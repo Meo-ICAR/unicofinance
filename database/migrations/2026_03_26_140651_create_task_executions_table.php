@@ -3,9 +3,9 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Mattiverse\Userstamps\Traits\Userstamps;
 
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('task_executions', function (Blueprint $table) {
@@ -18,15 +18,42 @@ return new class extends Migration
             $table->unsignedBigInteger('client_id')->nullable();
 
             // Stato e tempistiche
-            $table->enum('status', ['todo', 'in_progress', 'completed'])->default('todo');
+
             $table->date('due_date')->nullable()->comment('Scadenza per completare il task');
             $table->timestamp('started_at')->nullable();
             $table->timestamp('completed_at')->nullable();
 
+            $table
+                ->string('reference_number')
+                ->nullable()
+                ->comment("Protocollo univoco immutabile (es. PRT-2026-001). Fondamentale per la ricerca dell'ispettore e l'intestazione del Fascicolo PDF.");
+
+            // 2. Integrazione con il Document Management System (DMS)
+            $table
+                ->string('audit_dms_id')
+                ->nullable()
+                ->comment('ID univoco restituito dal DMS esterno. Se questo campo è valorizzato, significa che il PDF di audit è stato generato e blindato in sola lettura (policy WORM).');
+
+            // 3. Aggiornamento Enum dello Status
+            // Nota: Cambiamo la colonna in stringa per maggiore flessibilità nei workflow futuri, mantenendo i vecchi stati.
+            $table
+                ->string('status')
+                ->default('todo')
+                ->comment('Stato avanzato: todo, in_progress, in_review (attesa back-office), completed, archived (chiusa e archiviata nel DMS).');
+
+            $table
+                ->softDeletes()
+                ->comment('COMPLIANCE REQUIREMENT: I record bancari/finanziari non si cancellano MAI fisicamente. Se un utente elimina la pratica, viene solo nascosta.');
+            $table->unsignedBigInteger('previous_task_execution_id')->nullable()->comment("ID dell'esecuzi");
+
+            $table->userstamps();
+            $table->userstampSoftDeletes();
             $table->timestamps();
 
             $table->foreign('employee_id')->references('id')->on('employees')->cascadeOnDelete();
             $table->foreign('client_id')->references('id')->on('clients')->cascadeOnDelete();
+
+            $table->index(['status', 'due_date']);
         });
     }
 

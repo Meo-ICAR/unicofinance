@@ -44,4 +44,13 @@ class Process extends Model
     {
         return $this->hasMany(ProcessTask::class)->orderBy('sequence_number');
     }
+
+    protected $guarded = ['id'];
+
+    protected function casts(): array
+    {
+        return [
+            'is_active' => 'boolean',
+        ];
+    }
 }

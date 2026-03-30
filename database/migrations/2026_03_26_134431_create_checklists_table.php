@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('checklists', function (Blueprint $table) {
@@ -15,7 +14,9 @@ return new class extends Migration
             $table->string('name')->comment('Nome della checklist (es. Controlli preliminari)');
             $table->text('description')->nullable();
             $table->unsignedInteger('sort_order')->default(0);
-
+            $table
+                ->softDeletes()
+                ->comment("COMPLIANCE REQUIREMENT: Mai eliminare fisicamente un raggruppamento di checklist. Se viene rimosso dal processo, va solo nascosto (Soft Delete) per non corrompere l'Audit Trail delle pratiche passate.");
             $table->timestamps();
         });
     }

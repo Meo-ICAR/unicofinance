@@ -3,6 +3,9 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Mattiverse\Userstamps\Traits\Userstamps;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 
 return new class extends Migration {
     public function up(): void
@@ -16,41 +19,61 @@ return new class extends Migration {
             // Riferimento storico al template (nullable per evitare rotture se l'admin cancella il template)
             $table->foreignId('checklist_item_id')->nullable()->constrained()->nullOnDelete();
 
-            // Copia della descrizione per storicizzazione (immutabile)
-            $table->string('description');
-
             // --- STATO DI AVANZAMENTO ---
             $table
                 ->boolean('is_checked')
                 ->default(false)
                 ->comment('Operazione completata con successo');
 
-            // --- GESTIONE ECCEZIONI E SOLLECITI ---
-            $table
-                ->boolean('requires_revision')
-                ->default(false)
-                ->comment("True se l'operatore ha segnalato un problema (es. doc scaduto)");
-
-            $table
-                ->text('rejection_reason')
-                ->nullable()
-                ->comment('Testo del sollecito inviato al cliente/dipendente');
-
             // --- AUDIT TRAIL E COMPLIANCE ---
-            $table
-                ->boolean('is_not_applicable')
-                ->default(false)
-                ->comment('True se scartata dal Rule Engine (skip_condition o !require_condition)');
-
-            $table
-                ->boolean('automated_by_system')
-                ->default(false)
-                ->comment("True se completata dall'AI, Observer o Action senza intervento umano");
 
             // Ordine visivo
             $table->integer('sort_order')->default(0);
 
-            $table->timestamps();
+            // 1. Snapshot Pattern (Immutabilità)
+            $table
+                ->text('description')
+                ->nullable()
+                ->comment("SNAPSHOT REQUIREMENT: Testo dell'istruzione clonato dal catalogo (checklist_items) al momento della generazione. Se il master broker modifica la regola madre mesi dopo, questa riga storica NON deve cambiare testo.");
+
+            // 2. Rule Engine Flags (Automazioni)
+            $table
+                ->boolean('is_not_applicable')
+                ->default(false)
+                ->comment('RULE ENGINE: True se la voce è stata esclusa dal sistema o dichiarata non necessaria dall\'operatore (es. regola "Under 65" scattata).');
+
+            $table
+                ->boolean('automated_by_system')
+                ->default(false)
+                ->comment("AUDIT: True se questa riga è stata spuntata o esclusa in automatico da un algoritmo e non da un click umano. Essenziale per giustificare all'OAM l'assenza di firma operatore.");
+
+            // 3. Ciclo di Revisione e Rifiuto
+            $table
+                ->boolean('requires_revision')
+                ->default(false)
+                ->comment("WORKFLOW: True se l'analista ha esaminato il documento allegato a questo item e lo ha scartato (es. sfocato, incompleto).");
+
+            $table
+                ->text('rejection_reason')
+                ->nullable()
+                ->comment("AUDIT: Motivazione testuale del rifiuto. Viene stampata nel PDF di conformità e mostrata all'agente per correggere l'errore.");
+
+            // 4. Matrice RACI (Firma Elettronica Logica)
+            $table
+                ->foreignId('validated_by_employee_id')
+                ->nullable()
+                ->comment('RACI [R]: ID del dipendente che ha fisicamente cliccato su "Valida/Approva". Corrisponde alla firma digitale dell\'operatore su questa specifica azione.')
+                ->constrained('employees')
+                ->nullOnDelete();
+
+            $table->timestamps();  // Crea created_at e updated_at
+
+            // LA MAGIA DEL PACCHETTO:
+            $table->userstamps();  // Crea in automatico created_by e updated_by
+
+            // SE USI I SOFT DELETES:
+            $table->softDeletes();
+            $table->userstampSoftDeletes();
         });
     }
 

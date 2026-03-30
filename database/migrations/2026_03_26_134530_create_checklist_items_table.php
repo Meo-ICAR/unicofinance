@@ -10,39 +10,47 @@ return new class extends Migration {
         Schema::create('checklist_items', function (Blueprint $table) {
             $table->id();
 
-            // Relazione col Task Template padre (es. "Fase 1: Onboarding")
-            $table->foreignId('task_template_id')->constrained()->cascadeOnDelete();
-
-            // L'istruzione per l'operatore (es. "Verifica Carta d'Identità")
-            $table->string('description');
-
-            // --- 1. EVENT-DRIVEN (Automazione Passiva) ---
+            // Relazione con il gruppo genitore
             $table
-                ->unsignedBigInteger('required_document_type_id')
-                ->nullable()
-                ->comment('Punta al DB dms_db.document_types. Spunta automatica se il doc arriva.');
+                ->foreignId('checklist_id')
+                ->constrained('checklists')
+                ->cascadeOnDelete()
+                ->comment('Relazione con il gruppo (es. Controlli Preliminari).');
 
-            // --- 2. ACTION PATTERN (Automazione Attiva) ---
+            // Il testo della regola
             $table
-                ->string('action_class')
-                ->nullable()
-                ->comment("Es: App\Actions\ActivateUserAction. Scatta al click dell'operatore.");
+                ->text('instruction')
+                ->comment("SNAPSHOT SOURCE: L'operazione dettagliata da compiere. Questo testo DEVE essere clonato nella \"task_execution_checklist_items\" al momento dell'assegnazione per garantire l'immutabilità storica.");
 
-            // --- 3. RULE ENGINE (Motore di Regole) ---
+            // Flag di base
             $table
-                ->string('skip_condition_class')
-                ->nullable()
-                ->comment('OPT-OUT: Salta questa voce se la classe restituisce true (es. HasHireDate).');
+                ->boolean('is_mandatory')
+                ->default(true)
+                ->comment('Indica se questo step è obbligatorio di default per poter completare il task associato.');
 
+            // Motore a Regole (Rule Engine)
             $table
                 ->string('require_condition_class')
                 ->nullable()
-                ->comment('OPT-IN: Richiedi questa voce SOLO SE la classe restituisce true (es. IsElderly).');
+                ->comment("RULE ENGINE: Namespace completo (es. App\Rules\ForeignerRule) della classe PHP che valuta l'anagrafica. Se restituisce true, questa voce diventa obbligatoria ignorando il flag is_mandatory.");
 
-            // Ordine visivo
-            $table->integer('sort_order')->default(0);
+            $table
+                ->string('skip_condition_class')
+                ->nullable()
+                ->comment("RULE ENGINE: Namespace completo (es. App\Rules\Under65Rule) della classe PHP. Se restituisce true, il sistema scarta questa voce automaticamente impostando is_not_applicable=true nell'esecuzione.");
 
+            // Ordinamento UI
+            $table
+                ->unsignedInteger('sort_order')
+                ->default(0)
+                ->comment("Ordine di visualizzazione all'interno della UI di Filament.");
+
+            // Timestamps e Compliance
             $table->timestamps();
+
+            $table
+                ->softDeletes()
+                ->comment("COMPLIANCE REQUIREMENT: Non eliminare mai fisicamente le regole dal database. Se il master broker disattiva un controllo, questo va solo nascosto (Soft Delete) per non corrompere le FK dell'Audit Trail passato.");
         });
     }
 

@@ -2,14 +2,14 @@
 
 namespace App\Models;
 
-use App\Enums\MacroArea;
 use App\Enums\BusinessFunctionType;
+use App\Enums\MacroArea;
 use App\Enums\OutsourcableStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Model;
 
 class BusinessFunction extends Model
 {
@@ -63,7 +63,8 @@ class BusinessFunction extends Model
      */
     public function employees(): BelongsToMany
     {
-        return $this->belongsToMany(Employee::class, 'business_function_employee')
+        return $this
+            ->belongsToMany(Employee::class, 'business_function_employee')
             ->withPivot('is_manager')
             ->withTimestamps();
     }
@@ -73,7 +74,8 @@ class BusinessFunction extends Model
      */
     public function clients(): BelongsToMany
     {
-        return $this->belongsToMany(Client::class, 'business_function_client')
+        return $this
+            ->belongsToMany(Client::class, 'business_function_client')
             ->withPivot('start_date', 'end_date', 'temporary_reason')
             ->withTimestamps()
             ->orderByPivot('start_date', 'desc');

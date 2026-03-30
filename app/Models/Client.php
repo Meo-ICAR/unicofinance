@@ -7,10 +7,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 
 class Client extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes, LogsActivity;
+
+    protected $guarded = ['id'];
 
     protected $fillable = [
         'company_id', 'is_person', 'name', 'first_name', 'tax_code', 'vat_number', 'email', 'phone',
@@ -78,5 +83,24 @@ class Client extends Model
             ->withPivot('start_date', 'end_date', 'temporary_reason')
             ->withTimestamps()
             ->orderByPivot('start_date', 'desc');
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'start_date' => 'date',
+            'end_date' => 'date',
+            // Aggiungi qui eventuali altri cast anagrafici (es. is_foreigner => 'boolean')
+        ];
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()->logUnguarded()->logOnlyDirty();
+    }
+
+    public function taskExecutions(): HasMany
+    {
+        return $this->hasMany(TaskExecution::class);
     }
 }

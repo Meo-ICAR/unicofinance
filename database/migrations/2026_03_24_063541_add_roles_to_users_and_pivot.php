@@ -13,6 +13,8 @@ return new class extends Migration {
         // 1. Aggiungiamo il Super Admin globale
         Schema::table('users', function (Blueprint $table) {
             $table->boolean('is_super_admin')->default(false)->after('password');
+            $table->uuid('current_company_id')->comment("ID dell'azienda corrente")->after('is_super_admin');
+            $table->foreign('current_company_id')->references('id')->on('companies')->onDelete('cascade');
         });
 
         // 2. Aggiungiamo il ruolo specifico per l'azienda nella pivot

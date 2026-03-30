@@ -5,12 +5,21 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Mattiverse\Userstamps\Traits\Userstamps;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 
 class TaskExecution extends Model
 {
+    use SoftDeletes, LogsActivity;
+    use Userstamps;
+
+    protected $guarded = ['id'];
+
     protected $fillable = [
         'process_task_id', 'employee_id', 'client_id',
-        'status', 'due_date', 'started_at', 'completed_at'
+        'status', 'due_date', 'started_at', 'completed_at', 'previous_task_execution_id'
     ];
 
     protected $casts = [
@@ -63,5 +72,34 @@ class TaskExecution extends Model
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'due_date' => 'date',
+            'started_at' => 'datetime',
+            'completed_at' => 'datetime',
+        ];
+    }
+
+    // Configurazione Audit Trail
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['status', 'employee_id', 'audit_dms_id'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->setDescriptionForEvent(fn(string $eventName) => "Pratica {$eventName}");
+    }
+
+    public function processTask(): BelongsTo
+    {
+        return $this->belongsTo(ProcessTask::class);
+    }
+
+    public function executionItems(): HasMany
+    {
+        return $this->hasMany(TaskExecutionChecklistItem::class);
     }
 }

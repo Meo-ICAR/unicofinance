@@ -3,9 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Model;
 
 class ProcessTask extends Model
 {
@@ -21,9 +21,10 @@ class ProcessTask extends Model
     ];
 
     public function checklists(): HasMany
-{
-    return $this->hasMany(Checklist::class)->orderBy('sort_order');
-}
+    {
+        return $this->hasMany(Checklist::class)->orderBy('sort_order');
+    }
+
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
@@ -42,5 +43,12 @@ class ProcessTask extends Model
     public function raciAssignments(): HasMany
     {
         return $this->hasMany(RaciAssignment::class);
+    }
+
+    protected $guarded = ['id'];
+
+    public function executions(): HasMany
+    {
+        return $this->hasMany(TaskExecution::class);
     }
 }
