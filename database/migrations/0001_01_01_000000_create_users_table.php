@@ -19,13 +19,6 @@ return new class extends Migration {
             $table->string('password')->default('password');
             $table->rememberToken();
             $table->timestamps();  // Crea created_at e updated_at
-
-            // LA MAGIA DEL PACCHETTO:
-            $table->userstamps();  // Crea in automatico created_by e updated_by
-
-            // SE USI I SOFT DELETES:
-            $table->softDeletes();
-            $table->userstampSoftDeletes();
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
