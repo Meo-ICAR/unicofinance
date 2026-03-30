@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Mattiverse\Userstamps\Traits\Userstamps;
 
 return new class extends Migration {
     /**
@@ -13,7 +14,7 @@ return new class extends Migration {
         // 1. Aggiungiamo il Super Admin globale
         Schema::table('users', function (Blueprint $table) {
             $table->boolean('is_super_admin')->default(false)->after('password');
-            $table->uuid('current_company_id')->comment("ID dell'azienda corrente")->after('is_super_admin');
+            $table->uuid('current_company_id')->comment("ID dell'azienda corrente")->after('is_super_admin')->nullable();
             $table->foreign('current_company_id')->references('id')->on('companies')->onDelete('cascade');
         });
 

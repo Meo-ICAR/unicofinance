@@ -50,6 +50,10 @@ class DatabaseSeeder extends Seeder
             CompanyBranchSeeder::class,
             EmployeeSeeder::class,
             ClientTypeSeeder::class,
+            PrivacyDataTypeSeeder::class,
+            BusinessPrivacySeeder::class,
+            PrivacyBpmSeeder::class,
+            SlaPolicySeeder::class,
         ]);
     }
 }

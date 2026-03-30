@@ -3,9 +3,9 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Mattiverse\Userstamps\Traits\Userstamps;
 
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('employees', function (Blueprint $table) {
@@ -14,10 +14,10 @@ return new class extends Migration
             $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete()->comment('ID utente collegato');
             $table->string('name')->nullable()->comment('Nome completo dipendente');
             $table->string('role_title', 100)->nullable()->comment('Qualifica aziendale');
-            $table->string('cf', 16)->nullable()->comment('Codice Fiscale');
-            $table->string('email', 100)->nullable()->comment('Email aziendale');
+            $table->string('cf')->nullable()->comment('Codice Fiscale');
+            $table->string('email')->nullable()->comment('Email aziendale');
             $table->string('pec')->nullable()->comment('PEC');
-            $table->string('phone', 16)->nullable()->comment('Telefono');
+            $table->string('phone')->nullable()->comment('Telefono');
             $table->string('department', 100)->nullable()->comment('Dipartimento');
             // OAM / IVASS
             $table->string('oam', 100)->nullable()->comment('Codice OAM individuale');
@@ -46,7 +46,14 @@ return new class extends Migration
             // Flags
             $table->boolean('is_structure')->default(false)->comment('Personale di struttura');
             $table->boolean('is_ghost')->default(false)->comment('Personale prestato');
-            $table->timestamps();
+            $table->timestamps();  // Crea created_at e updated_at
+
+            // LA MAGIA DEL PACCHETTO:
+            $table->userstamps();  // Crea in automatico created_by e updated_by
+
+            // SE USI I SOFT DELETES:
+            $table->softDeletes();
+            $table->userstampSoftDeletes();
 
             // Self-referencing FK (added after table creation)
         });

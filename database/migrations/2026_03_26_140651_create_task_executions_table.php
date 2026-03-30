@@ -46,9 +46,14 @@ return new class extends Migration {
                 ->comment('COMPLIANCE REQUIREMENT: I record bancari/finanziari non si cancellano MAI fisicamente. Se un utente elimina la pratica, viene solo nascosta.');
             $table->unsignedBigInteger('previous_task_execution_id')->nullable()->comment("ID dell'esecuzi");
 
-            $table->userstamps();
+            $table->timestamps();  // Crea created_at e updated_at
+
+            // LA MAGIA DEL PACCHETTO:
+            $table->userstamps();  // Crea in automatico created_by e updated_by
+
+            // SE USI I SOFT DELETES:
+            //    $table->softDeletes();
             $table->userstampSoftDeletes();
-            $table->timestamps();
 
             $table->foreign('employee_id')->references('id')->on('employees')->cascadeOnDelete();
             $table->foreign('client_id')->references('id')->on('clients')->cascadeOnDelete();

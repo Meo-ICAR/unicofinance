@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Processes\RelationManagers;
 
 use App\Services\BpmRegistryService;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -79,6 +80,19 @@ class ProcessTasksRelationManager extends RelationManager
                     ->columns(2)
                     ->columnSpanFull()
                     ->defaultItems(0),
+                CheckboxList::make('privacyDataTypes')
+                    ->relationship(
+                        name: 'privacyDataTypes',
+                        titleAttribute: 'name',
+                        modifyQueryUsing: fn($query) => $query->orderBy('category')->orderBy('name')
+                    )
+                    ->descriptions([
+                        'HEALTH_DATA' => 'Richiede misure di sicurezza elevate (Crittografia).',
+                        'FIN_CREDIT' => 'Dati critici per il merito creditizio.',
+                        'CRIMINAL_REC' => 'Dati relativi a condanne penali o reati.',
+                    ])
+                    ->columns(2)
+                    ->bulkToggleable()  // Comodo per l'utente
             ]);
     }
 

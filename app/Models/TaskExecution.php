@@ -102,4 +102,28 @@ class TaskExecution extends Model
     {
         return $this->hasMany(TaskExecutionChecklistItem::class);
     }
+
+    /**
+     * Le deadline SLA associate a questa esecuzione.
+     */
+    public function taskDeadline(): HasMany
+    {
+        return $this->hasMany(TaskDeadline::class);
+    }
+
+    /**
+     * Verifica se ha una deadline attiva.
+     */
+    public function hasActiveDeadline(): bool
+    {
+        return $this->taskDeadline()->active()->exists();
+    }
+
+    /**
+     * Ottiene la deadline attiva se presente.
+     */
+    public function getActiveDeadline(): ?TaskDeadline
+    {
+        return $this->taskDeadline()->active()->first();
+    }
 }

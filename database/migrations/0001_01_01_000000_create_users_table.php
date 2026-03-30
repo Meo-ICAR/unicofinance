@@ -3,9 +3,9 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Mattiverse\Userstamps\Traits\Userstamps;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -18,7 +18,14 @@ return new class extends Migration
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password')->default('password');
             $table->rememberToken();
-            $table->timestamps();
+            $table->timestamps();  // Crea created_at e updated_at
+
+            // LA MAGIA DEL PACCHETTO:
+            $table->userstamps();  // Crea in automatico created_by e updated_by
+
+            // SE USI I SOFT DELETES:
+            $table->softDeletes();
+            $table->userstampSoftDeletes();
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
