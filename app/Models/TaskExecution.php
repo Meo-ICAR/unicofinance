@@ -2,13 +2,13 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Mattiverse\Userstamps\Traits\Userstamps;
-use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 
 class TaskExecution extends Model
 {
@@ -18,8 +18,14 @@ class TaskExecution extends Model
     protected $guarded = ['id'];
 
     protected $fillable = [
-        'process_task_id', 'employee_id', 'client_id',
-        'status', 'due_date', 'started_at', 'completed_at', 'previous_task_execution_id',
+        'process_task_id',
+        'employee_id',
+        'client_id',
+        'status',
+        'due_date',
+        'started_at',
+        'completed_at',
+        'previous_task_execution_id',
     ];
 
     protected $casts = [
@@ -90,7 +96,7 @@ class TaskExecution extends Model
             ->logOnly(['status', 'employee_id', 'audit_dms_id'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
-            ->setDescriptionForEvent(fn (string $eventName) => "Pratica {$eventName}");
+            ->setDescriptionForEvent(fn(string $eventName) => "Pratica {$eventName}");
     }
 
     public function processTask(): BelongsTo
@@ -125,5 +131,10 @@ class TaskExecution extends Model
     public function getActiveDeadline(): ?TaskDeadline
     {
         return $this->taskDeadline()->active()->first();
+    }
+
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
     }
 }
