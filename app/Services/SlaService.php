@@ -13,17 +13,29 @@ class SlaService
     public function calculateBusinessDeadline(Carbon $startDate, int $minutes): Carbon
     {
         $deadline = $startDate->copy();
-        $holidays = Holiday::pluck('holiday_date')->toArray();
+        // O(1) lookup usando le chiavi array (estremamente più veloce dell'in_array)
+        $holidays = array_flip(Holiday::pluck('holiday_date')->toArray());
 
         while ($minutes > 0) {
-            $deadline->addMinute();
-
-            // Se è weekend o è un giorno festivo, non scalare i minuti
-            if ($deadline->isWeekend() || in_array($deadline->toDateString(), $holidays)) {
+            // Se il giorno all'istante attuale è festivo/weekend saltiamo subito a mezzanotte del giorno successivo
+            if ($deadline->isWeekend() || isset($holidays[$deadline->toDateString()])) {
+                $deadline->addDay()->startOfDay();
                 continue;
             }
 
-            $minutes--;
+            // Calcola i minuti rimanenti fino a mezzanotte odierna
+            $endOfDay = $deadline->copy()->endOfDay();
+            $minutesToMidnight = $deadline->diffInMinutes($endOfDay, false) + 1; // +1 per coprire tutto il gap fino a mezzanotte
+            
+            if ($minutesToMidnight <= $minutes) {
+                // Il task supera la giornata, passa a domani sottraendo i minuti equivalenti all'orario rimasto
+                $minutes -= $minutesToMidnight;
+                $deadline->addDay()->startOfDay();
+            } else {
+                // Il tempo si esaurisce completamente all'interno della giornata corrente
+                $deadline->addMinutes($minutes);
+                $minutes = 0; // Termina il loop
+            }
         }
 
         return $deadline;

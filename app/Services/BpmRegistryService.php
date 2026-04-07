@@ -15,7 +15,7 @@ class BpmRegistryService
      * * @param string $type 'actions' o 'conditions'
      * @param  int  $currentCompanyId  L'ID dell'azienda attualmente loggata
      */
-    public static function getOptionsForFilament(string $type, char $currentCompanyId): array
+    public static function getOptionsForFilament(string $type, string $currentCompanyId): array
     {
         // 1. Leggiamo tutto l'array dal file di configurazione
         $registry = config("bpm_registry.{$type}", []);

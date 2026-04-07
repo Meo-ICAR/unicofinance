@@ -3,28 +3,57 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Spatie\Activitylog\LogOptions;
-use Spatie\Activitylog\Traits\LogsActivity;
+// use Spatie\Activitylog\LogOptions;
+// use Spatie\Activitylog\Traits\LogsActivity;
 
 class Client extends Model
 {
-    use HasFactory, LogsActivity, SoftDeletes;
+    use HasFactory, SoftDeletes;  // LogsActivity removed
 
     protected $guarded = ['id'];
 
     protected $fillable = [
-        'company_id', 'is_person', 'name', 'first_name', 'tax_code', 'vat_number', 'email', 'phone',
-        'is_pep', 'client_type_id', 'is_sanctioned', 'is_remote_interaction',
-        'general_consent_at', 'privacy_policy_read_at', 'consent_special_categories_at',
-        'consent_sic_at', 'consent_marketing_at', 'consent_profiling_at',
-        'status', 'is_company', 'is_lead', 'leadsource_id', 'acquired_at', 'contoCOGE',
-        'privacy_consent', 'is_client', 'subfornitori', 'is_requiredApprovation', 'is_approved',
-        'is_anonymous', 'blacklist_at', 'blacklisted_by', 'salary', 'salary_quote', 'is_art108', 'user_id',
+        'company_id',
+        'is_person',
+        'name',
+        'first_name',
+        'tax_code',
+        'vat_number',
+        'email',
+        'phone',
+        'is_pep',
+        'client_type_id',
+        'is_sanctioned',
+        'is_remote_interaction',
+        'general_consent_at',
+        'privacy_policy_read_at',
+        'consent_special_categories_at',
+        'consent_sic_at',
+        'consent_marketing_at',
+        'consent_profiling_at',
+        'status',
+        'is_company',
+        'is_lead',
+        'leadsource_id',
+        'acquired_at',
+        'contoCOGE',
+        'privacy_consent',
+        'is_client',
+        'subfornitori',
+        'is_requiredApprovation',
+        'is_approved',
+        'is_anonymous',
+        'blacklist_at',
+        'blacklisted_by',
+        'salary',
+        'salary_quote',
+        'is_art108',
+        'user_id',
     ];
 
     protected $casts = [
@@ -94,10 +123,12 @@ class Client extends Model
         ];
     }
 
-    public function getActivitylogOptions(): LogOptions
-    {
-        return LogOptions::defaults()->logUnguarded()->logOnlyDirty();
-    }
+    /*
+     * public function getActivitylogOptions(): LogOptions
+     * {
+     *     return LogOptions::defaults()->logUnguarded()->logOnlyDirty();
+     * }
+     */
 
     public function taskExecutions(): HasMany
     {

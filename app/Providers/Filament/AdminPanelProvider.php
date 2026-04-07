@@ -13,11 +13,11 @@ use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Pages\Dashboard;
-use Filament\Panel;
-use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\Widgets\AccountWidget;
 use Filament\Widgets\FilamentInfoWidget;
+use Filament\Panel;
+use Filament\PanelProvider;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -49,7 +49,7 @@ class AdminPanelProvider extends PanelProvider
                 'primary' => Color::Amber,
             ])
             // Abilita la multi-tenancy
-            ->tenant(Company::class, ownershipRelationship: 'companies')
+            ->tenant(Company::class, ownershipRelationship: 'company')
             // Menu per passare da un'azienda all'altra
             ->tenantMenu()
             ->databaseNotifications()  // <-- Aggiungi questo!
@@ -60,10 +60,10 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->plugin(
-                ActivityLogPlugin::make()
-                    ->label('Log')
-                    ->pluralLabel('Logs')
-                    ->navigationGroup('System'),
+                //   ActivityLogPlugin::make()
+                //      ->label('Log')
+                //     ->pluralLabel('Logs')
+                //   ->navigationGroup('System'),
                 //   ->cluster('System'),  // Optional: Group inside a cluster
                 FilamentSocialitePlugin::make()
                     // (required) Add providers corresponding with providers in `config/services.php`.
@@ -123,8 +123,8 @@ class AdminPanelProvider extends PanelProvider
                 //   ->socialiteUserModelClass(\App\Models\SocialiteUser::class)
             )
             ->widgets([
-                AccountWidget::class,
-                FilamentInfoWidget::class,
+                //  AccountWidget::class,
+                //  FilamentInfoWidget::class,
             ])
             ->middleware([
                 EncryptCookies::class,

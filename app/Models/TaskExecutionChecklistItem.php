@@ -2,21 +2,24 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Model;
 use Mattiverse\Userstamps\Traits\Userstamps;
-use Spatie\Activitylog\LogOptions;
-use Spatie\Activitylog\Traits\LogsActivity;
+// use Spatie\Activitylog\LogOptions;
+// use Spatie\Activitylog\Traits\LogsActivity;
 
 class TaskExecutionChecklistItem extends Model
 {
-    use LogsActivity;
+    // use LogsActivity;
     use Userstamps;
 
     protected $guarded = ['id'];
 
     protected $fillable = [
-        'task_execution_id', 'checklist_item_id', 'is_checked', 'checked_at',
+        'task_execution_id',
+        'checklist_item_id',
+        'is_checked',
+        'checked_at',
     ];
 
     protected $casts = [
@@ -48,7 +51,7 @@ class TaskExecutionChecklistItem extends Model
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()  // Evita log vuoti
             ->useLogName('checklist_audit')  // Un nome per filtrare i log
-            ->setDescriptionForEvent(fn (string $eventName) => "Controllo documento/regola {$eventName}");
+            ->setDescriptionForEvent(fn(string $eventName) => "Controllo documento/regola {$eventName}");
     }
 
     public function taskExecution(): BelongsTo

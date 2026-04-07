@@ -5,9 +5,13 @@ namespace App\Filament\Actions;
 use App\Models\Process;
 use App\Models\TaskExecution;
 use Filament\Forms\Components\Select;
-use Filament\Notifications\Notification;
 use Filament\Tables\Actions\Action;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
+use Filament\Facades\Filament;
+use Illuminate\Support\Facades\Notification as SystemNotification;
+use Filament\Notifications\Notification as FilamentNotification;
+use App\Notifications\TaskAssignedNotification;
 
 class StartProcessAction extends Action
 {
@@ -31,7 +35,7 @@ class StartProcessAction extends Action
                         // $record contiene l'entità da cui stiamo cliccando (es. l'Employee)
                         $currentModelClass = $record->getMorphClass();
 
-                        return Process::where('is_active', true)
+                        return Filament::getTenant()->processes()->where('is_active', true)
                             ->where(function ($query) use ($currentModelClass) {
                                 // Mostra i processi specifici per questo modello...
                                 $query
@@ -45,56 +49,55 @@ class StartProcessAction extends Action
                     ->searchable(),
             ])
             ->action(function (Model $record, array $data): void {
-                // Il bello di Model $record è che accetta QUALSIASI modello (Employee, Client, ecc.)
+                DB::transaction(function () use ($record, $data) {
+                    // Il bello di Model $record è che accetta QUALSIASI modello (Employee, Client, ecc.)
 
-                $process = Process::with(['tasks.raciAssignments'])->find($data['process_id']);
-                $taskCount = 0;
+                    $process = Process::with(['tasks.raciAssignments'])->find($data['process_id']);
+                    $taskCount = 0;
 
-                foreach ($process->tasks as $task) {
-                    $responsible = $task->raciAssignments->where('raci_role', 'R')->first();
+                    foreach ($process->tasks as $task) {
+                        $responsible = $task->raciAssignments->where('raci_role', 'R')->first();
 
-                    TaskExecution::create([
-                        'process_task_id' => $task->id,
-                        'employee_id' => $responsible?->employee_id,
-                        'client_id' => $responsible?->client_id,
-                        'status' => 'todo',
-                        // MAGIA POLIMORFICA:
-                        // getMorphClass() capisce da solo se è 'App\Models\Employee' o altro
-                        // getKey() prende l'ID corretto
-                        'target_type' => $record->getMorphClass(),
-                        'target_id' => $record->getKey(),
-                    ]);
+                        $execution = TaskExecution::create([
+                            'process_task_id' => $task->id,
+                            'employee_id' => $responsible?->employee_id,
+                            'client_id' => $responsible?->client_id,
+                            'status' => 'todo',
+                            // MAGIA POLIMORFICA:
+                            // getMorphClass() capisce da solo se è 'App\Models\Employee' o altro
+                            // getKey() prende l'ID corretto
+                            'target_type' => $record->getMorphClass(),
+                            'target_id' => $record->getKey(),
+                        ]);
 
-                    // --- GESTIONE NOTIFICHE ---
-                    if (false) {
+                        // --- GESTIONE NOTIFICHE (RIPRISTINATA) ---
 
                         // CASO 1: Dipendente Interno (Ha un account User collegato)
                         if ($execution->employee && $execution->employee->user) {
                             // Invia Email + Campanellina in Filament
                             $execution->employee->user->notify(new TaskAssignedNotification($execution));
                         }
-
                         // CASO 2: Consulente (Ha un account User collegato)
                         elseif ($execution->client && $execution->client->user) {
                             $execution->client->user->notify(new TaskAssignedNotification($execution));
                         }
-
                         // CASO 3: Destinatario Esterno Volante (es. se nel Target c'è una mail o se vogliamo avvisare un cliente specifico)
                         // Usiamo il routing "On-Demand" di Laravel. Non serve che questa persona esista nel database users!
-                        if ($record->getMorphClass() === 'App\Models\Customer' && $record->email) {
+                        elseif (method_exists($record, 'getMorphClass') && $record->getMorphClass() === 'App\Models\Customer' && $record->email) {
                             // Invia SOLO l'email a questo indirizzo
-                            Notification::route('mail', $record->email)
+                            SystemNotification::route('mail', $record->email)
                                 ->notify(new TaskAssignedNotification($execution));
                         }
+                        
+                        $taskCount++;
                     }
-                    $taskCount++;
-                }
 
-                Notification::make()
-                    ->success()
-                    ->title('Processo Avviato')
-                    ->body("Sono stati generati e assegnati {$taskCount} task operativi.")
-                    ->send();
+                    FilamentNotification::make()
+                        ->success()
+                        ->title('Processo Avviato')
+                        ->body("Sono stati generati e assegnati {$taskCount} task operativi.")
+                        ->send();
+                });
             });
     }
 }

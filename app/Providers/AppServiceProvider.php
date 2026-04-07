@@ -25,10 +25,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        Activity::saving(function (Activity $activity) {
-            $activity->properties = $activity->properties->put('ip_address', request()->ip());
-            $activity->properties = $activity->properties->put('user_agent', request()->userAgent());
-        });
+        /*
+         * Activity::saving(function (Activity $activity) {
+         *     $activity->properties = $activity->properties->put('ip_address', request()->ip());
+         *     $activity->properties = $activity->properties->put('user_agent', request()->userAgent());
+         * });
+         */
         Event::listen(function (SocialiteWasCalled $event) {
             $event->extendSocialite('microsoft', Provider::class);
         });

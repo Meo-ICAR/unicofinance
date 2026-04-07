@@ -241,7 +241,11 @@ return new class extends Migration {
             $table->boolean('is_art108')->default(false);
 
             $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('deleted_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
+            $table->softDeletes();
 
             $table->index('blacklist_at');
             $table->index('is_anonymous');
@@ -368,6 +372,7 @@ return new class extends Migration {
             $table->date('due_date')->nullable();
             $table->timestamp('started_at')->nullable();
             $table->timestamp('completed_at')->nullable();
+            $table->boolean('is_overdue')->default(false);
             $table->string('reference_number')->nullable();
             $table->string('audit_dms_id')->nullable();
             $table->string('status')->default('todo');

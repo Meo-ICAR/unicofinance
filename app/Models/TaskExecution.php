@@ -7,13 +7,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Mattiverse\Userstamps\Traits\Userstamps;
-use Spatie\Activitylog\Traits\LogsActivity;
-use Spatie\Activitylog\LogOptions;
+// use Spatie\Activitylog\Traits\LogsActivity;
+// use Spatie\Activitylog\LogOptions;
 
 class TaskExecution extends Model
 {
-    use LogsActivity, SoftDeletes;
-    use Userstamps;
+    // use LogsActivity
+    use Userstamps, SoftDeletes;
 
     protected $guarded = ['id'];
 
@@ -44,19 +44,15 @@ class TaskExecution extends Model
                 $query->where('process_task_id', $execution->process_task_id);
             })->get();
 
-            // ...e creiamo le righe "vuote" (da spuntare) per questa specifica esecuzione
-            $dataToInsert = [];
+            // Sostituiamo insert silenzioso con Model::create() per innescare correttamente Model Events (es. Activity Log)
+            // vitale per audit compliance in ambito OAM / Privacy GDPR
             foreach ($checklistItems as $item) {
-                $dataToInsert[] = [
+                TaskExecutionChecklistItem::create([
                     'task_execution_id' => $execution->id,
                     'checklist_item_id' => $item->id,
                     'is_checked' => false,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
+                ]);
             }
-
-            TaskExecutionChecklistItem::insert($dataToInsert);
         });
     }
 
@@ -136,5 +132,17 @@ class TaskExecution extends Model
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
+    }
+
+    // Relazione con la Policy
+    public function slaPolicy()
+    {
+        return $this->belongsTo(SlaPolicy::class);
+    }
+
+    // Relazione con i Checklist Items
+    public function checklistItems()
+    {
+        return $this->hasMany(TaskExecutionChecklistItem::class);
     }
 }
