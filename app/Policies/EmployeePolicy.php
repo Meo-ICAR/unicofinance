@@ -2,10 +2,10 @@
 
 namespace App\Policies;
 
-use App\Models\Company;
+use App\Models\Employee;
 use Illuminate\Auth\Access\Response;
 
-class CompanyPolicy
+class EmployeePolicy
 {
     /**
      * Determine whether the user can view any models.
@@ -18,9 +18,9 @@ class CompanyPolicy
     /**
      * Determine whether the user can view the model.
      */
-    public function view($user, Company $company): bool
+    public function view($user, Employee $employee): bool
     {
-        return $user->companies()->where('company_id', $company->id)->exists();
+        return $user->companies()->where('company_id', $employee->company_id)->exists() || $user->is_super_admin;
     }
 
     /**
@@ -28,37 +28,37 @@ class CompanyPolicy
      */
     public function create($user): bool
     {
-        return true;  // Allow all authenticated users to create companies
+        return true; // Allow all authenticated users to create employees
     }
 
     /**
      * Determine whether the user can update the model.
      */
-    public function update($user, Company $company): bool
+    public function update($user, Employee $employee): bool
     {
-        return $user->companies()->where('company_id', $company->id)->exists() || $user->is_super_admin;
+        return $user->companies()->where('company_id', $employee->company_id)->exists() || $user->is_super_admin;
     }
 
     /**
      * Determine whether the user can delete the model.
      */
-    public function delete($user, Company $company): bool
+    public function delete($user, Employee $employee): bool
     {
-        return true;  // Allow all authenticated users to delete companies
+        return true; // Allow all authenticated users to delete employees
     }
 
     /**
      * Determine whether the user can restore the model.
      */
-    public function restore($user, Company $company): bool
+    public function restore($user, Employee $employee): bool
     {
-        return true;  // Allow all authenticated users to restore companies
+        return true; // Allow all authenticated users to restore employees
     }
 
     /**
      * Determine whether the user can force delete the model.
      */
-    public function forceDelete($user, Company $company): bool
+    public function forceDelete($user, Employee $employee): bool
     {
         return $user->is_super_admin;
     }

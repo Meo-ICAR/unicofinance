@@ -2,25 +2,25 @@
 
 namespace App\Policies;
 
-use App\Models\User;
+use App\Models\Client;
 use Illuminate\Auth\Access\Response;
 
-class UserPolicy
+class ClientPolicy
 {
     /**
      * Determine whether the user can view any models.
      */
     public function viewAny($user): bool
     {
-        return $user->is_super_admin;
+        return true;
     }
 
     /**
      * Determine whether the user can view the model.
      */
-    public function view($user, User $model): bool
+    public function view($user, Client $client): bool
     {
-        return $user->is_super_admin || $user->id === $model->id;
+        return $user->companies()->where('company_id', $client->company_id)->exists() || $user->is_super_admin;
     }
 
     /**
@@ -28,37 +28,37 @@ class UserPolicy
      */
     public function create($user): bool
     {
-        return $user->is_super_admin;
+        return true; // Allow all authenticated users to create clients
     }
 
     /**
      * Determine whether the user can update the model.
      */
-    public function update($user, User $model): bool
+    public function update($user, Client $client): bool
     {
-        return $user->is_super_admin || $user->id === $model->id;
+        return $user->companies()->where('company_id', $client->company_id)->exists() || $user->is_super_admin;
     }
 
     /**
      * Determine whether the user can delete the model.
      */
-    public function delete($user, User $model): bool
+    public function delete($user, Client $client): bool
     {
-        return $user->is_super_admin || $user->id === $model->id;
+        return true; // Allow all authenticated users to delete clients
     }
 
     /**
      * Determine whether the user can restore the model.
      */
-    public function restore($user, User $model): bool
+    public function restore($user, Client $client): bool
     {
-        return $user->is_super_admin;
+        return true; // Allow all authenticated users to restore clients
     }
 
     /**
      * Determine whether the user can force delete the model.
      */
-    public function forceDelete($user, User $model): bool
+    public function forceDelete($user, Client $client): bool
     {
         return $user->is_super_admin;
     }

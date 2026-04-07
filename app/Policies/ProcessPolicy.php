@@ -3,60 +3,63 @@
 namespace App\Policies;
 
 use App\Models\Process;
-use App\Models\User;
+use Illuminate\Auth\Access\Response;
 
 class ProcessPolicy
 {
     /**
-     * Super Admin bypass.
-     */
-    public function before(User $user, $ability): ?bool
-    {
-        if ($user->is_super_admin) {
-            return true;
-        }
-
-        return null;
-    }
-
-    /**
      * Determine whether the user can view any models.
      */
-    public function viewAny(User $user): bool
+    public function viewAny($user): bool
     {
-        // Solo Super Admin e Admin dell'azienda possono vedere i processi
-        return $user->is_super_admin || $user->isTenantAdmin() || $user->isTenantInspector();
+        return true;
     }
 
     /**
      * Determine whether the user can view the model.
      */
-    public function view(User $user, Process $process): bool
+    public function view($user, Process $process): bool
     {
-        return $user->is_super_admin || $user->isTenantAdmin() || $user->isTenantInspector();
+        return $user->companies()->where('company_id', $process->company_id)->exists() || $user->is_super_admin;
     }
 
     /**
      * Determine whether the user can create models.
      */
-    public function create(User $user): bool
+    public function create($user): bool
     {
-        return $user->is_super_admin || $user->isTenantAdmin();
+        return $user->companies()->exists() || $user->is_super_admin;
     }
 
     /**
      * Determine whether the user can update the model.
      */
-    public function update(User $user, Process $process): bool
+    public function update($user, Process $process): bool
     {
-        return $user->is_super_admin || $user->isTenantAdmin();
+        return $user->companies()->where('company_id', $process->company_id)->exists() || $user->is_super_admin;
     }
 
     /**
      * Determine whether the user can delete the model.
      */
-    public function delete(User $user, Process $process): bool
+    public function delete($user, Process $process): bool
     {
-        return $user->is_super_admin || $user->isTenantAdmin();
+        return $user->companies()->where('company_id', $process->company_id)->exists() || $user->is_super_admin;
+    }
+
+    /**
+     * Determine whether the user can restore the model.
+     */
+    public function restore($user, Process $process): bool
+    {
+        return $user->companies()->where('company_id', $process->company_id)->exists() || $user->is_super_admin;
+    }
+
+    /**
+     * Determine whether the user can force delete the model.
+     */
+    public function forceDelete($user, Process $process): bool
+    {
+        return $user->is_super_admin;
     }
 }

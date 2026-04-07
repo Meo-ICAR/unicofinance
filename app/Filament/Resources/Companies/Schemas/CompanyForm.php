@@ -13,6 +13,7 @@ use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Schema;
 
+
 class CompanyForm
 {
     public static function configure(Schema $schema): Schema

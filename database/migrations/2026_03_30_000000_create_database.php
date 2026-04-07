@@ -126,6 +126,7 @@ return new class extends Migration {
             $table->string('manager_last_name', 100)->nullable();
             $table->string('manager_tax_code', 16)->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
 
         Schema::create('business_functions', function (Blueprint $table) {
@@ -290,6 +291,7 @@ return new class extends Migration {
             $table->string('target_model')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
+            $table->softDeletes();
         });
 
         // ==========================================

@@ -7,7 +7,7 @@ use App\Filament\Resources\Processes\Pages\EditProcesses;
 use App\Filament\Resources\Processes\Pages\ListProcesses;
 use App\Filament\Resources\Processes\Schemas\ProcessesForm;
 use App\Filament\Resources\Processes\Tables\ProcessesTable;
-use App\Models\Processes;
+use App\Models\Process;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -18,7 +18,7 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class ProcessesResource extends Resource
 {
-    protected static ?string $model = Processes::class;
+    protected static ?string $model = Process::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
