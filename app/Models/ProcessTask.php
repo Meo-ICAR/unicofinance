@@ -71,6 +71,11 @@ class ProcessTask extends Model
         return $this->hasMany(RaciAssignment::class);
     }
 
+    public function privacyData(): HasMany
+    {
+        return $this->hasMany(ProcessTaskPrivacyData::class, 'process_task_id');
+    }
+
     protected $guarded = ['id'];
 
     public function executions(): HasMany

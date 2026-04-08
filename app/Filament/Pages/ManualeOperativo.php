@@ -91,7 +91,7 @@ class ManualeOperativo extends Page implements HasSchemas
                 ->label('Accesso')
                 ->badge()
                 ->color('warning'),
-            TextEntry::make('legal_basis')
+            TextEntry::make('legal_base.name')
                 ->label('Base Giuridica'),
         ]),
         TextEntry::make('purpose')
@@ -150,7 +150,7 @@ class ManualeOperativo extends Page implements HasSchemas
     {
         return Process::query()
             ->where('company_id', Filament::getTenant()?->id)
-            ->with(['businessFunction', 'tasks.raciAssignments.businessFunction', 'tasks.checklists.items'])
+            ->with(['businessFunction', 'tasks.raciAssignments.businessFunction', 'tasks.checklists.items', 'tasks.privacyData.privacyDataType', 'tasks.privacyData.legalBase'])
             ->where('is_active', true)
             ->get()
             ->toArray();
