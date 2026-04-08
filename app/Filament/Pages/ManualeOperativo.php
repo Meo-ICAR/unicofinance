@@ -96,8 +96,8 @@ class ManualeOperativo extends Page implements HasSchemas
         ]),
         TextEntry::make('purpose')
             ->label('Finalità')
-            ->size(TextEntry\TextEntrySize::Small)
-            ->italic(),
+           ->size(TextSize::Small),
+           // ->italic(),
     ])
     ->columns(1)
     ->grid(2), // Mostra i dati privacy su due colonne per risparmiare spazio verticale

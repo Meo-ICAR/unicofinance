@@ -17,6 +17,8 @@ use Filament\Tables\Table;
 class ProcessTaskPrivacyDataResource extends Resource
 {
     protected static ?string $model = ProcessTaskPrivacyData::class;
+    protected static bool $shouldRegisterNavigation = false;
+    protected static bool $isScopedToTenant = false;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
