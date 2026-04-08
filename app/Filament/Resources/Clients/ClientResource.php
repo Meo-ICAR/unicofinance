@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Filament\Resources\Employees;
+namespace App\Filament\Resources\Clients;
 
-use App\Filament\Resources\Employees\Pages\CreateEmployee;
-use App\Filament\Resources\Employees\Pages\EditEmployee;
-use App\Filament\Resources\Employees\Pages\ListEmployees;
-use App\Filament\Resources\Employees\Schemas\EmployeeForm;
-use App\Filament\Resources\Employees\Tables\EmployeesTable;
-use App\Models\Employee;
+use App\Filament\Resources\Clients\Pages\CreateClient;
+use App\Filament\Resources\Clients\Pages\EditClient;
+use App\Filament\Resources\Clients\Pages\ListClients;
+use App\Filament\Resources\Clients\Schemas\ClientForm;
+use App\Filament\Resources\Clients\Tables\ClientsTable;
+use App\Models\Client;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -17,15 +17,13 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use UnitEnum;
 
-class EmployeeResource extends Resource
+class ClientResource extends Resource
 {
-    protected static ?string $model = Employee::class;
+    protected static ?string $model = Client::class;
 
     protected static string|UnitEnum|null $navigationGroup = 'Organigramma';
 
-    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-user-group';
-
-    protected static ?string $navigationLabel = 'Dipendenti';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-identification';
 
     protected static ?string $recordTitleAttribute = 'name';
 
@@ -33,12 +31,12 @@ class EmployeeResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return EmployeeForm::configure($schema);
+        return ClientForm::configure($schema);
     }
 
     public static function table(Table $table): Table
     {
-        return EmployeesTable::configure($table);
+        return ClientsTable::configure($table);
     }
 
     public static function getRelations(): array
@@ -51,9 +49,9 @@ class EmployeeResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => ListEmployees::route('/'),
-            'create' => CreateEmployee::route('/create'),
-            'edit' => EditEmployee::route('/{record}/edit'),
+            'index' => ListClients::route('/'),
+            'create' => CreateClient::route('/create'),
+            'edit' => EditClient::route('/{record}/edit'),
         ];
     }
 
