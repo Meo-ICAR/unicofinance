@@ -123,4 +123,9 @@ class Employee extends Model
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
     }
+
+    public function taskExecutions()
+    {
+        return $this->hasMany(TaskExecution::class);
+    }
 }

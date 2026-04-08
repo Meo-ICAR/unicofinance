@@ -12,6 +12,31 @@ class ProcessTask extends Model
 {
     use HasFactory;
 
+    protected static function booted()
+    {
+        static::created(function (ProcessTask $task) {
+            $process = $task->process;
+            $company_id = $process->company_id;
+            // Eredita la business function del processo, oppure usa quella assegnata al task come fallback
+            $businessFunctionId = $process ? $process->business_function_id : $task->business_function_id;
+
+
+                $roles = ['R', 'A', 'C', 'I'];
+                foreach ($roles as $role) {
+                    $task->raciAssignments()->firstOrCreate(
+                        ['company_id' => $company_id,
+                        'process_task_id' =>  $task->id,
+                         'role' => $role], // Controlla se esiste già questo ruolo
+                        [
+
+                            'business_function_id' => $businessFunctionId,
+                        ]
+                    );
+                }
+
+        });
+    }
+
     protected $fillable = [
         'company_id',
         'process_id',

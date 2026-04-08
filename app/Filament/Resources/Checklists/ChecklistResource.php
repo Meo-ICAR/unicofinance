@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Checklists;
 use App\Filament\Resources\Checklists\Pages\CreateChecklist;
 use App\Filament\Resources\Checklists\Pages\EditChecklist;
 use App\Filament\Resources\Checklists\Pages\ListChecklists;
+use App\Filament\Resources\Checklists\RelationManagers\ItemsRelationManager;
 use App\Filament\Resources\Checklists\Schemas\ChecklistForm;
 use App\Filament\Resources\Checklists\Tables\ChecklistsTable;
 use App\Models\Checklist;
@@ -19,6 +20,9 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 class ChecklistResource extends Resource
 {
     protected static ?string $model = Checklist::class;
+
+    protected static bool $shouldRegisterNavigation = false;
+    protected static bool $isScopedToTenant = false;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
@@ -35,7 +39,7 @@ class ChecklistResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            ItemsRelationManager::class,
         ];
     }
 

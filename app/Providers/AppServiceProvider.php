@@ -9,6 +9,8 @@ use Illuminate\Support\ServiceProvider;
 use SocialiteProviders\Manager\SocialiteWasCalled;
 use SocialiteProviders\Microsoft\Provider;
 use Spatie\Activitylog\Models\Activity;
+use App\Models\RaciAssignment;
+use App\Observers\RaciAssignmentObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -25,6 +27,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+       // RaciAssignment::observe(RaciAssignmentObserver::class);
         /*
          * Activity::saving(function (Activity $activity) {
          *     $activity->properties = $activity->properties->put('ip_address', request()->ip());

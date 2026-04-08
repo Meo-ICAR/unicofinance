@@ -13,9 +13,6 @@ class ChecklistForm
     {
         return $schema
             ->components([
-                Select::make('process_task_id')
-                    ->relationship('processTask', 'name')
-                    ->required(),
                 TextInput::make('name')
                     ->required(),
                 Textarea::make('description')

@@ -18,6 +18,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 
 #[Fillable(['name', 'email', 'password', 'is_approved'])]
 #[Hidden(['password', 'remember_token'])]
@@ -116,5 +118,100 @@ class User extends Authenticatable implements FilamentUser, HasAvatar, HasTenant
     public function isTenantInspector(): bool
     {
         return $this->getCurrentTenantRole() === 'inspector';
+    }
+
+
+
+   /**
+     * Relazione Eloquent: Un Utente ha un Impiegato
+     */
+    public function employee()
+    {
+        return $this->hasOne(Employee::class, 'user_id');
+    }
+
+     /**
+     * Relazione Eloquent: Un Utente ha un Impiegato
+     */
+    public function consultant()
+    {
+        return $this->hasOne(Client::class, 'user_id');
+    }
+
+    public function hasBpmPermission(string $resource, string $ability): bool
+    {
+        $permissions = $this->getBpmPermissions();
+
+        if (in_array('*', $permissions) || in_array("{$resource}.*", $permissions)) {
+            return true;
+        }
+
+        return in_array("{$resource}.{$ability}", $permissions);
+    }
+
+    /**
+     * Motore di estrazione basato sui Modelli Eloquent
+     */
+    public function getBpmPermissions(): array
+    {
+        $cacheKey = "user_{$this->id}_bpm_permissions";
+
+        return Cache::remember($cacheKey, 300, function () {
+
+            // A. Recuperiamo l'impiegato tramite la relazione.
+            // Nota: se il modello Employee usa il trait SoftDeletes,
+            // Laravel aggiungerà automaticamente "whereNull('deleted_at')".
+            $employee = $this->employee;
+
+            if (!$employee) {
+                return [];
+            }
+
+            $permissions = [];
+
+            // B. Recuperiamo le pratiche usando l'Eager Loading (with) per evitare il problema N+1
+            $tasks = $employee->taskExecutions()->with('processTask.process')->get();
+
+            // C. Mappiamo gli stati
+            foreach ($tasks as $task) {
+                // Navighiamo le relazioni Eloquent in modo pulito
+                $process = $task->processTask->process;
+
+                $resource = $process->target_model
+                    ? strtolower(class_basename($process->target_model))
+                    : Str::slug($process->name, '_');
+
+                $permissions[] = "{$resource}.lettura";
+
+                if (in_array($task->status, ['todo', 'in_progress'])) {
+                    $permissions[] = "{$resource}.modifica";
+                    $permissions[] = "{$resource}.creazione";
+                    $permissions[] = "{$resource}.esecuzione";
+                }
+            }
+
+            // D. Gestione Supervisori (Accesso Gerarchico) tramite "whereHas"
+            if ($employee->supervisor_type !== 'no') {
+
+                // Cerchiamo i Task che appartengono agli impiegati coordinati da questo utente
+                $subordinateTasks = TaskExecution::with('processTask.process')
+                    ->whereHas('employee', function ($query) use ($employee) {
+                        $query->where('coordinated_by_id', $employee->id);
+                    })
+                    ->get();
+
+                foreach ($subordinateTasks as $subTask) {
+                    $process = $subTask->processTask->process;
+
+                    $resource = $process->target_model
+                        ? strtolower(class_basename($process->target_model))
+                        : Str::slug($process->name, '_');
+
+                    $permissions[] = "{$resource}.lettura";
+                }
+            }
+
+            return array_values(array_unique($permissions));
+        });
     }
 }

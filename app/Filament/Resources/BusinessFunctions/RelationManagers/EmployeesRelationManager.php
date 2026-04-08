@@ -27,12 +27,14 @@ class EmployeesRelationManager extends RelationManager
                     ->label('Responsabile')
                     ->default(false),
                 DatePicker::make('start_date')
+                ->default(now())
                     ->label('Inizio Incarico'),
-                DatePicker::make('end_date')
-                    ->label('Fine Incarico'),
-                TextInput::make('temporary_reason')
+                      TextInput::make('temporary_reason')
                     ->label('Causale (es. Interim)')
                     ->maxLength(255),
+                DatePicker::make('end_date')
+                    ->label('Fine Incarico'),
+
             ]);
     }
 

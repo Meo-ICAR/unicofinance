@@ -14,9 +14,7 @@ class ChecklistItemForm
     {
         return $schema
             ->components([
-                Select::make('checklist_id')
-                    ->relationship('checklist', 'name')
-                    ->required(),
+
                 Textarea::make('instruction')
                     ->required()
                     ->columnSpanFull(),

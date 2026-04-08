@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Processes;
 use App\Filament\Resources\Processes\Pages\CreateProcesses;
 use App\Filament\Resources\Processes\Pages\EditProcesses;
 use App\Filament\Resources\Processes\Pages\ListProcesses;
+use App\Filament\Resources\Processes\RelationManagers\TasksRelationManager;
 use App\Filament\Resources\Processes\Schemas\ProcessesForm;
 use App\Filament\Resources\Processes\Tables\ProcessesTable;
 use App\Models\BusinessFunction;
@@ -20,6 +21,7 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Filament\Notifications\Notification;
 use BackedEnum;
 use UnitEnum;
 
@@ -54,7 +56,7 @@ class ProcessesResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            TasksRelationManager::class,
         ];
     }
 
@@ -79,7 +81,7 @@ class ProcessesResource extends Resource
     {
         $query = parent::getEloquentQuery();
         $user = auth()->user();
-        $companyId = Filament::getCurrentPanel()->getId();
+        $companyId =  $user->current_company_id;
 
         // 1. Se l'utente è un SUPER ADMIN tuo (es. tu che sviluppi),
         // fagli vedere tutto per poter fare manutenzione.
@@ -125,8 +127,7 @@ class ProcessesResource extends Resource
                     $newProcess = $record->replicate();
                     $newProcess->name = $record->name . ' (Copia)';
                     $newProcess->save();
-
-                    \Filament\Notifications\Notification::make()
+Notification::make()
                         ->title('Processo Duplicato')
                         ->body("Il processo '{$record->name}' è stato duplicato con successo.")
                         ->success()
@@ -141,7 +142,7 @@ class ProcessesResource extends Resource
                     $record->is_active = true;
                     $record->save();
 
-                    \Filament\Notifications\Notification::make()
+                    Notification::make()
                         ->title('Processo Attivato')
                         ->body("Il processo '{$record->name}' è stato attivato.")
                         ->success()
@@ -156,7 +157,7 @@ class ProcessesResource extends Resource
                     $record->is_active = false;
                     $record->save();
 
-                    \Filament\Notifications\Notification::make()
+                    Notification::make()
                         ->title('Processo Disattivato')
                         ->body("Il processo '{$record->name}' è stato disattivato.")
                         ->warning()

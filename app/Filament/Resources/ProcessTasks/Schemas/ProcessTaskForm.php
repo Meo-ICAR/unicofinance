@@ -13,12 +13,10 @@ class ProcessTaskForm
     {
         return $schema
             ->components([
-                Select::make('company_id')
-                    ->relationship('company', 'name')
+                TextInput::make('name')
                     ->required(),
-                Select::make('process_id')
-                    ->relationship('process', 'name')
-                    ->required(),
+                Textarea::make('description')
+                    ->columnSpanFull(),
                 Select::make('business_function_id')
                     ->relationship('businessFunction', 'name')
                     ->required(),
@@ -26,10 +24,7 @@ class ProcessTaskForm
                     ->required()
                     ->numeric()
                     ->default(0),
-                TextInput::make('name')
-                    ->required(),
-                Textarea::make('description')
-                    ->columnSpanFull(),
+
             ]);
     }
 }

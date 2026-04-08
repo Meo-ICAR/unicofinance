@@ -5,6 +5,7 @@ namespace App\Filament\Resources\ProcessTasks;
 use App\Filament\Resources\ProcessTasks\Pages\CreateProcessTask;
 use App\Filament\Resources\ProcessTasks\Pages\EditProcessTask;
 use App\Filament\Resources\ProcessTasks\Pages\ListProcessTasks;
+use App\Filament\Resources\ProcessTasks\RelationManagers\ChecklistsRelationManager;
 use App\Filament\Resources\ProcessTasks\Schemas\ProcessTaskForm;
 use App\Filament\Resources\ProcessTasks\Tables\ProcessTasksTable;
 use App\Models\ProcessTask;
@@ -17,6 +18,8 @@ use Filament\Tables\Table;
 class ProcessTaskResource extends Resource
 {
     protected static ?string $model = ProcessTask::class;
+    protected static bool $shouldRegisterNavigation = false;
+
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
@@ -35,7 +38,7 @@ class ProcessTaskResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            ChecklistsRelationManager::class,
         ];
     }
 

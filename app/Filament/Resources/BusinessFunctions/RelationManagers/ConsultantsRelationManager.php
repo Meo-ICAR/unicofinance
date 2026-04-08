@@ -6,8 +6,8 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
-use Filament\Tables\Actions\AttachAction;
-use Filament\Tables\Actions\DetachAction;
+use Filament\Actions\AttachAction;
+use Filament\Actions\DetachAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -15,19 +15,21 @@ class ConsultantsRelationManager extends RelationManager
 {
     protected static string $relationship = 'clients';
 
-    protected static ?string $title = 'Consulenti / Fornitori Esterni';
+    protected static ?string $title = 'Consulenti Esterni';
 
     public function form(Schema $schema): Schema
     {
         return $schema
             ->schema([
                 DatePicker::make('start_date')
+                ->default(now())
                     ->label('Inizio Incarico'),
+                        TextInput::make('temporary_reason')
+                    ->label('Annotazioni ( es. interim)')
+                    ->maxLength(255),
                 DatePicker::make('end_date')
                     ->label('Fine Incarico (Scadenza)'),
-                TextInput::make('temporary_reason')
-                    ->label('Note / Causale')
-                    ->maxLength(255),
+
             ]);
     }
 
@@ -37,7 +39,7 @@ class ConsultantsRelationManager extends RelationManager
             ->recordTitleAttribute('name')
             ->columns([
                 TextColumn::make('name')
-                    ->label('Ragione Sociale')
+                    ->label('Denominazione')
                     ->searchable(),
                 TextColumn::make('email')
                     ->label('Email')
@@ -62,7 +64,7 @@ class ConsultantsRelationManager extends RelationManager
                         $action->getRecordSelect(),
                         DatePicker::make('start_date')->label('Inizio Incarico'),
                         DatePicker::make('end_date')->label('Fine/Scadenza'),
-                        TextInput::make('temporary_reason')->label('Causale'),
+                        TextInput::make('temporary_reason')->label('Causale es. Interim'),
                     ]),
             ])
             ->actions([

@@ -21,6 +21,8 @@ class TaskExecutionResource extends Resource
     protected static ?string $model = TaskExecution::class;
 
     protected static ?string $tenantOwnershipRelationshipName = 'company';
+    protected static bool $shouldRegisterNavigation = false;
+    protected static bool $isScopedToTenant = false;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
