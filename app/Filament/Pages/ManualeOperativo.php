@@ -79,6 +79,47 @@ class ManualeOperativo extends Page implements HasSchemas
                                             ->hiddenLabel()
                                             ->color('gray'),
 
+
+                                            RepeatableEntry::make('privacy_data')
+    ->label('Dati Privacy Trattati')
+    ->schema([
+        Grid::make(3)->schema([
+            TextEntry::make('privacy_data_type.name')
+                ->label('Tipo Dato')
+                ->weight(FontWeight::Bold),
+            TextEntry::make('access_level')
+                ->label('Accesso')
+                ->badge()
+                ->color('warning'),
+            TextEntry::make('legal_basis')
+                ->label('Base Giuridica'),
+        ]),
+        TextEntry::make('purpose')
+            ->label('Finalità')
+            ->size(TextEntry\TextEntrySize::Small)
+            ->italic(),
+    ])
+    ->columns(1)
+    ->grid(2), // Mostra i dati privacy su due colonne per risparmiare spazio verticale
+
+                                        RepeatableEntry::make('checklists')
+                                            ->label('Checklist Operative')
+                                            ->schema([
+                                                TextEntry::make('name')
+                                                    ->label('Gruppo')
+                                                    ->weight(FontWeight::SemiBold)
+                                                    ->color('primary'),
+
+                                                RepeatableEntry::make('items')
+                                                    ->label('Istruzioni di Dettaglio')
+                                                    ->schema([
+                                                        TextEntry::make('instruction')
+                                                            ->hiddenLabel()
+                                                            ->bulleted()
+                                                            ->columns(1)
+                                                    ])
+                                            ]),
+
                                         RepeatableEntry::make('raci_assignments')
                                             ->label('Matrice RACI')
                                             ->grid(4)
@@ -109,7 +150,7 @@ class ManualeOperativo extends Page implements HasSchemas
     {
         return Process::query()
             ->where('company_id', Filament::getTenant()?->id)
-            ->with(['businessFunction', 'tasks.raciAssignments.businessFunction'])
+            ->with(['businessFunction', 'tasks.raciAssignments.businessFunction', 'tasks.checklists.items'])
             ->where('is_active', true)
             ->get()
             ->toArray();

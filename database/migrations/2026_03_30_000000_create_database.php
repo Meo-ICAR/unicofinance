@@ -219,6 +219,18 @@ return new class extends Migration {
             $table->timestamp('consent_marketing_at')->nullable();
             $table->timestamp('consent_profiling_at')->nullable();
 
+              // GDPR
+            $table->string('privacy_role')->nullable();
+            $table->text('purpose')->nullable();
+            $table->text('data_subjects')->nullable();
+            $table->text('data_categories')->nullable();
+            $table->string('retention_period')->nullable();
+            $table->string('extra_eu_transfer')->nullable();
+            $table->text('security_measures')->nullable();
+            $table->string('privacy_data')->nullable();
+            $table->boolean('is_structure')->default(false);
+            $table->boolean('is_ghost')->default(false);
+
             // Dipende da client_types
             $table->foreignId('client_type_id')->nullable()->constrained('client_types')->nullOnDelete();
 
@@ -336,16 +348,44 @@ return new class extends Migration {
             $table->softDeletes();
         });
 
-        Schema::create('process_task_privacy_data', function (Blueprint $table) {
-            $table->comment('Registro Trattamenti: QUALE task accede a QUALE dato sensibile.');
-            $table->foreignId('process_task_id')->constrained('process_tasks')->cascadeOnDelete();
-            $table->foreignId('privacy_data_type_id')->constrained('privacy_data_types')->cascadeOnDelete();
-            $table->enum('access_level', ['read', 'write', 'delete'])->default('read');
-            $table->foreignId('created_by')->nullable();
-            $table->foreignId('updated_by')->nullable();
-            $table->timestamps();
-            $table->primary(['process_task_id', 'privacy_data_type_id']);
-        });
+Schema::create('privacy_legal_bases', function (Blueprint $table) {
+    $table->id();
+    $table->string('name')->comment('Nome breve: Consenso, Contratto, ecc.');
+    $table->string('reference_article')->default('Art. 6 par. 1 lett. ...');
+    $table->text('description')->nullable()->comment('Spiegazione estesa della base giuridica');
+    $table->timestamps();
+});
+
+
+      Schema::create('process_task_privacy_data', function (Blueprint $table) {
+    $table->comment('Registro Trattamenti: Dettaglio del trattamento dati personali per ogni task.');
+
+    // Chiavi Esterne
+    $table->foreignId('process_task_id')->constrained('process_tasks')->cascadeOnDelete();
+    $table->foreignId('privacy_data_type_id')->constrained('privacy_data_types')->cascadeOnDelete();
+
+    // Dettagli del Trattamento
+    $table->enum('access_level', ['read', 'write', 'update', 'delete'])->default('read');
+
+    // Finalità e Base Giuridica (GDPR Compliance)
+    $table->string('purpose')->nullable()->comment('Finalità specifica del trattamento in questo task');
+    $table->foreignId('privacy_legal_base_id')->nullable()->constrained('privacy_legal_bases');
+    // 'Es: Consenso, Contratto, Obbligo Legale, Legittimo Interesse');
+
+
+    // Sicurezza e Conservazione
+    $table->string('retention_period')->nullable()->comment('Tempo di conservazione dei dati relativi a questo task');
+    $table->boolean('is_encrypted')->default(false)->comment('Il dato è cifrato durante questo task?');
+    $table->boolean('is_shared_externally')->default(false)->comment('Il dato viene inviato a terzi in questa fase?');
+
+    // Audit
+    $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+    $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
+    $table->timestamps();
+
+    // Chiave Primaria Composta
+    $table->primary(['process_task_id', 'privacy_data_type_id'], 'task_privacy_primary');
+});
 
         // ==========================================
         // FASE 8: ELEMENTI DELLA CHECKLIST E ESECUZIONE (TICKET)
