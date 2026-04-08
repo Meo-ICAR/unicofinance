@@ -5,13 +5,17 @@ namespace App\Filament\Resources\Processes\Tables;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\Action;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
+
+use App\Filament\Pages\ManualeOperativo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\Process;
 
 class ProcessesTable
 {
@@ -45,12 +49,8 @@ class ProcessesTable
                     ->boolean()
                     ->sortable(),
 
-                TextColumn::make('created_at')
-                    ->label('Creato il')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                
+
+
                 TextColumn::make('updated_at')
                     ->label('Modificato il')
                     ->dateTime()
@@ -62,6 +62,12 @@ class ProcessesTable
             ])
             ->recordActions([
                 EditAction::make(),
+                Action::make('print')
+                    ->label('Stampa')
+                    ->icon('heroicon-o-printer')
+                    ->color('info')
+                    ->url(fn (Process $record): string => ManualeOperativo::getUrl(['process_id' => $record->id, 'print' => true]))
+                    ->openUrlInNewTab(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

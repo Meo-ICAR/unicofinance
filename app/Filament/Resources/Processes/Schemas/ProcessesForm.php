@@ -10,6 +10,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
+use \Illuminate\Database\Eloquent\Builder;
 
 class ProcessesForm
 {
@@ -33,18 +34,11 @@ class ProcessesForm
                                 ->columnSpanFull(),
 
                             Select::make('business_function_id')
-                                ->label('Funzione Aziendale')
-                                ->relationship('businessFunction', 'name', modifyQueryUsing: fn (\Illuminate\Database\Eloquent\Builder $query) => $query->where('company_id', auth()->user()?->current_company_id))
-                                ->searchable()
-                                ->preload()
-                                ->required(),
+                                ->relationship('businessFunction', 'name').
+                              //  ->required(),
 
                             Select::make('owner_function_id')
-                                ->label('Proprietario (Funzione)')
-                                ->relationship('ownerFunction', 'name', modifyQueryUsing: fn (\Illuminate\Database\Eloquent\Builder $query) => $query->where('company_id', auth()->user()?->current_company_id))
-                                ->searchable()
-                                ->preload()
-                                ->required(),
+                                  ->relationship('ownerFunction', 'name').
 
                             Select::make('target_model')
                                 ->label('Modello Target')

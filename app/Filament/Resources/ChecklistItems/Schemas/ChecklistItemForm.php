@@ -20,8 +20,31 @@ class ChecklistItemForm
                     ->columnSpanFull(),
                 Toggle::make('is_mandatory')
                     ->required(),
-                TextInput::make('require_condition_class'),
-                TextInput::make('skip_condition_class'),
+
+                 Select::make('require_condition_class')
+                                ->label('Regola di Richiesta')
+                                ->options(function () {
+                                    $rules = [];
+                                    foreach (glob(app_path('Rules/*.php')) as $file) {
+                                        $rule = basename($file, '.php');
+                                        $rules["App\\Rules\\{$rule}"] = preg_replace('/(?<!^)[A-Z]/', ' $0', $rule);
+                                    }
+                                    return $rules;
+                                })
+                                ->searchable()
+                                ->placeholder('Seleziona una regola'),
+                 Select::make('skip_condition_class')
+                                ->label('Regola di Salto')
+                                ->options(function () {
+                                    $rules = [];
+                                    foreach (glob(app_path('Rules/*.php')) as $file) {
+                                        $rule = basename($file, '.php');
+                                        $rules["App\\Rules\\{$rule}"] = preg_replace('/(?<!^)[A-Z]/', ' $0', $rule);
+                                    }
+                                    return $rules;
+                                })
+                                ->searchable()
+                                ->placeholder('Seleziona una regola'),
                 TextInput::make('sort_order')
                     ->required()
                     ->numeric()

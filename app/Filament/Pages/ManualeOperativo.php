@@ -148,12 +148,18 @@ class ManualeOperativo extends Page implements HasSchemas
      */
     protected function getProcessesData(): array
     {
-        return Process::query()
+        $processId = request()->query('process_id');
+        
+        $query = Process::query()
             ->where('company_id', Filament::getTenant()?->id)
             ->with(['businessFunction', 'tasks.raciAssignments.businessFunction', 'tasks.checklists.items', 'tasks.privacyData.privacyDataType', 'tasks.privacyData.legalBase'])
-            ->where('is_active', true)
-            ->get()
-            ->toArray();
+            ->where('is_active', true);
+
+        if ($processId) {
+            $query->where('id', $processId);
+        }
+
+        return $query->get()->toArray();
     }
 
 
