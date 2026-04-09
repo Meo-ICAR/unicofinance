@@ -14,4 +14,9 @@ class SuppressionList extends Model
     protected $casts = [
         'request_date' => 'date',
     ];
+
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
+    }
 }

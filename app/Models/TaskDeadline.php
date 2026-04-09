@@ -27,6 +27,11 @@ class TaskDeadline extends Model
         'completed_at' => 'datetime',
     ];
 
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
+    }
+
     /**
      * La policy SLA associata.
      */

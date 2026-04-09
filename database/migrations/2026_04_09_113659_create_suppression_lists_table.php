@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('suppression_lists', function (Blueprint $table) {
             $table->id();
+            $table->foreignUuid('company_id')->constrained('companies')->cascadeOnDelete();
             $table->string('hashed_identifier')->unique()->comment('SHA-256 hash of email or phone');
             $table->enum('identifier_type', ['email', 'phone'])->default('email');
             $table->date('request_date');

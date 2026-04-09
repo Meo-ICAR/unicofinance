@@ -41,6 +41,7 @@ class PrivacyComplianceSeeder extends Seeder
         // 4. Generiamo i Log del Consenso per ogni Lead
         foreach ($leads as $lead) {
             ConsentLog::factory()->create([
+                'company_id' => $company->id,
                 'client_id' => $lead->id,
                 'created_at' => $lead->created_at, // Coerente con la creazione del lead
             ]);
@@ -48,8 +49,9 @@ class PrivacyComplianceSeeder extends Seeder
 
         // 5. Simuliamo le Cessioni (Lead venduti agli acquirenti)
         // Prendiamo 40 lead a caso e li "vendiamo" ai nostri clienti installer
-        $leads->random(40)->each(function ($lead) use ($purchasers) {
+        $leads->random(40)->each(function ($lead) use ($purchasers, $company) {
             LeadTransfer::factory()->create([
+                'company_id' => $company->id,
                 'lead_id' => $lead->id,
                 'purchaser_id' => $purchasers->random()->id,
                 'transferred_at' => $lead->created_at->addDays(rand(1, 10)),
@@ -57,9 +59,9 @@ class PrivacyComplianceSeeder extends Seeder
         });
 
         // 6. Popoliamo la Suppression List (Esercizio dei diritti via email/telefono)
-        SuppressionList::factory()->count(20)->create();
+        SuppressionList::factory()->count(20)->create(['company_id' => $company->id]);
 
         // 7. Registriamo dei Data Breach storici per testare il registro trattamenti
-        DataBreach::factory()->count(5)->create();
+        DataBreach::factory()->count(5)->create(['company_id' => $company->id]);
     }
 }

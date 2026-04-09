@@ -43,6 +43,7 @@ class LeadCessionWorkflowSeeder extends Seeder
 
             // Log di Cessione (Invio verso Call Center)
             LeadTransfer::create([
+                'company_id' => $company->id,
                 'lead_id' => $lead->id,
                 'purchaser_id' => $client->id,
                 'transferred_at' => now()->subDays(rand(1, 15)),
@@ -55,6 +56,7 @@ class LeadCessionWorkflowSeeder extends Seeder
             $status = collect(['opt_out_requested', 'bounce', 'converted', 'converted', 'converted'])->random();
             
             LeadReturnLog::create([
+                'company_id' => $company->id,
                 'client_id' => $client->id,
                 'lead_id' => $lead->id,
                 'status' => $status,

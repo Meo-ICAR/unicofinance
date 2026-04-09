@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('lead_return_logs', function (Blueprint $table) {
             $table->id();
+            $table->foreignUuid('company_id')->constrained('companies')->cascadeOnDelete();
             $table->foreignId('client_id')->constrained('clients')->cascadeOnDelete();
             $table->foreignId('lead_id')->constrained('clients')->cascadeOnDelete();
             $table->enum('status', ['bounce', 'opt_out_requested', 'converted'])->default('bounce');

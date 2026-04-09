@@ -18,6 +18,7 @@ class DataBreachFactory extends Factory
     public function definition(): array
     {
         return [
+            'company_id' => \App\Models\Company::factory(),
             'discovery_date' => $this->faker->dateTimeBetween('-2 years', 'now')->format('Y-m-d'),
             'description' => $this->faker->randomElement([
                 'Accesso non autorizzato tramite credenziali compromesse (Phishing).',

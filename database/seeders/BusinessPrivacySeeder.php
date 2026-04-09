@@ -69,6 +69,7 @@ class BusinessPrivacySeeder extends Seeder
     private function seedChecklists($task)
     {
         $checklist = Checklist::create([
+            'company_id' => $task->company_id,
             'process_task_id' => $task->id,
             'name' => 'Verifiche Obbligatorie Art. 33',
             'sort_order' => 1,
@@ -76,6 +77,7 @@ class BusinessPrivacySeeder extends Seeder
 
         // Item 1: Sempre obbligatorio
         ChecklistItem::create([
+            'company_id' => $task->company_id,
             'checklist_id' => $checklist->id,
             'instruction' => "Identificare la data e l'ora esatta della scoperta della violazione.",
             'is_mandatory' => true,
@@ -84,6 +86,7 @@ class BusinessPrivacySeeder extends Seeder
 
         // Item 2: Obbligatorio SOLO SE il cliente è straniero (Usa la tua ForeignerRule)
         ChecklistItem::create([
+            'company_id' => $task->company_id,
             'checklist_id' => $checklist->id,
             'instruction' => 'Verificare se è necessaria la notifica a un Garante Estero (Cross-border processing).',
             'is_mandatory' => false,
@@ -93,6 +96,7 @@ class BusinessPrivacySeeder extends Seeder
 
         // Item 3: Regola per la nomina a Responsabile Esterno
         ChecklistItem::create([
+            'company_id' => $task->company_id,
             'checklist_id' => $checklist->id,
             'instruction' => "Firmare l'addendum ex Art. 28 GDPR (Data Processing Agreement).",
             'is_mandatory' => false,

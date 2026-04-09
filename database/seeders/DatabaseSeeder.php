@@ -64,6 +64,8 @@ class DatabaseSeeder extends Seeder
             ErasureRequestProcessSeeder::class,
             CampaignPrivacyByDesignProcessSeeder::class,
             VendorOnboardingProcessSeeder::class,
+            LeadAcquisitionProcessSeeder::class,
+            FacebookLeadAcquisitionSeeder::class,
             DataBreachProcessSeeder::class,
         ]);
     }

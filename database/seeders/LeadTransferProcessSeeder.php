@@ -142,13 +142,13 @@ class LeadTransferProcessSeeder extends Seeder
     private function seedChecklist(ProcessTask $task, string $name, array $items): void
     {
         $checklist = Checklist::updateOrCreate(
-            ['process_task_id' => $task->id, 'name' => $name],
+            ['process_task_id' => $task->id, 'name' => $name, 'company_id' => $task->company_id],
             ['sort_order' => 1]
         );
 
         foreach ($items as $index => $instruction) {
             ChecklistItem::updateOrCreate(
-                ['checklist_id' => $checklist->id, 'instruction' => $instruction],
+                ['checklist_id' => $checklist->id, 'instruction' => $instruction, 'company_id' => $task->company_id],
                 [
                     'is_mandatory' => true,
                     'sort_order' => $index + 1,

@@ -37,6 +37,7 @@ class PrivacyBpmSeeder extends Seeder
 
         // Supponiamo di avere un task: "Redazione DPIA (Valutazione Impatto)"
         $dpiaTask = ProcessTask::create([
+            'company_id' => $companyId,
             'process_id' => $process->id,
             'name' => 'Redazione Documento DPIA',
             'business_function_id' => $legalFunction->id,  // Funzione principale

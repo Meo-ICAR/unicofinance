@@ -229,13 +229,13 @@ class PrivacyProcessesSeeder extends Seeder
             if (isset($t['checklists'])) {
                 foreach ($t['checklists'] as $cIdx => $c) {
                     $checklist = Checklist::updateOrCreate(
-                        ['process_task_id' => $task->id, 'name' => $c['name']],
+                        ['process_task_id' => $task->id, 'name' => $c['name'], 'company_id' => $companyId],
                         ['sort_order' => $cIdx + 1]
                     );
 
                     foreach ($c['items'] as $iIdx => $i) {
                         ChecklistItem::updateOrCreate(
-                            ['checklist_id' => $checklist->id, 'instruction' => $i['instruction']],
+                            ['checklist_id' => $checklist->id, 'instruction' => $i['instruction'], 'company_id' => $companyId],
                             [
                                 'is_mandatory' => $i['mandatory'] ?? true,
                                 'sort_order' => $iIdx + 1

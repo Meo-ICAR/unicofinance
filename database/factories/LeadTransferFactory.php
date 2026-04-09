@@ -18,6 +18,7 @@ class LeadTransferFactory extends Factory
     public function definition(): array
     {
         return [
+            'company_id' => \App\Models\Company::factory(),
             'lead_id' => \App\Models\Client::factory()->lead(),
             'purchaser_id' => \App\Models\Client::factory()->purchaser(),
             'price' => $this->faker->randomFloat(2, 5, 50),

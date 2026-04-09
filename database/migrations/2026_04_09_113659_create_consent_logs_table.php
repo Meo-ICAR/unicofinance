@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('consent_logs', function (Blueprint $table) {
             $table->id();
+            $table->foreignUuid('company_id')->constrained('companies')->cascadeOnDelete();
             $table->foreignId('client_id')->constrained('clients')->cascadeOnDelete();
             $table->string('ip_address', 45)->nullable();
             $table->string('origin')->nullable()->comment('Source e.g. Facebook, Website');

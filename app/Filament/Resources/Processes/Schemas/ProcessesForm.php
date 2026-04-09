@@ -34,11 +34,11 @@ class ProcessesForm
                                 ->columnSpanFull(),
 
                             Select::make('business_function_id')
-                                ->relationship('businessFunction', 'name').
+                                ->relationship('businessFunction', 'name'),
                               //  ->required(),
 
                             Select::make('owner_function_id')
-                                  ->relationship('ownerFunction', 'name').
+                                  ->relationship('ownerFunction', 'name'),
 
                             Select::make('target_model')
                                 ->label('Modello Target')

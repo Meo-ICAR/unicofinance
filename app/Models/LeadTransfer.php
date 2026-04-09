@@ -11,6 +11,11 @@ class LeadTransfer extends Model
 
     protected $guarded = ['id'];
 
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
+    }
+
     public function lead()
     {
         return $this->belongsTo(Client::class, 'lead_id');

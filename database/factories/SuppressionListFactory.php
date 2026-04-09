@@ -21,6 +21,7 @@ class SuppressionListFactory extends Factory
         $value = ($type === 'email') ? $this->faker->safeEmail() : $this->faker->phoneNumber();
         
         return [
+            'company_id' => \App\Models\Company::factory(),
             'hashed_identifier' => hash('sha256', $value),
             'identifier_type' => $type,
             'request_date' => $this->faker->dateTimeBetween('-1 year', 'now')->format('Y-m-d'),

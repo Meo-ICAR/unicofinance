@@ -21,6 +21,11 @@ class ChecklistItem extends Model
         ];
     }
 
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
+    }
+
     public function checklist(): BelongsTo
     {
         return $this->belongsTo(Checklist::class);

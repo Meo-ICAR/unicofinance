@@ -56,9 +56,11 @@ class SlaPolicySeeder extends Seeder
             ],
         ];
 
+        $company = \App\Models\Company::first();
+
         foreach ($policies as $policy) {
             SlaPolicy::updateOrCreate(
-                ['name' => $policy['name']],
+                ['name' => $policy['name'], 'company_id' => $company->id],
                 $policy
             );
         }

@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('data_breaches', function (Blueprint $table) {
             $table->id();
+            $table->foreignUuid('company_id')->constrained('companies')->cascadeOnDelete();
             $table->date('discovery_date');
             $table->text('description');
             $table->enum('severity_level', ['low', 'medium', 'high'])->default('low');

@@ -18,6 +18,7 @@ class LeadReturnLogFactory extends Factory
     public function definition(): array
     {
         return [
+            'company_id' => \App\Models\Company::factory(),
             'client_id' => \App\Models\Client::factory()->purchaser(),
             'lead_id' => \App\Models\Client::factory()->lead(),
             'status' => $this->faker->randomElement(['bounce', 'opt_out_requested', 'converted']),

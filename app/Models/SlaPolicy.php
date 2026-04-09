@@ -20,6 +20,11 @@ class SlaPolicy extends Model
         'exclude_weekends',
     ];
 
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
+    }
+
     protected $casts = [
         'duration_minutes' => 'integer',
         'warning_threshold_minutes' => 'integer',

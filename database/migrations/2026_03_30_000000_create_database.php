@@ -66,6 +66,7 @@ return new class extends Migration {
         Schema::create('sla_policies', function (Blueprint $table) {
             $table->comment('Politiche di Service Level Agreement per il calcolo dei tempi.');
             $table->id();
+            $table->foreignUuid('company_id')->constrained('companies')->cascadeOnDelete();
             $table->string('name');
             $table->string('process_type');
             $table->integer('duration_minutes');
@@ -351,6 +352,7 @@ return new class extends Migration {
         Schema::create('checklists', function (Blueprint $table) {
             $table->comment('Gruppi logici di controlli associati a un Task.');
             $table->id();
+            $table->foreignUuid('company_id')->constrained('companies')->cascadeOnDelete();
             $table->foreignId('process_task_id')->constrained('process_tasks')->cascadeOnDelete();
             $table->string('name');
             $table->text('description')->nullable();
@@ -405,6 +407,7 @@ Schema::create('privacy_legal_bases', function (Blueprint $table) {
         Schema::create('checklist_items', function (Blueprint $table) {
             $table->comment('Le singole regole/istruzioni operative nel task.');
             $table->id();
+            $table->foreignUuid('company_id')->constrained('companies')->cascadeOnDelete();
             $table->foreignId('checklist_id')->constrained('checklists')->cascadeOnDelete();
             $table->text('instruction');
             $table->boolean('is_mandatory')->default(true);
@@ -447,6 +450,7 @@ Schema::create('privacy_legal_bases', function (Blueprint $table) {
         Schema::create('task_execution_checklist_items', function (Blueprint $table) {
             $table->comment('Dato IMMUTABILE. Snapshot storico della regola applicata e firmata.');
             $table->id();
+            $table->foreignUuid('company_id')->constrained('companies')->cascadeOnDelete();
             $table->foreignId('task_execution_id')->constrained('task_executions')->cascadeOnDelete();
             $table->foreignId('checklist_item_id')->nullable()->constrained('checklist_items')->nullOnDelete();
             $table->boolean('is_checked')->default(false);
@@ -468,6 +472,7 @@ Schema::create('privacy_legal_bases', function (Blueprint $table) {
         Schema::create('task_deadlines', function (Blueprint $table) {
             $table->comment('Scadenziario puntuale SLA applicato alla singola esecuzione.');
             $table->id();
+            $table->foreignUuid('company_id')->constrained('companies')->cascadeOnDelete();
             $table->foreignId('task_execution_id')->constrained('task_executions')->cascadeOnDelete();
             $table->foreignId('sla_policy_id')->constrained('sla_policies');
             $table->dateTime('start_time');

@@ -22,6 +22,11 @@ class TaskExecutionChecklistItem extends Model
         'checked_at',
     ];
 
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
+    }
+
     protected $casts = [
         'is_checked' => 'boolean',
         'checked_at' => 'datetime',

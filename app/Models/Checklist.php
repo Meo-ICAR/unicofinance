@@ -20,6 +20,11 @@ class Checklist extends Model
 
     protected $guarded = ['id'];
 
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
+    }
+
     public function processTask(): BelongsTo
     {
         return $this->belongsTo(ProcessTask::class);

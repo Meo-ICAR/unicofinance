@@ -16,4 +16,9 @@ class DataBreach extends Model
     protected $casts = [
         'discovery_date' => 'date',
     ];
+
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
+    }
 }

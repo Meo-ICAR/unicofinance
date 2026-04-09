@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('lead_transfers', function (Blueprint $table) {
             $table->id();
+            $table->foreignUuid('company_id')->constrained('companies')->cascadeOnDelete();
             $table->foreignId('lead_id')->constrained('clients')->cascadeOnDelete();
             $table->foreignId('purchaser_id')->constrained('clients')->cascadeOnDelete();
             $table->timestamp('transferred_at')->useCurrent();
