@@ -56,6 +56,15 @@ class DatabaseSeeder extends Seeder
             PrivacyBpmSeeder::class,
             ProcessTaskPrivacyDataSeeder::class,
             SlaPolicySeeder::class,
+            // GDPR Compliance & Workflow Data
+            PrivacyComplianceSeeder::class,
+            LeadCessionWorkflowSeeder::class,
+            // BPM GDPR Processes
+            LeadTransferProcessSeeder::class,
+            ErasureRequestProcessSeeder::class,
+            CampaignPrivacyByDesignProcessSeeder::class,
+            VendorOnboardingProcessSeeder::class,
+            DataBreachProcessSeeder::class,
         ]);
     }
 }

@@ -2,11 +2,14 @@
 
 namespace App\Filament\Resources\Clients\Tables;
 
+use App\Filament\Resources\Clients\Schemas\ClientInfolist;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TrashedFilter;
@@ -97,6 +100,14 @@ class ClientsTable
             ])
             ->recordActions([
                 EditAction::make(),
+                ViewAction::make('stampa_nomina_esterna')
+                    ->label('Visualizza Nomina')
+                    ->icon('heroicon-o-document-text')
+                    ->infolist(fn (Schema $infolist) => ClientInfolist::configure($infolist))
+                    ->modalHeading('Anteprima Nomina Responsabile Esterno')
+                    ->modalWidth('5xl')
+                    ->slideOver()
+                    ->color('warning'),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

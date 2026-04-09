@@ -10,7 +10,6 @@ use Filament\Schemas\Schema;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Grid;
 use Filament\Infolists\Components\RepeatableEntry;
-
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class EmployeeInfolist
