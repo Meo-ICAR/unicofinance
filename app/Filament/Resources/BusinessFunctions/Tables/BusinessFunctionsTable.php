@@ -20,6 +20,11 @@ class BusinessFunctionsTable
                     ->badge()
                     ->searchable(),
                 TextColumn::make('name')
+                    ->label('Nome Funzione')
+                    ->searchable(),
+                TextColumn::make('employees.name')
+                    ->label('Dipendenti')
+                    ->badge()
                     ->searchable(),
                 TextColumn::make('type')
                     ->badge()

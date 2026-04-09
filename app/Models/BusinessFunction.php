@@ -26,6 +26,14 @@ class BusinessFunction extends Model
         'managed_by_id',
         'mission',
         'responsibility',
+        'privacy_role',
+        'purpose',
+        'data_subjects',
+        'data_categories',
+        'retention_period',
+        'extra_eu_transfer',
+        'security_measures',
+        'privacy_data',
     ];
 
     protected $casts = [
@@ -65,7 +73,8 @@ class BusinessFunction extends Model
     {
         return $this
             ->belongsToMany(Employee::class, 'business_function_employee')
-            ->withPivot('is_manager')
+            ->using(BusinessFunctionEmployee::class)
+            ->withPivot('is_manager', 'start_date', 'end_date', 'temporary_reason')
             ->withTimestamps();
     }
 
@@ -76,6 +85,7 @@ class BusinessFunction extends Model
     {
         return $this
             ->belongsToMany(Client::class, 'business_function_client')
+            ->using(BusinessFunctionClient::class)
             ->withPivot('start_date', 'end_date', 'temporary_reason')
             ->withTimestamps()
             ->orderByPivot('start_date', 'desc');

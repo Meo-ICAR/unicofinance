@@ -2,14 +2,19 @@
 
 namespace App\Filament\Resources\Employees\Tables;
 
+use App\Enums\EmployeeType;
+use App\Filament\Resources\Employees\Schemas\EmployeeInfolist;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TrashedFilter;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
 class EmployeesTable
@@ -60,16 +65,24 @@ class EmployeesTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                \Filament\Tables\Filters\SelectFilter::make('employee_types')
+                SelectFilter::make('employee_types')
                     ->label('Tipo Profilo')
-                    ->options(\App\Enums\EmployeeType::class),
-                \Filament\Tables\Filters\SelectFilter::make('company_branch_id')
+                    ->options(EmployeeType::class),
+                SelectFilter::make('company_branch_id')
                     ->label('Sede')
                     ->relationship('branch', 'name'),
                 TrashedFilter::make(),
             ])
             ->recordActions([
                 EditAction::make(),
+                ViewAction::make('stampa_nomina')
+                    ->label('Visualizza Nomina')
+                    ->icon('heroicon-o-document-text')
+                    ->infolist(fn (Schema $infolist) => EmployeeInfolist::configure($infolist))
+                    ->modalHeading('Anteprima Atto di Nomina')
+                    ->modalWidth('5xl')
+                    ->slideOver()
+                    ->color('success')
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

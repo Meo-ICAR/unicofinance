@@ -141,6 +141,16 @@ return new class extends Migration {
             $table->foreignId('managed_by_id')->nullable()->constrained('business_functions')->nullOnDelete();
             $table->longText('mission')->nullable();
             $table->longText('responsibility')->nullable();
+
+               // GDPR
+            $table->string('privacy_role')->nullable();
+            $table->text('purpose')->nullable();
+            $table->text('data_subjects')->nullable();
+            $table->text('data_categories')->nullable();
+            $table->string('retention_period')->nullable();
+            $table->string('extra_eu_transfer')->nullable();
+            $table->text('security_measures')->nullable();
+            $table->string('privacy_data')->nullable();
             $table->foreignUuid('company_id')->nullable()->constrained('companies')->cascadeOnDelete();
             $table->timestamps();
             $table->unique(['company_id', 'code']);
@@ -278,6 +288,7 @@ return new class extends Migration {
             $table->date('end_date')->nullable();
             $table->string('temporary_reason')->nullable();
             $table->timestamps();
+            $table->softDeletes();
             $table->primary(['business_function_id', 'employee_id']);
         });
 

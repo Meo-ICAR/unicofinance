@@ -109,6 +109,7 @@ class Client extends Model
     {
         return $this
             ->belongsToMany(BusinessFunction::class, 'business_function_client')
+            ->using(BusinessFunctionClient::class)
             ->withPivot('start_date', 'end_date', 'temporary_reason')
             ->withTimestamps()
             ->orderByPivot('start_date', 'desc');

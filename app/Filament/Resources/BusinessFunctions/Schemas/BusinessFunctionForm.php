@@ -75,6 +75,36 @@ class BusinessFunctionForm
                             ->columnSpanFull(),
                     ])
                     ->collapsible(),
+
+                Section::make('Privacy / GDPR')
+                    ->description('Dati relativi al trattamento e protezione dei dati personali')
+                    ->schema([
+                        Grid::make(2)->schema([
+                            TextInput::make('privacy_role')
+                                ->label('Ruolo Privacy'),
+                            TextInput::make('retention_period')
+                                ->label('Periodo di Conservazione'),
+                            TextInput::make('extra_eu_transfer')
+                                ->label('Trasferimenti Extra UE'),
+                            TextInput::make('privacy_data')
+                                ->label('Dati Privacy'),
+                        ]),
+                        Grid::make(2)->schema([
+                            Textarea::make('purpose')
+                                ->label('Finalità')
+                                ->rows(3),
+                            Textarea::make('data_subjects')
+                                ->label('Categorie di Interessati')
+                                ->rows(3),
+                            Textarea::make('data_categories')
+                                ->label('Categorie di Dati')
+                                ->rows(3),
+                            Textarea::make('security_measures')
+                                ->label('Misure di Sicurezza')
+                                ->rows(3),
+                        ]),
+                    ])
+                    ->collapsible(),
             ]);
     }
 }
