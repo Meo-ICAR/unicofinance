@@ -55,11 +55,17 @@ class DatabaseSeeder extends Seeder
             BusinessPrivacySeeder::class,
             PrivacyBpmSeeder::class,
             ProcessTaskPrivacyDataSeeder::class,
+                // Vocal Order Contract Acquisition (ARERA/GDPR Compliance)
+            VocalOrderProcessSeeder::class,
+                // Opt-Out & Blacklist Emergency Flow (Art. 21 GDPR)
+            OptOutManagementProcessSeeder::class,
+                // Request Registry (GDPR Art. 12, 15-22)
+            RequestRegistrySeeder::class,
             SlaPolicySeeder::class,
-            // GDPR Compliance & Workflow Data
+                // GDPR Compliance & Workflow Data
             PrivacyComplianceSeeder::class,
             LeadCessionWorkflowSeeder::class,
-            // BPM GDPR Processes
+                // BPM GDPR Processes
             LeadTransferProcessSeeder::class,
             ErasureRequestProcessSeeder::class,
             CampaignPrivacyByDesignProcessSeeder::class,
