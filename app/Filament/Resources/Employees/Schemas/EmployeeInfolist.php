@@ -3,12 +3,15 @@
 namespace App\Filament\Resources\Employees\Schemas;
 
 use App\Models\Employee;
+use Filament\Actions\Action;
 use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components\Section;
-use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Schemas\Components\Grid;
+use Filament\Infolists\Components\RepeatableEntry;
+
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class EmployeeInfolist
 {
@@ -19,6 +22,16 @@ class EmployeeInfolist
         ->schema([
             Section::make('ATTO DI NOMINA A SOGGETTO AUTORIZZATO')
                 ->description('Art. 29 Regolamento UE 2016/679')
+                ->headerActions([
+                    Action::make('download_pdf')
+                        ->label('Scarica PDF')
+                        ->icon('heroicon-o-arrow-down-tray')
+                        ->color('primary')
+                        ->action(function (Employee $record) {
+                            $pdf = Pdf::loadView('pdf.employee-nomination', ['employee' => $record]);
+                            return response()->streamDownload(fn () => print($pdf->output()), "Nomina_{$record->name}.pdf");
+                        }),
+                ])
                 ->schema([
                     Grid::make(2)->schema([
                         TextEntry::make('company.name')
