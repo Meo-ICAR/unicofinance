@@ -2,15 +2,17 @@
 
 namespace App\Providers;
 
+use App\Models\RaciAssignment;
 use App\Models\SocialiteUser;
+use App\Models\TaskExecutionChecklistItem;
+use App\Observers\RaciAssignmentObserver;
+use App\Observers\TaskExecutionChecklistItemObserver;
 use DutchCodingCompany\FilamentSocialite\Events\Login;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use SocialiteProviders\Manager\SocialiteWasCalled;
 use SocialiteProviders\Microsoft\Provider;
 use Spatie\Activitylog\Models\Activity;
-use App\Models\RaciAssignment;
-use App\Observers\RaciAssignmentObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -27,7 +29,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-       // RaciAssignment::observe(RaciAssignmentObserver::class);
+        // RaciAssignment::observe(RaciAssignmentObserver::class);
+
         /*
          * Activity::saving(function (Activity $activity) {
          *     $activity->properties = $activity->properties->put('ip_address', request()->ip());
@@ -50,5 +53,7 @@ class AppServiceProvider extends ServiceProvider
                 ]);
             }
         });
+
+        TaskExecutionChecklistItem::observe(TaskExecutionChecklistItemObserver::class);
     }
 }

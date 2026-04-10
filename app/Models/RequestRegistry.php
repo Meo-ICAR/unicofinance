@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\RequestType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -21,6 +22,7 @@ class RequestRegistry extends Model
         'response_date' => 'date',
         'sla_breach' => 'boolean',
         'extension_granted' => 'boolean',
+        'request_type' => RequestType::class,
     ];
 
     protected static function booted(): void
@@ -28,7 +30,7 @@ class RequestRegistry extends Model
         static::creating(function (self $registry) {
             $registry->request_number = self::generateRequestNumber();
 
-            if (!$registry->response_deadline) {
+            if (! $registry->response_deadline) {
                 $registry->response_deadline = $registry->request_date->copy()->addDays(30);
             }
         });
@@ -42,7 +44,7 @@ class RequestRegistry extends Model
             // Se lo stato è 'evasa', 'respinta' o 'parzialmente_evasa' e non c'è una data risposta, impostala
             if (
                 in_array($registry->status, ['evasa', 'respinta', 'parzialmente_evasa'])
-                && !$registry->response_date
+                && ! $registry->response_date
             ) {
                 $registry->response_date = now()->toDateString();
             }

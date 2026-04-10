@@ -64,6 +64,12 @@ class TaskExecutionChecklistItem extends Model
         return $this->belongsTo(TaskExecution::class);
     }
 
+    public function checklistVisibilityConfig()
+    {
+        // Questa è la relazione verso la tabella 'checklist_items' (quella con action_class)
+        return $this->belongsTo(ChecklistItem::class, 'checklist_item_id');
+    }
+
     public function originalChecklistItem(): BelongsTo
     {
         return $this->belongsTo(ChecklistItem::class, 'checklist_item_id')->withTrashed();

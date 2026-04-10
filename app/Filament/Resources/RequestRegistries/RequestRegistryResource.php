@@ -8,6 +8,7 @@ use App\Filament\Resources\RequestRegistries\Pages\ListRequestRegistries;
 use App\Filament\Resources\RequestRegistries\RelationManagers\ActionsRelationManager;
 use App\Filament\Resources\RequestRegistries\RelationManagers\AttachmentsRelationManager;
 use App\Filament\Resources\RequestRegistries\RelationManagers\ProcessesRelationManager;
+use App\Enums\RequestType;
 use App\Models\Client;
 use App\Models\Employee;
 use App\Models\RequestRegistry;
@@ -26,10 +27,11 @@ use Filament\Forms\Components\Toggle;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Colors\Color;
 use Filament\Support\Icons\Heroicon;
-use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -130,7 +132,7 @@ class RequestRegistryResource extends Resource
                 TextInput::make('mandate_reference')
                     ->label('Riferimenti Mandato/Procura')
                     ->helperText('Numero procura, data, notaio')
-                    ->visible(fn (Get $get) => $get('requester_type') === 'mandatario')
+                    //   ->visible(fn (Get $get) => $get('requester_type') === 'mandatario')
                     ->columnSpanFull(),
 
                 // Campo condizionale: organismo vigilanza
@@ -142,7 +144,7 @@ class RequestRegistryResource extends Resource
                         'AGCM' => 'AGCM (Antitrust)',
                         'Altro' => 'Altro',
                     ])
-                    ->visible(fn (Get $get) => $get('requester_type') === 'organismo_vigilanza')
+                    //   ->visible(fn (Get $get) => $get('requester_type') === 'organismo_vigilanza')
                     ->columnSpanFull(),
             ])
             ->columns(3);
@@ -154,16 +156,7 @@ class RequestRegistryResource extends Resource
             ->schema([
                 Select::make('request_type')
                     ->label('Tipo di Richiesta')
-                    ->options([
-                        'accesso' => 'Accesso (Art. 15)',
-                        'cancellazione' => 'Cancellazione / Oblio (Art. 17)',
-                        'rettifica' => 'Rettifica (Art. 16)',
-                        'opposizione' => 'Opposizione (Art. 21)',
-                        'limitazione' => 'Limitazione del Trattamento (Art. 18)',
-                        'portabilita' => 'Portabilità dei Dati (Art. 20)',
-                        'revoca_consenso' => 'Revoca del Consenso',
-                        'reclamazione' => 'Reclamazione (Art. 77)',
-                    ])
+                    ->options(RequestType::options())
                     ->required()
                     ->columnSpanFull(),
 
@@ -179,9 +172,9 @@ class RequestRegistryResource extends Resource
 
                 Select::make('data_subject_id')
                     ->label('Soggetto Interessato')
-                    ->options(fn (Get $get) => self::getDataSubjectOptions($get('data_subject_type')))
+                    ->options(fn ($get) => self::getDataSubjectOptions($get('data_subject_type')))
                     ->searchable()
-                    ->visible(fn (Get $get) => filled($get('data_subject_type')))
+                    //  ->visible(fn (Get $get) => filled($get('data_subject_type')))
                     ->columnSpan(2),
 
                 Textarea::make('description')
@@ -228,7 +221,7 @@ class RequestRegistryResource extends Resource
 
                 MarkdownEditor::make('response_summary')
                     ->label('Sintesi della Risposta')
-                    ->rows(4)
+                    // ->rows(4)
                     ->columnSpanFull(),
 
                 // SLA
@@ -246,7 +239,7 @@ class RequestRegistryResource extends Resource
                 Textarea::make('extension_reason')
                     ->label('Motivazione Estensione')
                     ->rows(2)
-                    ->visible(fn (Get $get) => $get('extension_granted'))
+                    ->visible(fn ($get) => $get('extension_granted'))
                     ->columnSpanFull(),
 
                 Textarea::make('notes')
@@ -272,8 +265,9 @@ class RequestRegistryResource extends Resource
                     ->date('d/m/Y')
                     ->sortable(),
 
-                BadgeColumn::make('requester_type')
+                TextColumn::make('requester_type')
                     ->label('Richiedente')
+                    ->badge()
                     ->formatStateUsing(fn (string $state) => match ($state) {
                         'interessato' => 'Interessato',
                         'mandatario' => 'Mandatario',
@@ -285,9 +279,10 @@ class RequestRegistryResource extends Resource
                         'danger' => 'organismo_vigilanza',
                     ]),
 
-                BadgeColumn::make('request_type')
+                TextColumn::make('request_type')
                     ->label('Tipo')
-                    ->capitalize()
+                    ->badge()
+                    // ->capitalize()
                     ->colors([
                         'info' => 'accesso',
                         'danger' => 'cancellazione',
@@ -337,16 +332,7 @@ class RequestRegistryResource extends Resource
 
                 SelectFilter::make('request_type')
                     ->label('Tipo Richiesta')
-                    ->options([
-                        'accesso' => 'Accesso',
-                        'cancellazione' => 'Cancellazione',
-                        'rettifica' => 'Rettifica',
-                        'opposizione' => 'Opposizione',
-                        'limitazione' => 'Limitazione',
-                        'portabilita' => 'Portabilità',
-                        'revoca_consenso' => 'Revoca Consenso',
-                        'reclamazione' => 'Reclamazione',
-                    ]),
+                    ->options(RequestType::shortOptions()),
 
                 SelectFilter::make('requester_type')
                     ->label('Tipo Richiedente')

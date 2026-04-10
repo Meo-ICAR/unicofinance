@@ -62,4 +62,17 @@ class BpmEngineService
             ];
         })->filter();  // Rimuove gli elementi nulli (quelli "skippati")
     }
+
+    public function completeChecklistItem($executionId, $itemId)
+    {
+        $item = ChecklistItem::find($itemId);
+
+        // ... logica di salvataggio del check ...
+
+        // Se esiste una action_class, la eseguiamo
+        if ($item->action_class && class_exists($item->action_class)) {
+            $action = app($item->action_class);
+            $action->execute(TaskExecution::find($executionId));
+        }
+    }
 }
