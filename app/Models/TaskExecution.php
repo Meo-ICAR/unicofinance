@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Mattiverse\Userstamps\Traits\Userstamps;
@@ -26,6 +27,8 @@ class TaskExecution extends Model
         'started_at',
         'completed_at',
         'previous_task_execution_id',
+        'target_type',
+        'target_id',
     ];
 
     protected $casts = [
@@ -94,12 +97,17 @@ class TaskExecution extends Model
             ->logOnly(['status', 'employee_id', 'audit_dms_id'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
-            ->setDescriptionForEvent(fn(string $eventName) => "Pratica {$eventName}");
+            ->setDescriptionForEvent(fn (string $eventName) => "Pratica {$eventName}");
     }
 
     public function processTask(): BelongsTo
     {
         return $this->belongsTo(ProcessTask::class);
+    }
+
+    public function target(): MorphTo
+    {
+        return $this->morphTo();
     }
 
     public function executionItems(): HasMany

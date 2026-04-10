@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Processes;
 
+use App\Filament\Resources\Processes\Pages\CreateProcessWizard;
 use App\Filament\Resources\Processes\Pages\CreateProcesses;
 use App\Filament\Resources\Processes\Pages\EditProcesses;
 use App\Filament\Resources\Processes\Pages\ListProcesses;
@@ -65,6 +66,7 @@ class ProcessesResource extends Resource
         return [
             'index' => ListProcesses::route('/'),
             'create' => CreateProcesses::route('/create'),
+            'create-wizard' => CreateProcessWizard::route('/create-wizard'),
             'edit' => EditProcesses::route('/{record}/edit'),
         ];
     }
@@ -81,7 +83,7 @@ class ProcessesResource extends Resource
     {
         $query = parent::getEloquentQuery();
         $user = auth()->user();
-        $companyId =  $user->current_company_id;
+        $companyId = $user->current_company_id;
 
         // 1. Se l'utente è un SUPER ADMIN tuo (es. tu che sviluppi),
         // fagli vedere tutto per poter fare manutenzione.
@@ -111,9 +113,9 @@ class ProcessesResource extends Resource
     {
         return [
             EditAction::make()
-                ->visible(fn($record) => auth()->user()->can('update', $record)),
+                ->visible(fn ($record) => auth()->user()->can('update', $record)),
             DeleteAction::make()
-                ->visible(fn($record) => auth()->user()->can('delete', $record))
+                ->visible(fn ($record) => auth()->user()->can('delete', $record))
                 ->requiresConfirmation()
                 ->modalHeading('Elimina Processo')
                 ->modalDescription('Sei sicuro di voler eliminare questo processo? Questa azione non può essere annullata.')
@@ -122,12 +124,12 @@ class ProcessesResource extends Resource
             Action::make('duplicate')
                 ->label('Duplica')
                 ->icon('heroicon-o-document-duplicate')
-                ->visible(fn($record) => auth()->user()->can('create', Process::class))
+                ->visible(fn ($record) => auth()->user()->can('create', Process::class))
                 ->action(function ($record) {
                     $newProcess = $record->replicate();
-                    $newProcess->name = $record->name . ' (Copia)';
+                    $newProcess->name = $record->name.' (Copia)';
                     $newProcess->save();
-Notification::make()
+                    Notification::make()
                         ->title('Processo Duplicato')
                         ->body("Il processo '{$record->name}' è stato duplicato con successo.")
                         ->success()
@@ -137,7 +139,7 @@ Notification::make()
                 ->label('Attiva')
                 ->icon('heroicon-o-check-circle')
                 ->color('success')
-                ->visible(fn($record) => !$record->is_active && auth()->user()->can('update', $record))
+                ->visible(fn ($record) => ! $record->is_active && auth()->user()->can('update', $record))
                 ->action(function ($record) {
                     $record->is_active = true;
                     $record->save();
@@ -152,7 +154,7 @@ Notification::make()
                 ->label('Disattiva')
                 ->icon('heroicon-o-x-circle')
                 ->color('danger')
-                ->visible(fn($record) => $record->is_active && auth()->user()->can('update', $record))
+                ->visible(fn ($record) => $record->is_active && auth()->user()->can('update', $record))
                 ->action(function ($record) {
                     $record->is_active = false;
                     $record->save();

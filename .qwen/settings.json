@@ -3,7 +3,8 @@
     "allow": [
       "Bash(php *)",
       "Bash(true)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(grep *)"
     ]
   },
   "$version": 3

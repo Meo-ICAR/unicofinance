@@ -135,4 +135,12 @@ class Client extends Model
     {
         return $this->hasMany(TaskExecution::class);
     }
+
+    /**
+     * Task executions where this client is the polymorphic target.
+     */
+    public function taskExecutionsAsTarget(): HasMany
+    {
+        return $this->morphMany(TaskExecution::class, 'target');
+    }
 }

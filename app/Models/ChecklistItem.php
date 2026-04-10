@@ -12,7 +12,15 @@ class ChecklistItem extends Model
 
     protected $guarded = ['id'];
 
-    protected $fillable = ['checklist_id', 'instruction', 'is_mandatory', 'sort_order'];
+    protected $fillable = [
+        'checklist_id',
+        'instruction',
+        'is_mandatory',
+        'sort_order',
+        'require_condition_class',
+        'skip_condition_class',
+        'action_class',
+    ];
 
     protected function casts(): array
     {

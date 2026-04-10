@@ -130,36 +130,44 @@ class Employee extends Model
         return $this->hasMany(TaskExecution::class);
     }
 
-    public function getPrivacySummaryAttribute()
-{
-    $privacyRecords = collect();
-
-    // 1. Prendi tutte le funzioni aziendali di questo dipendente
-    $functions = $this->businessFunctions()->with([
-        'assignedTasks' => function ($query) {
-            // Filtriamo: ci interessano solo i task dove il reparto è R (fa il lavoro) o A (è proprietario)
-            $query->whereIn('raci_assignments.raci_role', ['R', 'A']);
-        },
-        'assignedTasks.privacyDataTypes' // Carichiamo i dati privacy (la tua tabella pivot di ieri)
-    ])->get();
-
-    // 2. Estrai i dati
-    foreach ($functions as $function) {
-        foreach ($function->assignedTasks as $task) {
-            foreach ($task->privacyDataTypes as $dataType) {
-                $privacyRecords->push([
-                    'data_type' => $dataType->name,
-                    'raci_role' => $task->pivot->raci_role, // Per mostrare in che veste tratta il dato
-                    'access_level' => $dataType->pivot->access_level,
-                    'purpose' => $dataType->pivot->purpose,
-                ]);
-            }
-        }
+    /**
+     * Task executions where this employee is the polymorphic target.
+     */
+    public function taskExecutionsAsTarget()
+    {
+        return $this->morphMany(TaskExecution::class, 'target');
     }
 
-    // Rimuovi duplicati: il dipendente potrebbe fare "R" su due task che trattano lo stesso dato
-    return $privacyRecords->unique(function ($item) {
-        return $item['data_type'] . $item['purpose'];
-    })->values();
-}
+    public function getPrivacySummaryAttribute()
+    {
+        $privacyRecords = collect();
+
+        // 1. Prendi tutte le funzioni aziendali di questo dipendente
+        $functions = $this->businessFunctions()->with([
+            'assignedTasks' => function ($query) {
+                // Filtriamo: ci interessano solo i task dove il reparto è R (fa il lavoro) o A (è proprietario)
+                $query->whereIn('raci_assignments.raci_role', ['R', 'A']);
+            },
+            'assignedTasks.privacyDataTypes' // Carichiamo i dati privacy (la tua tabella pivot di ieri)
+        ])->get();
+
+        // 2. Estrai i dati
+        foreach ($functions as $function) {
+            foreach ($function->assignedTasks as $task) {
+                foreach ($task->privacyDataTypes as $dataType) {
+                    $privacyRecords->push([
+                        'data_type' => $dataType->name,
+                        'raci_role' => $task->pivot->raci_role, // Per mostrare in che veste tratta il dato
+                        'access_level' => $dataType->pivot->access_level,
+                        'purpose' => $dataType->pivot->purpose,
+                    ]);
+                }
+            }
+        }
+
+        // Rimuovi duplicati: il dipendente potrebbe fare "R" su due task che trattano lo stesso dato
+        return $privacyRecords->unique(function ($item) {
+            return $item['data_type'].$item['purpose'];
+        })->values();
+    }
 }

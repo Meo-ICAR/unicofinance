@@ -4,10 +4,10 @@ namespace App\Models;
 
 use App\Enums\RequestType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class RequestRegistry extends Model
@@ -30,7 +30,7 @@ class RequestRegistry extends Model
         static::creating(function (self $registry) {
             $registry->request_number = self::generateRequestNumber();
 
-            if (! $registry->response_deadline) {
+            if (!$registry->response_deadline) {
                 $registry->response_deadline = $registry->request_date->copy()->addDays(30);
             }
         });
@@ -43,8 +43,8 @@ class RequestRegistry extends Model
 
             // Se lo stato è 'evasa', 'respinta' o 'parzialmente_evasa' e non c'è una data risposta, impostala
             if (
-                in_array($registry->status, ['evasa', 'respinta', 'parzialmente_evasa'])
-                && ! $registry->response_date
+                in_array($registry->status, ['evasa', 'respinta', 'parzialmente_evasa']) &&
+                !$registry->response_date
             ) {
                 $registry->response_date = now()->toDateString();
             }
@@ -79,6 +79,16 @@ class RequestRegistry extends Model
         return $this->belongsTo(User::class, 'assigned_to');
     }
 
+    public function activeProcess(): BelongsTo
+    {
+        return $this->belongsTo(Process::class, 'active_process_id');
+    }
+
+    public function activeTask(): BelongsTo
+    {
+        return $this->belongsTo(ProcessTask::class, 'process_task_id');
+    }
+
     public function dataSubject(): MorphTo
     {
         return $this->morphTo();
@@ -91,7 +101,8 @@ class RequestRegistry extends Model
 
     public function actions(): HasMany
     {
-        return $this->hasMany(RequestRegistryAction::class, 'registry_id')
+        return $this
+            ->hasMany(RequestRegistryAction::class, 'registry_id')
             ->orderBy('action_date', 'desc');
     }
 
@@ -109,7 +120,8 @@ class RequestRegistry extends Model
 
     public function scopeOverdue($query)
     {
-        return $query->where('response_deadline', '<', now())
+        return $query
+            ->where('response_deadline', '<', now())
             ->whereNotIn('status', ['evasa', 'respinta']);
     }
 

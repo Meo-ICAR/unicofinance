@@ -75,6 +75,10 @@ class DatabaseSeeder extends Seeder
             DataBreachProcessSeeder::class,
             // Process Macro Categories
             ProcessMacroCategorySeeder::class,
+            // GDPR Access Request Process
+            GdprAccessRequestProcessSeeder::class,
+            // Process Request Mappings
+            ProcessRequestMappingSeeder::class,
         ]);
     }
 }

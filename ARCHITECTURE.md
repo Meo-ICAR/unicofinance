@@ -6,16 +6,16 @@
 
 ## Technology Stack
 
-| Layer | Technology |
-|-------|------------|
-| **Framework** | Laravel 13 (PHP 8.3+) |
-| **Admin Panel** | Filament 5.4 (multi-tenant via `Company`) |
-| **Excel Import/Export** | pxlrbt/filament-excel |
-| **Authentication** | Laravel Socialite (Microsoft, Google) |
-| **Authorization** | Spatie Laravel Permission + Filament Shield |
-| **Media** | Spatie Media Library |
-| **Audit Trail** | Spatie Activity Log + wildside/userstamps |
-| **Testing** | Pest PHP |
+| Layer                   | Technology                                  |
+| ----------------------- | ------------------------------------------- |
+| **Framework**           | Laravel 13 (PHP 8.3+)                       |
+| **Admin Panel**         | Filament 5.4 (multi-tenant via `Company`)   |
+| **Excel Import/Export** | pxlrbt/filament-excel                       |
+| **Authentication**      | Laravel Socialite (Microsoft, Google)       |
+| **Authorization**       | Spatie Laravel Permission + Filament Shield |
+| **Media**               | Spatie Media Library                        |
+| **Audit Trail**         | Spatie Activity Log + wildside/userstamps   |
+| **Testing**             | Pest PHP                                    |
 
 ---
 
@@ -89,34 +89,34 @@ ProcessTask (1) ── (N) TaskExecution  (runtime)
 
 ### Core Tables
 
-| Table | Role | Key Columns |
-|-------|------|-------------|
-| `companies` | Multi-tenant root | `id` (UUID), `name`, `domain`, `vat_number`, `oam`, `ivass` |
-| `processes` | Process definition | `company_id`, `owner_function_id`, `name`, `description`, `target_model`, `is_active` |
-| `process_tasks` | Individual steps | `process_id`, `sequence_number`, `name`, `description` |
-| `checklists` | Instruction groups | `process_task_id`, `name`, `description`, `sort_order` |
-| `checklist_items` | Single instructions | `checklist_id`, `instruction`, `is_mandatory`, `sort_order`, **`require_condition_class`**, **`skip_condition_class`**, **`action_class`** |
-| `raci_assignments` | RACI matrix | `process_task_id`, `business_function_id`, `role` (R/A/C/I) — unique on `(process_task_id, role)` |
-| `process_task_privacy_data` | GDPR processing record | `process_task_id`, `privacy_data_type_id`, `privacy_legal_base_id`, `access_level`, `purpose`, `is_encrypted`, `is_shared_externally` |
-| `task_executions` | Runtime ticket | `process_task_id`, `employee_id`, `client_id`, `status`, `due_date`, `started_at`, `completed_at`, `target_type`, `target_id` |
-| `task_execution_checklist_items` | Runtime checklist check | `task_execution_id`, `checklist_item_id`, `is_checked`, `checked_at` |
-| `task_deadlines` | SLA tracking | `task_execution_id`, `status`, `warning_at`, `breached_at`, `completed_at` |
+| Table                            | Role                    | Key Columns                                                                                                                                |
+| -------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `companies`                      | Multi-tenant root       | `id` (UUID), `name`, `domain`, `vat_number`, `oam`, `ivass`                                                                                |
+| `processes`                      | Process definition      | `company_id`, `owner_function_id`, `name`, `description`, `target_model`, `is_active`                                                      |
+| `process_tasks`                  | Individual steps        | `process_id`, `sequence_number`, `name`, `description`                                                                                     |
+| `checklists`                     | Instruction groups      | `process_task_id`, `name`, `description`, `sort_order`                                                                                     |
+| `checklist_items`                | Single instructions     | `checklist_id`, `instruction`, `is_mandatory`, `sort_order`, **`require_condition_class`**, **`skip_condition_class`**, **`action_class`** |
+| `raci_assignments`               | RACI matrix             | `process_task_id`, `business_function_id`, `role` (R/A/C/I) — unique on `(process_task_id, role)`                                          |
+| `process_task_privacy_data`      | GDPR processing record  | `process_task_id`, `privacy_data_type_id`, `privacy_legal_base_id`, `access_level`, `purpose`, `is_encrypted`, `is_shared_externally`      |
+| `task_executions`                | Runtime ticket          | `process_task_id`, `employee_id`, `client_id`, `status`, `due_date`, `started_at`, `completed_at`, `target_type`, `target_id`              |
+| `task_execution_checklist_items` | Runtime checklist check | `task_execution_id`, `checklist_item_id`, `is_checked`, `checked_at`                                                                       |
+| `task_deadlines`                 | SLA tracking            | `task_execution_id`, `status`, `warning_at`, `breached_at`, `completed_at`                                                                 |
 
 ### Supporting Tables
 
-| Table | Purpose |
-|-------|---------|
-| `business_functions` | Organizational units (org chart) with GDPR metadata |
-| `employees` | Employee registry with OAM/IVASS registration |
-| `clients` | Client/lead registry with consent & GDPR fields |
-| `privacy_data_types` | GDPR data type catalog (comuni, particolari, giudiziari) |
-| `privacy_legal_bases` | Legal bases for processing (Art. 6 GDPR) |
-| `sla_policies` | SLA policy definitions (duration, warning %, weekend exclusion) |
-| `holidays` | Holiday calendar for business-day SLA calculations |
-| `request_registries` | GDPR request registry (access, deletion, rectification…) |
-| `consent_logs` | Logs of consent given by clients |
-| `suppression_lists` | Opt-out / blacklist entries |
-| `data_breaches` | Data breach tracking with DPA reporting flag |
+| Table                 | Purpose                                                         |
+| --------------------- | --------------------------------------------------------------- |
+| `business_functions`  | Organizational units (org chart) with GDPR metadata             |
+| `employees`           | Employee registry with OAM/IVASS registration                   |
+| `clients`             | Client/lead registry with consent & GDPR fields                 |
+| `privacy_data_types`  | GDPR data type catalog (comuni, particolari, giudiziari)        |
+| `privacy_legal_bases` | Legal bases for processing (Art. 6 GDPR)                        |
+| `sla_policies`        | SLA policy definitions (duration, warning %, weekend exclusion) |
+| `holidays`            | Holiday calendar for business-day SLA calculations              |
+| `request_registries`  | GDPR request registry (access, deletion, rectification…)        |
+| `consent_logs`        | Logs of consent given by clients                                |
+| `suppression_lists`   | Opt-out / blacklist entries                                     |
+| `data_breaches`       | Data breach tracking with DPA reporting flag                    |
 
 ---
 
@@ -133,12 +133,13 @@ interface BusinessRule {
 }
 ```
 
-| ChecklistItem Field | Purpose |
-|---------------------|---------|
-| `skip_condition_class` | If the rule evaluates `true`, the item is **skipped** (removed from the checklist) |
+| ChecklistItem Field       | Purpose                                                                                 |
+| ------------------------- | --------------------------------------------------------------------------------------- |
+| `skip_condition_class`    | If the rule evaluates `true`, the item is **skipped** (removed from the checklist)      |
 | `require_condition_class` | If the rule evaluates `true`, the item becomes **mandatory** (overrides `is_mandatory`) |
 
 **Example** — `App\Rules\Bpm\ForeignerRule`:
+
 ```php
 class ForeignerRule implements BusinessRule {
     public function evaluate(Client $client, ?TaskExecution $execution = null): bool {
@@ -156,18 +157,18 @@ interface BpmAction {
 }
 ```
 
-| ChecklistItem Field | Purpose |
-|---------------------|---------|
-| `action_class` | When the corresponding `TaskExecutionChecklistItem.is_checked` transitions to `true`, the action is **executed** via observer |
+| ChecklistItem Field | Purpose                                                                                                                       |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `action_class`      | When the corresponding `TaskExecutionChecklistItem.is_checked` transitions to `true`, the action is **executed** via observer |
 
 **Existing Actions** in `app/Actions/Bpm/`:
 
-| Class | What it does |
-|-------|-------------|
-| `PromoteClientStatus` | Sets `client.status` to `'approvato'` |
-| `UpdateClientToAmlCheck` | Sets `client.status` to `'valutazione_aml'`, sets `acquired_at` |
-| `SendPrivacyWelcomeEmail` | Sends privacy information email to client |
-| `SendPrivacyOnboardingEmail` | (stub — empty) |
+| Class                        | What it does                                                    |
+| ---------------------------- | --------------------------------------------------------------- |
+| `PromoteClientStatus`        | Sets `client.status` to `'approvato'`                           |
+| `UpdateClientToAmlCheck`     | Sets `client.status` to `'valutazione_aml'`, sets `acquired_at` |
+| `SendPrivacyWelcomeEmail`    | Sends privacy information email to client                       |
+| `SendPrivacyOnboardingEmail` | (stub — empty)                                                  |
 
 ### Rule Discovery
 
@@ -194,23 +195,66 @@ The Filament form for `ChecklistItem` scans `app/Rules/` via `glob()` to populat
 
 ---
 
+## Navigation Access Control
+
+The navigation bar items available to a user are determined by the **ProcessTask** and **RaciAssignment** relationship and enforced through **Laravel Policies**:
+
+- Each `ProcessTask` defines a step within a process template
+- `RaciAssignment` links a `ProcessTask` to a `BusinessFunction` with a specific role (R/A/C/I)
+- Users are associated with business functions (through their role/assignment), and the navigation items they can see are filtered based on which `ProcessTask` records have a `RaciAssignment` for their business function
+- Access is enforced via **Policies** in `app/Policies/` (e.g., `ProcessPolicy`, `EmployeePolicy`, `ClientPolicy`) that use a shared **trait** to encapsulate the RACI-based authorization logic
+- This creates a dynamic, role-based navigation system that adapts per tenant and per user's organizational position
+
+```
+User → Employee → BusinessFunction → RaciAssignment → ProcessTask → Policy (trait) → Navigation Item
+```
+
+---
+
+## Runtime User Tracking
+
+When a process is executed on a specific record (employee, client, etc.), the system creates runtime instances that track **which specific user operates each step**:
+
+- Starting a process creates a `TaskExecution` (runtime instance / ticket)
+- `TaskExecution` records link to the `employee_id` (or other assignee) who is responsible for that task
+- Each `TaskExecution` clones all `ChecklistItem` records from the template into `TaskExecutionChecklistItem` records
+- When a user completes a checklist item (marks `is_checked = true`), the `TaskExecutionChecklistItemObserver` fires and the action is attributed to that specific user
+- This creates a complete audit trail: **who** did **what**, **when**, on **which process step**
+
+```
+TaskExecution (runtime ticket)
+├── employee_id          → the user assigned to this task
+├── client_id            → the client/record being processed
+├── started_at           → when the user began work
+├── completed_at         → when the user finished
+│
+└── TaskExecutionChecklistItem (cloned from template)
+     ├── is_checked      → completion flag
+     ├── checked_at      → timestamp of completion
+     └── [via observer]  → action_class executed, attributed to this user
+```
+
+This design ensures full traceability for compliance purposes (GDPR, OAM/IVASS regulations) while maintaining the separation between **template definition** (ProcessTask, RaciAssignment) and **runtime execution** (TaskExecution, TaskExecutionChecklistItem).
+
+---
+
 ## Key Services
 
-| Service | Responsibility |
-|---------|---------------|
-| **BpmEngineService** | `getAvailableActions()`, `getAvailableConditions()`, `getEvaluatedChecklist()` (evaluates skip/require rules), `completeChecklistItem()` (triggers action_class) |
-| **BpmRegistryService** | `getOptionsForFilament()` reads from `config/bpm_registry.php` for multi-tenant filtering |
-| **SlaService** | Business-day-aware SLA deadline calculation, skipping weekends and Italian holidays |
+| Service                | Responsibility                                                                                                                                                   |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **BpmEngineService**   | `getAvailableActions()`, `getAvailableConditions()`, `getEvaluatedChecklist()` (evaluates skip/require rules), `completeChecklistItem()` (triggers action_class) |
+| **BpmRegistryService** | `getOptionsForFilament()` reads from `config/bpm_registry.php` for multi-tenant filtering                                                                        |
+| **SlaService**         | Business-day-aware SLA deadline calculation, skipping weekends and Italian holidays                                                                              |
 
 ---
 
 ## Observers & Lifecycle Events
 
-| Observer | Model | Trigger | Behavior |
-|----------|-------|---------|---------|
-| **EmployeeObserver** | `Employee` | `created` | Auto-starts `PROC-ONBOARDING` process — creates a `TaskExecution` for each task in the onboarding process |
-| **TaskExecutionChecklistItemObserver** | `TaskExecutionChecklistItem` | `updated` (is_checked → true) | Loads `action_class` from the master `ChecklistItem` and executes it |
-| **RaciAssignmentObserver** | `RaciAssignment` | *(currently commented out in AppServiceProvider)* | Syncs `business_function_id` from RACI 'A' role up to ProcessTask and Process |
+| Observer                               | Model                        | Trigger                                           | Behavior                                                                                                  |
+| -------------------------------------- | ---------------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| **EmployeeObserver**                   | `Employee`                   | `created`                                         | Auto-starts `PROC-ONBOARDING` process — creates a `TaskExecution` for each task in the onboarding process |
+| **TaskExecutionChecklistItemObserver** | `TaskExecutionChecklistItem` | `updated` (is_checked → true)                     | Loads `action_class` from the master `ChecklistItem` and executes it                                      |
+| **RaciAssignmentObserver**             | `RaciAssignment`             | _(currently commented out in AppServiceProvider)_ | Syncs `business_function_id` from RACI 'A' role up to ProcessTask and Process                             |
 
 ### TaskExecution Boot Logic
 
@@ -267,6 +311,7 @@ The polymorphic `target_type` / `target_id` on `TaskExecution` allows any model 
 All data is scoped to `Company` (UUID primary key). Filament uses tenant switching via `Filament::getTenant()`. The `bpm_registry.php` config controls which actions/conditions are visible per company.
 
 The `Company` model implements:
+
 - `HasTenants` on `User` — users belong to multiple companies
 - `HasFilamentName` — returns company name for UI
 - `HasAvatar` via Spatie Media Library — company logo

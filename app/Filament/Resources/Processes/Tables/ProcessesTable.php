@@ -63,7 +63,7 @@ class ProcessesTable
                     ->openUrlInNewTab(),
                 Action::make('flow')
                     ->label('Flusso')
-                    ->icon('heroicon-o-graph')
+                    //   ->icon('heroicon-o-gr')
                     ->color('info')
                     ->url(fn(Process $record): string => ProcessVisualizer::getUrl(['process_id' => $record->id, 'print' => true]))
                     ->openUrlInNewTab(),

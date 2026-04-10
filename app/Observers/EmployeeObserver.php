@@ -21,6 +21,9 @@ class EmployeeObserver
                     'status' => 'todo',
                     'due_date' => now()->addDays(7),
                     'reference_number' => "ONB-{$employee->id}-".now()->format('Ymd'),
+                    // target_type/target_id derived from the Process template
+                    'target_type' => $process->target_model,
+                    'target_id' => $employee->id,
                 ]);
             }
         }

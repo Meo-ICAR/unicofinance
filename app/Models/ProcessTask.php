@@ -21,18 +21,18 @@ class ProcessTask extends Model
             $businessFunctionId = $process ? $process->business_function_id : $task->business_function_id;
 
 
-                $roles = ['R', 'A', 'C', 'I'];
-                foreach ($roles as $role) {
-                    $task->raciAssignments()->firstOrCreate(
-                        ['company_id' => $company_id,
-                        'process_task_id' =>  $task->id,
-                         'role' => $role], // Controlla se esiste già questo ruolo
-                        [
+            $roles = ['R', 'A', 'C', 'I'];
+            foreach ($roles as $role) {
+                $task->raciAssignments()->firstOrCreate(
+                    ['company_id' => $company_id,
+                        'process_task_id' => $task->id,
+                        'role' => $role], // Controlla se esiste già questo ruolo
+                    [
 
-                            'business_function_id' => $businessFunctionId,
-                        ]
-                    );
-                }
+                        'business_function_id' => $businessFunctionId,
+                    ]
+                );
+            }
 
         });
     }

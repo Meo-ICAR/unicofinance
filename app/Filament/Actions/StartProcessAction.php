@@ -51,7 +51,7 @@ class StartProcessAction extends Action
             ->action(function (Model $record, array $data): void {
                 DB::transaction(function () use ($record, $data) {
                     // Il bello di Model $record è che accetta QUALSIASI modello (Employee, Client, ecc.)
-
+    
                     $process = Process::with(['tasks.raciAssignments'])->find($data['process_id']);
                     $taskCount = 0;
 
@@ -63,15 +63,14 @@ class StartProcessAction extends Action
                             'employee_id' => $responsible?->employee_id,
                             'client_id' => $responsible?->client_id,
                             'status' => 'todo',
-                            // MAGIA POLIMORFICA:
-                            // getMorphClass() capisce da solo se è 'App\Models\Employee' o altro
-                            // getKey() prende l'ID corretto
-                            'target_type' => $record->getMorphClass(),
+                            // target_type/target_id derived from the Process template:
+                            // Process.target_model determines which model this execution targets
+                            'target_type' => $process->target_model,
                             'target_id' => $record->getKey(),
                         ]);
 
                         // --- GESTIONE NOTIFICHE (RIPRISTINATA) ---
-
+    
                         // CASO 1: Dipendente Interno (Ha un account User collegato)
                         if ($execution->employee && $execution->employee->user) {
                             // Invia Email + Campanellina in Filament
@@ -88,7 +87,7 @@ class StartProcessAction extends Action
                             SystemNotification::route('mail', $record->email)
                                 ->notify(new TaskAssignedNotification($execution));
                         }
-                        
+
                         $taskCount++;
                     }
 

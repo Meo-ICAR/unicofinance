@@ -9,6 +9,7 @@ use App\Filament\Resources\Employees\RelationManagers\BusinessFunctionsRelationM
 use App\Filament\Resources\Employees\Schemas\EmployeeForm;
 use App\Filament\Resources\Employees\Tables\EmployeesTable;
 use App\Models\Employee;
+use App\Models\TaskExecution;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -17,10 +18,6 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use UnitEnum;
-
-
-
-
 
 class EmployeeResource extends Resource
 {
@@ -64,13 +61,75 @@ class EmployeeResource extends Resource
 
     public static function getRecordRouteBindingEloquentQuery(): Builder
     {
-        return parent::getRecordRouteBindingEloquentQuery()
+        return static::getEloquentQuery()
             ->withoutGlobalScopes([
                 SoftDeletingScope::class,
             ]);
     }
 
+    /**
+     * Filter employees to only those the current user can see
+     * based on TaskExecution assignments.
+     *
+     * A user can see:
+     *  - Themselves (their own employee record)
+     *  - Employees where they are the assignee on a TaskExecution
+     *  - Employees that are the target of a TaskExecution assigned to them
+     *  - If supervisor: also employees assigned to their subordinates
+     */
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+        $user = auth()->user();
 
+        if (! $user) {
+            return $query->whereRaw('1 = 0');
+        }
 
+        // Super admin sees everything
+        if ($user->is_super_admin) {
+            return $query;
+        }
 
+        $employee = $user->employee;
+
+        // No employee record = no access
+        if (! $employee) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        $targetType = Employee::class;
+
+        return $query->where(function (Builder $q) use ($employee, $targetType) {
+            // Always see your own record
+            $q->where('employees.id', $employee->id);
+
+            // Employees where this user is the assignee on a TaskExecution targeting Employee
+            $q->orWhereHas('taskExecutions', function (Builder $sub) use ($employee, $targetType) {
+                $sub->where('employee_id', $employee->id)
+                    ->where('target_type', $targetType);
+            });
+
+            // Employees where this user is the target of a process
+            $q->orWhereHas('taskExecutionsAsTarget', function (Builder $sub) use ($employee) {
+                $sub->where('employee_id', $employee->id)
+                    ->orWhereNull('employee_id');
+            });
+
+            // Supervisor: also see subordinates
+            if ($employee->supervisor_type !== 'no') {
+                $subordinateIds = Employee::where('coordinated_by_id', $employee->id)->pluck('id');
+
+                if ($subordinateIds->isNotEmpty()) {
+                    $q->orWhere(function (Builder $subQ) use ($subordinateIds, $targetType) {
+                        $subQ->whereIn('employees.id', $subordinateIds);
+                        $subQ->orWhereHas('taskExecutions', function (Builder $sub) use ($subordinateIds, $targetType) {
+                            $sub->whereIn('employee_id', $subordinateIds)
+                                ->where('target_type', $targetType);
+                        });
+                    });
+                }
+            }
+        });
+    }
 }
