@@ -37,7 +37,7 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($users as $userData) {
-            if (! User::where('email', $userData['email'])->exists()) {
+            if (!User::where('email', $userData['email'])->exists()) {
                 $user = User::factory()->create($userData);
                 $user->save();
             }
@@ -55,17 +55,17 @@ class DatabaseSeeder extends Seeder
             BusinessPrivacySeeder::class,
             PrivacyBpmSeeder::class,
             ProcessTaskPrivacyDataSeeder::class,
-                // Vocal Order Contract Acquisition (ARERA/GDPR Compliance)
+            // Vocal Order Contract Acquisition (ARERA/GDPR Compliance)
             VocalOrderProcessSeeder::class,
-                // Opt-Out & Blacklist Emergency Flow (Art. 21 GDPR)
+            // Opt-Out & Blacklist Emergency Flow (Art. 21 GDPR)
             OptOutManagementProcessSeeder::class,
-                // Request Registry (GDPR Art. 12, 15-22)
+            // Request Registry (GDPR Art. 12, 15-22)
             RequestRegistrySeeder::class,
             SlaPolicySeeder::class,
-                // GDPR Compliance & Workflow Data
+            // GDPR Compliance & Workflow Data
             PrivacyComplianceSeeder::class,
             LeadCessionWorkflowSeeder::class,
-                // BPM GDPR Processes
+            // BPM GDPR Processes
             LeadTransferProcessSeeder::class,
             ErasureRequestProcessSeeder::class,
             CampaignPrivacyByDesignProcessSeeder::class,
@@ -73,6 +73,8 @@ class DatabaseSeeder extends Seeder
             LeadAcquisitionProcessSeeder::class,
             FacebookLeadAcquisitionSeeder::class,
             DataBreachProcessSeeder::class,
+            // Process Macro Categories
+            ProcessMacroCategorySeeder::class,
         ]);
     }
 }

@@ -16,6 +16,7 @@ class Process extends Model
         'company_id',
         'business_function_id',
         'owner_function_id',
+        'process_macro_category_id',
         'name',
         'description',
         'target_model',
@@ -39,6 +40,11 @@ class Process extends Model
     public function ownerFunction(): BelongsTo
     {
         return $this->belongsTo(BusinessFunction::class, 'owner_function_id');
+    }
+
+    public function processMacroCategory(): BelongsTo
+    {
+        return $this->belongsTo(ProcessMacroCategory::class);
     }
 
     public function tasks(): HasMany
