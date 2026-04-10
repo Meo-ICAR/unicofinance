@@ -29,7 +29,7 @@ class GdprAccessRequestProcessSeeder extends Seeder
         // 1. Creazione del Processo per le Richieste di Accesso
         $process = Process::updateOrCreate(
             [
-                'id' => 13,  // ID specifico per il processo di accesso
+                'id' => 29,  // Prossimo ID disponibile
                 'company_id' => $company->id,
                 'name' => 'Gestione Diritto di Accesso (Art. 15 GDPR)',
             ],
@@ -49,7 +49,7 @@ class GdprAccessRequestProcessSeeder extends Seeder
         // 2. Creazione dei Task associati (Le "Scrivanie" del processo)
         $tasks = [
             [
-                'id' => 163,  // Prossimo ID disponibile
+                'id' => 99,  // Prossimo ID disponibile
                 'company_id' => $company->id,
                 'process_id' => $processId,
                 'business_function_id' => 24,
@@ -60,7 +60,7 @@ class GdprAccessRequestProcessSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
-                'id' => 164,  // Prossimo ID disponibile
+                'id' => 100,  // Prossimo ID disponibile
                 'company_id' => $company->id,
                 'process_id' => $processId,
                 'business_function_id' => 22,  // Estrazione Dati
@@ -71,7 +71,7 @@ class GdprAccessRequestProcessSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
-                'id' => 165,  // Prossimo ID disponibile
+                'id' => 101,  // Prossimo ID disponibile
                 'company_id' => $company->id,
                 'process_id' => $processId,
                 'business_function_id' => 24,  // Verifica Identità
@@ -90,27 +90,27 @@ class GdprAccessRequestProcessSeeder extends Seeder
         // 3. Creazione delle Checklist per i Task
         $checklists = [
             [
-                'id' => 160,  // Prossimo ID disponibile
+                'id' => 99,  // Prossimo ID disponibile
                 'company_id' => $company->id,
-                'process_task_id' => 160,  // Task 1
+                'process_task_id' => 99,  // Task 1
                 'name' => 'Checklist Preliminare Legale',
                 'sort_order' => 1,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
-                'id' => 161,  // Prossimo ID disponibile
+                'id' => 100,  // Prossimo ID disponibile
                 'company_id' => $company->id,
-                'process_task_id' => 161,  // Task 2
+                'process_task_id' => 100,  // Task 2
                 'name' => 'Checklist IT per Estrazione',
                 'sort_order' => 1,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
-                'id' => 162,  // Prossimo ID disponibile
+                'id' => 101,  // Prossimo ID disponibile
                 'company_id' => $company->id,
-                'process_task_id' => 162,  // Task 3
+                'process_task_id' => 101,  // Task 3
                 'name' => 'Checklist di Consegna e Chiusura',
                 'sort_order' => 1,
                 'created_at' => now(),

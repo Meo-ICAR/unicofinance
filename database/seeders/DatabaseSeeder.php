@@ -73,12 +73,6 @@ class DatabaseSeeder extends Seeder
             LeadAcquisitionProcessSeeder::class,
             FacebookLeadAcquisitionSeeder::class,
             DataBreachProcessSeeder::class,
-            // Process Macro Categories
-            ProcessMacroCategorySeeder::class,
-            // GDPR Access Request Process
-            GdprAccessRequestProcessSeeder::class,
-            // Process Request Mappings
-            ProcessRequestMappingSeeder::class,
             // Log e Audit
             ConsentLogSeeder::class,
             DataBreachSeeder::class,
@@ -87,10 +81,16 @@ class DatabaseSeeder extends Seeder
             LeadReturnLogSeeder::class,
             // Privacy & Compliance
             SuppressionListSeeder::class,
-            PrivacyActionSeeder::class,
-            // Processi Aggiuntivi
             OutboundCallArt14ProcessSeeder::class,
             ListSanitizationRPOProcessSeeder::class,
+            // Process Macro Categories
+            ProcessMacroCategorySeeder::class,
+            // GDPR Access Request Process
+            GdprAccessRequestProcessSeeder::class,
+            // Process Request Mappings
+            ProcessRequestMappingSeeder::class,
+            PrivacyActionSeeder::class,
+            // Processi Aggiuntivi
         ]);
     }
 }

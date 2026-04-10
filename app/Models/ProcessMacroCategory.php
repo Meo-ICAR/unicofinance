@@ -3,13 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
-// use Wildside\Userstamps\Traits\HasUserstamps;
 
 class ProcessMacroCategory extends Model
 {
-    use SoftDeletes;
-
     protected $guarded = ['id'];
 
     protected $fillable = [
