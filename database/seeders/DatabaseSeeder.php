@@ -79,6 +79,18 @@ class DatabaseSeeder extends Seeder
             GdprAccessRequestProcessSeeder::class,
             // Process Request Mappings
             ProcessRequestMappingSeeder::class,
+            // Log e Audit
+            ConsentLogSeeder::class,
+            DataBreachSeeder::class,
+            // Lead Management
+            LeadTransferSeeder::class,
+            LeadReturnLogSeeder::class,
+            // Privacy & Compliance
+            SuppressionListSeeder::class,
+            PrivacyActionSeeder::class,
+            // Processi Aggiuntivi
+            OutboundCallArt14ProcessSeeder::class,
+            ListSanitizationRPOProcessSeeder::class,
         ]);
     }
 }

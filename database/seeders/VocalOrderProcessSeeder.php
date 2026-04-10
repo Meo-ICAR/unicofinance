@@ -35,9 +35,10 @@ class VocalOrderProcessSeeder extends Seeder
                     'name' => 'Acquisizione Contratto tramite Vocal Order (Utility)',
                 ],
                 [
-                    'description' => 'Procedura guidata per la stipula del contratto telefonico (Luce/Gas/Telco). Include lo script legale, la registrazione audio e l\'archiviazione sicura del file.',
-                    'target_model' => 'App\\Models\\Contract',
+                    'description' => "Procedura guidata per la stipula del contratto telefonico (Luce/Gas/Telco). Include lo script legale, la registrazione audio e l'archiviazione sicura del file.",
+                    'target_model' => 'App\Models\Contract',
                     'is_active' => true,
+                    'business_function_id' => 1,  // Default business function
                 ]
             );
 
@@ -52,7 +53,8 @@ class VocalOrderProcessSeeder extends Seeder
                 ],
                 [
                     'name' => 'Consenso alla Registrazione e Identificazione',
-                    'description' => 'Identificazione certa dell\'intestatario e acquisizione del consenso alla registrazione della chiamata.',
+                    'description' => "Identificazione certa dell'intestatario e acquisizione del consenso alla registrazione della chiamata.",
+                    'business_function_id' => 1,  // Default business function
                 ]
             );
 
@@ -60,7 +62,7 @@ class VocalOrderProcessSeeder extends Seeder
                 $task1,
                 'Fase di Apertura Vocal Order',
                 [
-                    'Chiedere conferma del Nome, Cognome e Codice Fiscale dell\'intestatario.',
+                    "Chiedere conferma del Nome, Cognome e Codice Fiscale dell'intestatario.",
                     'Enunciare chiaramente: "Questa chiamata viene registrata per la conclusione del contratto, è d\'accordo?".',
                     'Verificare che l\'utente risponda con un "SÌ" udibile e chiaro.',
                 ]
@@ -69,10 +71,10 @@ class VocalOrderProcessSeeder extends Seeder
             // Mappatura Privacy per Task 1
             $this->seedPrivacyData(
                 $task1->id,
-                privacyDataTypeId: 1,   // ID_BASE
+                privacyDataTypeId: 1,  // ID_BASE
                 privacyLegalBaseId: 2,  // Esecuzione Contratto (Art. 6 par. 1 lett. b)
                 accessLevel: 'write',
-                purpose: 'Identificazione certa dell\'intestatario e acquisizione del consenso alla registrazione della chiamata.',
+                purpose: "Identificazione certa dell'intestatario e acquisizione del consenso alla registrazione della chiamata.",
                 isEncrypted: true,
                 isSharedExternally: false
             );
@@ -88,7 +90,8 @@ class VocalOrderProcessSeeder extends Seeder
                 ],
                 [
                     'name' => 'Lettura Proposta Economica e Oneri',
-                    'description' => 'Lettura obbligatoria dell\'offerta commerciale, dei costi di attivazione e delle condizioni contrattuali.',
+                    'description' => "Lettura obbligatoria dell'offerta commerciale, dei costi di attivazione e delle condizioni contrattuali.",
+                    'business_function_id' => 1,  // Default business function
                 ]
             );
 
@@ -96,9 +99,9 @@ class VocalOrderProcessSeeder extends Seeder
                 $task2,
                 'Script Economico Obbligatorio',
                 [
-                    'Leggere il nome dell\'offerta commerciale e il prezzo della materia prima.',
+                    "Leggere il nome dell'offerta commerciale e il prezzo della materia prima.",
                     'Specificare la durata del contratto e la frequenza della fatturazione.',
-                    'Enunciare chiaramente i costi di attivazione o l\'assenza di essi.',
+                    "Enunciare chiaramente i costi di attivazione o l'assenza di essi.",
                 ]
             );
 
@@ -114,6 +117,7 @@ class VocalOrderProcessSeeder extends Seeder
                 [
                     'name' => 'Manifestazione del Consenso e Recesso',
                     'description' => 'Informazione sul diritto di ripensamento e acquisizione del consenso finale alla sottoscrizione.',
+                    'business_function_id' => 1,  // Default business function
                 ]
             );
 
@@ -121,7 +125,7 @@ class VocalOrderProcessSeeder extends Seeder
                 $task3,
                 'Clausole Legali Finali',
                 [
-                    'Informare l\'utente sul Diritto di Ripensamento (14 giorni) e sulle modalità di esercizio.',
+                    "Informare l'utente sul Diritto di Ripensamento (14 giorni) e sulle modalità di esercizio.",
                     'Acquisire il consenso finale alla sottoscrizione: "Conferma di voler sottoscrivere il contratto X con l\'azienda Y?".',
                 ]
             );
@@ -137,7 +141,8 @@ class VocalOrderProcessSeeder extends Seeder
                 ],
                 [
                     'name' => 'Chiusura e Archiviazione File',
-                    'description' => 'Interruzione della registrazione, verifica dell\'integrità del file audio e invio della sintesi contrattuale.',
+                    'description' => "Interruzione della registrazione, verifica dell'integrità del file audio e invio della sintesi contrattuale.",
+                    'business_function_id' => 1,  // Default business function
                 ]
             );
 
@@ -146,15 +151,15 @@ class VocalOrderProcessSeeder extends Seeder
                 'Integrità del Dato Audio',
                 [
                     'Interrompere la registrazione e verificare che il file audio sia stato generato correttamente.',
-                    'Associare il file audio (o l\'URL sicuro) al record del contratto nel CRM.',
-                    'Inviare automaticamente la sintesi contrattuale via email/SMS all\'utente.',
+                    "Associare il file audio (o l'URL sicuro) al record del contratto nel CRM.",
+                    "Inviare automaticamente la sintesi contrattuale via email/SMS all'utente.",
                 ]
             );
 
             // Mappatura Privacy per Task 4
             $this->seedPrivacyData(
                 $task4->id,
-                privacyDataTypeId: 1,   // ID_BASE
+                privacyDataTypeId: 1,  // ID_BASE
                 privacyLegalBaseId: 2,  // Esecuzione Contratto (Art. 6 par. 1 lett. b)
                 accessLevel: 'write',
                 purpose: 'Archiviazione sicura del file audio di registrazione contrattuale e associazione al record del contratto.',

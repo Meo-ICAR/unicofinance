@@ -13,6 +13,7 @@ use App\Models\Client;
 use App\Models\Employee;
 use App\Models\ProcessRequestMapping;
 use App\Models\RequestRegistry;
+use App\Models\TaskExecution;
 use App\Models\User;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
@@ -39,7 +40,6 @@ use Filament\Tables\Table;
 use Illuminate\Support\Facades\DB;
 use BackedEnum;
 use UnitEnum;
-use \Filament\Schemas\Components\Section;
 
 class RequestRegistryResource extends Resource
 {
@@ -409,26 +409,29 @@ class RequestRegistryResource extends Resource
                     ->label('Crea Esecuzione Task')
                     ->icon('heroicon-o-play')
                     ->color('success')
-                    ->url(fn ($record) => route('filament.resources.task-executions.create', [
+                    ->url(fn($record) => route('filament.resources.task-executions.create', [
                         'process_id' => $record->active_process_id,
                         'task_id' => $record->process_task_id,
                         'request_registry_id' => $record->id,
-                    ]))
-                    ->visible(fn ($record) => {
-                        // Mostra solo se processo e task sono assegnati
-                        if (!$record->active_process_id || !$record->process_task_id) {
-                            return false;
-                        }
+                    ])),
 
-                        // Controlla se esiste già un'esecuzione attiva per questo task
-                        $existingExecution = \App\Models\TaskExecution::where('process_task_id', $record->process_task_id)
-                            ->where('request_registry_id', $record->id)
-                            ->whereIn('status', ['in_progress', 'pending'])
-                            ->exists();
-
-                        // Disabilita se c'è già un'esecuzione attiva
-                        return !$existingExecution;
-                    }),
+                /*
+                 * ->visible(fn ($record) =>
+                 *     // Mostra solo se processo e task sono assegnati
+                 *     if (!$record->active_process_id || !$record->process_task_id) {
+                 *         return false;
+                 *     }
+                 *
+                 *     // Controlla se esiste già un'esecuzione attiva per questo task
+                 *     $existingExecution = TaskExecution::where('process_task_id', $record->process_task_id)
+                 *         ->where('request_registry_id', $record->id)
+                 *         ->whereIn('status', ['in_progress', 'pending'])
+                 *         ->exists();
+                 *
+                 *     // Disabilita se c'è già un'esecuzione attiva
+                 *     return !$existingExecution;
+                 * )
+                 */
                 EditAction::make()
                     ->color('warning'),
                 DeleteAction::make()

@@ -4,7 +4,10 @@
       "Bash(php *)",
       "Bash(true)",
       "Bash(npm run *)",
-      "Bash(grep *)"
+      "Bash(grep *)",
+      "Bash(mkdir *)",
+      "Bash(do)",
+      "Bash(done)"
     ]
   },
   "$version": 3

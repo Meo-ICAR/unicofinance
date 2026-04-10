@@ -37,6 +37,16 @@ class ProcessMacroCategorySeeder extends Seeder
             ],
         ];
 
-        DB::table('process_macro_categories')->insert($categories);
+        foreach ($categories as $category) {
+            \App\Models\ProcessMacroCategory::updateOrCreate(
+                ['code' => $category['code']],
+                [
+                    'name' => $category['name'],
+                    'description' => $category['description'],
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]
+            );
+        }
     }
 }

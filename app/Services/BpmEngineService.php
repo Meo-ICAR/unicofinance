@@ -5,7 +5,10 @@ namespace App\Services;
 use App\Contracts\BusinessRule;
 use App\Models\ChecklistItem;
 use App\Models\TaskExecution;
+use App\Models\TaskExecutionChecklistItem;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 class BpmEngineService
 {
@@ -58,21 +61,107 @@ class BpmEngineService
                 'id' => $item->id,
                 'instruction' => $item->instruction,
                 'is_mandatory' => $isMandatory,
-                'original_item' => $item
+                'action_class' => $item->action_class,
+                'has_action' => filled($item->action_class),
+                'original_item' => $item,
             ];
         })->filter();  // Rimuove gli elementi nulli (quelli "skippati")
     }
 
-    public function completeChecklistItem($executionId, $itemId)
+    /**
+     * Mark a runtime checklist item as checked and execute its action_class (if any).
+     *
+     * @param  int  $executionId   The TaskExecution ID
+     * @param  int  $checklistItemId  The master ChecklistItem ID (from template)
+     * @return array{success: bool, message: string, action_class: string|null}
+     *
+     * @throws RuntimeException  if the action_class validation fails
+     */
+    public function completeChecklistItem(int $executionId, int $checklistItemId): array
     {
-        $item = ChecklistItem::find($itemId);
+        $execution = TaskExecution::with('executionItems.originalChecklistItem')
+            ->findOrFail($executionId);
 
-        // ... logica di salvataggio del check ...
+        // Find the runtime item that corresponds to this checklist item
+        $runtimeItem = $execution->executionItems
+            ->firstWhere('checklist_item_id', $checklistItemId);
 
-        // Se esiste una action_class, la eseguiamo
-        if ($item->action_class && class_exists($item->action_class)) {
-            $action = app($item->action_class);
-            $action->execute(TaskExecution::find($executionId));
+        if (! $runtimeItem) {
+            throw new RuntimeException(
+                "Checklist item #{$checklistItemId} not found in execution #{$executionId}."
+            );
         }
+
+        if ($runtimeItem->is_checked) {
+            return [
+                'success' => true,
+                'message' => 'Item already checked.',
+                'action_class' => null,
+            ];
+        }
+
+        $masterItem = $runtimeItem->originalChecklistItem;
+
+        // Atomically mark as checked (and let the observer fire the action)
+        DB::transaction(function () use ($runtimeItem) {
+            $runtimeItem->update(['is_checked' => true]);
+        });
+
+        // The observer already executed the action_class inside its own transaction.
+        // We just report the result.
+        $actionClass = $masterItem?->action_class;
+
+        return [
+            'success' => true,
+            'message' => filled($actionClass)
+                ? "Item checked and action {$actionClass} executed."
+                : 'Item checked (no action configured).',
+            'action_class' => $actionClass,
+        ];
+    }
+
+    /**
+     * Uncheck a previously checked item (idempotent undo).
+     * Does NOT re-run any action — only reverts the flag.
+     */
+    public function uncheckChecklistItem(int $executionId, int $checklistItemId): array
+    {
+        $execution = TaskExecution::findOrFail($executionId);
+
+        $runtimeItem = $execution->executionItems
+            ->firstWhere('checklist_item_id', $checklistItemId);
+
+        if (! $runtimeItem) {
+            throw new RuntimeException(
+                "Checklist item #{$checklistItemId} not found in execution #{$executionId}."
+            );
+        }
+
+        if (! $runtimeItem->is_checked) {
+            return [
+                'success' => true,
+                'message' => 'Item is not checked.',
+            ];
+        }
+
+        $runtimeItem->update([
+            'is_checked' => false,
+            'checked_at' => null,
+        ]);
+
+        return [
+            'success' => true,
+            'message' => 'Item unchecked.',
+        ];
+    }
+
+    /* ─── Private helpers ─── */
+
+    /**
+     * Delega a BpmRegistryService per le opzioni filtrate per tenant.
+     */
+    private function getOptionsForFilament(string $type, string $companyId): Collection
+    {
+        return BpmRegistryService::getOptionsForFilament($type, $companyId);
     }
 }

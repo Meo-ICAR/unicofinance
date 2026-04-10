@@ -35,9 +35,10 @@ class OptOutManagementProcessSeeder extends Seeder
                     'name' => 'Gestione Immediata Opt-Out e Blacklist (Art. 21 GDPR)',
                 ],
                 [
-                    'description' => 'Procedura di inibizione immediata della numerazione a seguito di opposizione dell\'interessato, con aggiornamento della Suppression List e comunicazione di ritorno al Committente.',
-                    'target_model' => 'App\\Models\\Blacklist',
+                    'description' => "Procedura di inibizione immediata della numerazione a seguito di opposizione dell'interessato, con aggiornamento della Suppression List e comunicazione di ritorno al Committente.",
+                    'target_model' => 'App\Models\Blacklist',
                     'is_active' => true,
+                    'business_function_id' => 1,  // Default business function
                 ]
             );
 
@@ -52,7 +53,8 @@ class OptOutManagementProcessSeeder extends Seeder
                 ],
                 [
                     'name' => 'Interruzione e Registrazione Esito Assoluto',
-                    'description' => 'Blocco immediato della proposta commerciale e registrazione dell\'esito come OPT-OUT.',
+                    'description' => "Blocco immediato della proposta commerciale e registrazione dell'esito come OPT-OUT.",
+                    'business_function_id' => 1,  // Default business function
                 ]
             );
 
@@ -61,7 +63,7 @@ class OptOutManagementProcessSeeder extends Seeder
                 'Triage Opposizione',
                 [
                     'Interrompere immediatamente qualsiasi proposta commerciale (Diritto di Opposizione Assoluto).',
-                    'Registrare l\'esito della chiamata TASSATIVAMENTE come \'OPT-OUT / RICHIESTA CANCELLAZIONE\' (e NON come \'Non Interessato\').',
+                    "Registrare l'esito della chiamata TASSATIVAMENTE come 'OPT-OUT / RICHIESTA CANCELLAZIONE' (e NON come 'Non Interessato').",
                 ]
             );
 
@@ -77,6 +79,7 @@ class OptOutManagementProcessSeeder extends Seeder
                 [
                     'name' => 'Inserimento in Suppression List Locale',
                     'description' => 'Pseudonimizzazione del record e inserimento nella Blacklist di blocco del Dialer.',
+                    'business_function_id' => 1,  // Default business function
                 ]
             );
 
@@ -85,7 +88,7 @@ class OptOutManagementProcessSeeder extends Seeder
                 'Azione Tecnica Dialer',
                 [
                     'Sganciare istantaneamente la numerazione dalla coda di chiamata attiva e da eventuali ricontatti programmati.',
-                    'Inserire l\'hash del numero nella Suppression List globale dell\'azienda (valida per tutte le campagne future).',
+                    "Inserire l'hash del numero nella Suppression List globale dell'azienda (valida per tutte le campagne future).",
                 ]
             );
 
@@ -94,7 +97,7 @@ class OptOutManagementProcessSeeder extends Seeder
             // perché la legge impone di ricordare di NON chiamarlo più.
             $this->seedPrivacyData(
                 $task2->id,
-                privacyDataTypeId: 1,   // ID_BASE – Numero di Telefono
+                privacyDataTypeId: 1,  // ID_BASE – Numero di Telefono
                 privacyLegalBaseId: 3,  // Obbligo Legale (Art. 6 par. 1 lett. c)
                 accessLevel: 'update',
                 purpose: 'Pseudonimizzazione del record e inserimento nella Blacklist di blocco del Dialer.',
@@ -114,6 +117,7 @@ class OptOutManagementProcessSeeder extends Seeder
                 [
                     'name' => 'Notifica al Titolare / Utility',
                     'description' => 'Sincronizzazione con il Committente tramite log temporale ed export SFTP di fine giornata.',
+                    'business_function_id' => 1,  // Default business function
                 ]
             );
 
