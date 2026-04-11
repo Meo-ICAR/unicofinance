@@ -3,13 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
-use Wildside\Userstamps\Traits\Userstamps;
 
 class ProcessRequestMapping extends Model
 {
-    use SoftDeletes, Userstamps;
-
     protected $guarded = ['id'];
 
     protected $fillable = [

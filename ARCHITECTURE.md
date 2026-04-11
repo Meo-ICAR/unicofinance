@@ -92,7 +92,10 @@ ProcessTask (1) ── (N) TaskExecution  (runtime)
 | Table                            | Role                    | Key Columns                                                                                                                                |
 | -------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | `companies`                      | Multi-tenant root       | `id` (UUID), `name`, `domain`, `vat_number`, `oam`, `ivass`                                                                                |
+| `company_branches`               | Company branch offices  | `company_id`, `name`, `is_main_office`, `manager_first_name`, `manager_last_name`, `manager_tax_code`                                      |
 | `processes`                      | Process definition      | `company_id`, `owner_function_id`, `name`, `description`, `target_model`, `is_active`                                                      |
+| `process_macros`                 | Process macro category  | `name`, `description`                                                                                                                      |
+| `process_request_mappings`       | Request type → Process  | `request_type`, `process_id`, `is_suggested`                                                                                               |
 | `process_tasks`                  | Individual steps        | `process_id`, `sequence_number`, `name`, `description`                                                                                     |
 | `checklists`                     | Instruction groups      | `process_task_id`, `name`, `description`, `sort_order`                                                                                     |
 | `checklist_items`                | Single instructions     | `checklist_id`, `instruction`, `is_mandatory`, `sort_order`, **`require_condition_class`**, **`skip_condition_class`**, **`action_class`** |
@@ -104,19 +107,74 @@ ProcessTask (1) ── (N) TaskExecution  (runtime)
 
 ### Supporting Tables
 
-| Table                 | Purpose                                                         |
-| --------------------- | --------------------------------------------------------------- |
-| `business_functions`  | Organizational units (org chart) with GDPR metadata             |
-| `employees`           | Employee registry with OAM/IVASS registration                   |
-| `clients`             | Client/lead registry with consent & GDPR fields                 |
-| `privacy_data_types`  | GDPR data type catalog (comuni, particolari, giudiziari)        |
-| `privacy_legal_bases` | Legal bases for processing (Art. 6 GDPR)                        |
-| `sla_policies`        | SLA policy definitions (duration, warning %, weekend exclusion) |
-| `holidays`            | Holiday calendar for business-day SLA calculations              |
-| `request_registries`  | GDPR request registry (access, deletion, rectification…)        |
-| `consent_logs`        | Logs of consent given by clients                                |
-| `suppression_lists`   | Opt-out / blacklist entries                                     |
-| `data_breaches`       | Data breach tracking with DPA reporting flag                    |
+| Table                          | Purpose                                                                                               |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| `users`                        | Application users (multi-tenant via `Company`)                                                        |
+| `socialite_users`              | OAuth login records (Microsoft, Google)                                                               |
+| `business_functions`           | Organizational units (org chart) with GDPR metadata                                                   |
+| `business_function_client`     | Pivot: client ↔ business function (with `start_date`, `end_date`, `temporary_reason`)                 |
+| `business_function_employee`   | Pivot: employee ↔ business function (with `is_manager`, `start_date`, `end_date`, `temporary_reason`) |
+| `employees`                    | Employee registry with OAM/IVASS registration                                                         |
+| `clients`                      | Client/lead registry with consent & GDPR fields                                                       |
+| `client_types`                 | Client type catalog (`name`, `description`)                                                           |
+| `privacy_data_types`           | GDPR data type catalog (comuni, particolari, giudiziari)                                              |
+| `privacy_legal_bases`          | Legal bases for processing (Art. 6 GDPR)                                                              |
+| `sla_policies`                 | SLA policy definitions (duration, warning %, weekend exclusion)                                       |
+| `holidays`                     | Holiday calendar for business-day SLA calculations                                                    |
+| `request_registries`           | GDPR request registry (access, deletion, rectification…)                                              |
+| `request_registry_actions`     | Audit log of actions performed on a registry entry                                                    |
+| `request_registry_attachments` | Files uploaded to a registry entry                                                                    |
+| `request_registry_processes`   | Links a registry entry to processes/process_tasks being executed                                      |
+| `consent_logs`                 | Logs of consent given by clients                                                                      |
+| `suppression_lists`            | Opt-out / blacklist entries                                                                           |
+| `data_breaches`                | Data breach tracking with DPA reporting flag                                                          |
+| `lead_transfers`               | Lead ownership transfer between clients                                                               |
+| `lead_return_logs`             | Lead reassignment / return log                                                                        |
+| `agents`                       | Candidate/agent registry for recruitment BPM process                                                  |
+| `proformas`                    | Preliminary invoices for "Gestione Proforma ed Emissione Fattura" BPM                                 |
+| `commissions`                  | Fee/commission lines linked to a Proforma                                                             |
+
+### BPM Models (37 total)
+
+| Model                        | Type  | Key Relationships                                                                                                                                                                                                                                                           |
+| ---------------------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Agent`                      | Model | `belongsTo(User)`, `morphMany(TaskExecution)`                                                                                                                                                                                                                               |
+| `BusinessFunction`           | Model | `belongsTo(Company)`, `hasMany(Process)`, `hasMany(RaciAssignment)`, `belongsToMany(Client)`, `belongsToMany(Employee)`                                                                                                                                                     |
+| `BusinessFunctionClient`     | Pivot | `business_function_id`, `client_id`, `start_date`, `end_date`, `temporary_reason`                                                                                                                                                                                           |
+| `BusinessFunctionEmployee`   | Pivot | `business_function_id`, `employee_id`, `is_manager`, `start_date`, `end_date`, `temporary_reason`                                                                                                                                                                           |
+| `Checklist`                  | Model | `belongsTo(ProcessTask)`, `hasMany(ChecklistItem)`                                                                                                                                                                                                                          |
+| `ChecklistItem`              | Model | `belongsTo(Checklist)`, `require_condition_class`, `skip_condition_class`, `action_class`                                                                                                                                                                                   |
+| `Client`                     | Model | `belongsTo(Company)`, `belongsTo(ClientType)`, `morphMany(TaskExecution)`, `belongsToMany(BusinessFunction)`                                                                                                                                                                |
+| `ClientType`                 | Model | `hasMany(Client)`                                                                                                                                                                                                                                                           |
+| `Commission`                 | Model | `belongsTo(Proforma)`, `belongsTo(Company)`                                                                                                                                                                                                                                 |
+| `Company`                    | Model | `hasMany(Process, Employee, Client, BusinessFunction, CompanyBranch, RequestRegistry)`                                                                                                                                                                                      |
+| `CompanyBranch`              | Model | `belongsTo(Company)`                                                                                                                                                                                                                                                        |
+| `ConsentLog`                 | Model | `belongsTo(Client)`                                                                                                                                                                                                                                                         |
+| `DataBreach`                 | Model | `belongsTo(Company)`                                                                                                                                                                                                                                                        |
+| `Employee`                   | Model | `belongsTo(Company)`, `belongsTo(CompanyBranch)`, `morphMany(TaskExecution)`, `belongsToMany(BusinessFunction)`                                                                                                                                                             |
+| `Holiday`                    | Model | `belongsTo(Company)`                                                                                                                                                                                                                                                        |
+| `LeadReturnLog`              | Model | `belongsTo(Company)`, `belongsTo(Client, client_id)`, `belongsTo(Client, lead_id)`                                                                                                                                                                                          |
+| `LeadTransfer`               | Model | `belongsTo(Company)`, `belongsTo(Client, lead_id)`, `belongsTo(Client, purchaser_id)`                                                                                                                                                                                       |
+| `PrivacyDataType`            | Model | `hasMany(ProcessTaskPrivacyData)`                                                                                                                                                                                                                                           |
+| `PrivacyLegalBase`           | Model | `hasMany(ProcessTaskPrivacyData)`                                                                                                                                                                                                                                           |
+| `Process`                    | Model | `belongsTo(Company)`, `belongsTo(BusinessFunction, owner_function_id)`, `belongsTo(ProcessMacroCategory)`, `hasMany(ProcessTask)`, `hasMany(ProcessRequestMapping)`                                                                                                         |
+| `ProcessMacroCategory`       | Model | `hasMany(Process)`                                                                                                                                                                                                                                                          |
+| `ProcessRequestMapping`      | Model | `belongsTo(Process)`, scopes: `suggested()`, `byRequestType()`                                                                                                                                                                                                              |
+| `ProcessTask`                | Model | `belongsTo(Process)`, `hasMany(Checklist)`, `hasMany(RaciAssignment)`, `hasOne(ProcessTaskPrivacyData)`, `hasMany(TaskExecution)`                                                                                                                                           |
+| `ProcessTaskPrivacyData`     | Model | `belongsTo(ProcessTask)`, `belongsTo(PrivacyDataType)`, `belongsTo(PrivacyLegalBase)`                                                                                                                                                                                       |
+| `Proforma`                   | Model | `belongsTo(Company)`, `belongsTo(Client)`, `belongsTo(Employee, employee_id)`, `hasMany(Commission)`, `morphMany(TaskExecution)`                                                                                                                                            |
+| `RaciAssignment`             | Model | `belongsTo(ProcessTask)`, `belongsTo(BusinessFunction)`                                                                                                                                                                                                                     |
+| `RequestRegistry`            | Model | `belongsTo(Company)`, `belongsTo(User, assigned_to)`, `belongsTo(Process, active_process_id)`, `belongsTo(ProcessTask, process_task_id)`, `morphTo(dataSubject)`, `hasMany(RequestRegistryAttachment)`, `hasMany(RequestRegistryAction)`, `hasMany(RequestRegistryProcess)` |
+| `RequestRegistryAction`      | Model | `belongsTo(RequestRegistry)`, `belongsTo(User, performed_by)`                                                                                                                                                                                                               |
+| `RequestRegistryAttachment`  | Model | `belongsTo(RequestRegistry)`, `belongsTo(User, uploaded_by)`                                                                                                                                                                                                                |
+| `RequestRegistryProcess`     | Model | `belongsTo(RequestRegistry)`, `belongsTo(Process)`, `belongsTo(ProcessTask)`                                                                                                                                                                                                |
+| `SlaPolicy`                  | Model | `belongsTo(Company)`                                                                                                                                                                                                                                                        |
+| `SocialiteUser`              | Model | Extends `DutchCodingCompany\FilamentSocialite\Models\SocialiteUser`                                                                                                                                                                                                         |
+| `SuppressionList`            | Model | `belongsTo(Company)`                                                                                                                                                                                                                                                        |
+| `TaskDeadline`               | Model | `belongsTo(TaskExecution)`                                                                                                                                                                                                                                                  |
+| `TaskExecution`              | Model | `belongsTo(ProcessTask)`, `belongsTo(Employee)`, `belongsTo(Client)`, `belongsTo(RequestRegistry)`, `morphTo(target)`, `hasMany(TaskExecutionChecklistItem)`, `hasMany(TaskDeadline)`                                                                                       |
+| `TaskExecutionChecklistItem` | Model | `belongsTo(TaskExecution)`, `belongsTo(ChecklistItem)`                                                                                                                                                                                                                      |
+| `User`                       | Model | `belongsToMany(Company)`, `hasOne(SocialiteUser)`, `hasMany(Employee)`, `hasMany(RequestRegistry, assigned_to)`                                                                                                                                                             |
 
 ---
 

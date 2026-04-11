@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\BusinessFunction;
 use App\Models\Checklist;
 use App\Models\ChecklistItem;
 use App\Models\Company;
@@ -19,10 +20,15 @@ class VocalOrderProcessSeeder extends Seeder
     {
         DB::transaction(function () {
             $companyId = Company::first()?->id;
+            $defaultBusinessFunction = BusinessFunction::first();  // Get first business function as default
 
             if (!$companyId) {
                 $this->command->error('Nessuna azienda trovata. Eseguire prima il CompanySeeder.');
+                return;
+            }
 
+            if (!$defaultBusinessFunction) {
+                $this->command->error('Nessuna business function trovata. Eseguire prima il BusinessFunctionSeeder.');
                 return;
             }
 
@@ -38,7 +44,7 @@ class VocalOrderProcessSeeder extends Seeder
                     'description' => "Procedura guidata per la stipula del contratto telefonico (Luce/Gas/Telco). Include lo script legale, la registrazione audio e l'archiviazione sicura del file.",
                     'target_model' => 'App\Models\Contract',
                     'is_active' => true,
-                    'business_function_id' => 1,  // Default business function
+                    'business_function_id' => $defaultBusinessFunction->id,
                 ]
             );
 
@@ -54,7 +60,7 @@ class VocalOrderProcessSeeder extends Seeder
                 [
                     'name' => 'Consenso alla Registrazione e Identificazione',
                     'description' => "Identificazione certa dell'intestatario e acquisizione del consenso alla registrazione della chiamata.",
-                    'business_function_id' => 1,  // Default business function
+                    'business_function_id' => $defaultBusinessFunction->id,
                 ]
             );
 
@@ -91,7 +97,7 @@ class VocalOrderProcessSeeder extends Seeder
                 [
                     'name' => 'Lettura Proposta Economica e Oneri',
                     'description' => "Lettura obbligatoria dell'offerta commerciale, dei costi di attivazione e delle condizioni contrattuali.",
-                    'business_function_id' => 1,  // Default business function
+                    'business_function_id' => $defaultBusinessFunction->id,
                 ]
             );
 
@@ -117,7 +123,7 @@ class VocalOrderProcessSeeder extends Seeder
                 [
                     'name' => 'Manifestazione del Consenso e Recesso',
                     'description' => 'Informazione sul diritto di ripensamento e acquisizione del consenso finale alla sottoscrizione.',
-                    'business_function_id' => 1,  // Default business function
+                    'business_function_id' => $defaultBusinessFunction->id,
                 ]
             );
 
@@ -142,7 +148,7 @@ class VocalOrderProcessSeeder extends Seeder
                 [
                     'name' => 'Chiusura e Archiviazione File',
                     'description' => "Interruzione della registrazione, verifica dell'integrità del file audio e invio della sintesi contrattuale.",
-                    'business_function_id' => 1,  // Default business function
+                    'business_function_id' => $defaultBusinessFunction->id,
                 ]
             );
 

@@ -52,6 +52,11 @@ class Process extends Model
         return $this->hasMany(ProcessTask::class)->orderBy('sequence_number');
     }
 
+    public function requestMappings(): HasMany
+    {
+        return $this->hasMany(ProcessRequestMapping::class);
+    }
+
     /**
      * Scope per filtrare processi che trattano dati particolari.
      */
@@ -79,5 +84,41 @@ class Process extends Model
         return [
             'is_active' => 'boolean',
         ];
+    }
+
+    /**
+     * Scope per filtrare processi attivi con request mappings per tipo.
+     */
+    public function scopeActiveWithRequestType($query, string $requestType)
+    {
+        return $query->where('is_active', true)
+            ->whereHas('requestMappings', function ($q) use ($requestType) {
+                $q->where('request_type', $requestType);
+            })
+            ->withExists([
+                'requestMappings as is_suggested_exists' => function ($q) use ($requestType) {
+                    $q->where('request_type', $requestType)->where('is_suggested', true);
+                }
+            ]);
+    }
+
+    /**
+     * Ottiene i processi attivi per tipo di richiesta ordinati per suggerimento.
+     * Restituisce un array ['process_id' => 'process_name'].
+     */
+    public static function getActiveForRequestType(string $requestType): array
+    {
+        return self::query()
+            ->where('is_active', true)
+            ->whereHas('requestMappings', function ($q) use ($requestType) {
+                $q->where('request_type', $requestType);
+            })
+            ->join('process_request_mappings', 'processes.id', '=', 'process_request_mappings.process_id')
+            ->where('process_request_mappings.request_type', $requestType)
+            ->select('processes.id', 'processes.name', 'process_request_mappings.is_suggested')
+            ->orderBy('process_request_mappings.is_suggested', 'desc')
+            ->orderBy('processes.name')
+            ->pluck('processes.name', 'processes.id')
+            ->toArray();
     }
 }

@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Models\ProcessMacroCategory;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 
 class ProcessMacroCategorySeeder extends Seeder
 {
@@ -38,7 +38,7 @@ class ProcessMacroCategorySeeder extends Seeder
         ];
 
         foreach ($categories as $category) {
-            \App\Models\ProcessMacroCategory::updateOrCreate(
+            ProcessMacroCategory::updateOrCreate(
                 ['code' => $category['code']],
                 [
                     'name' => $category['name'],

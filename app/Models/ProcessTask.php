@@ -3,10 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Model;
 
 class ProcessTask extends Model
 {
@@ -20,20 +21,17 @@ class ProcessTask extends Model
             // Eredita la business function del processo, oppure usa quella assegnata al task come fallback
             $businessFunctionId = $process ? $process->business_function_id : $task->business_function_id;
 
-
             $roles = ['R', 'A', 'C', 'I'];
             foreach ($roles as $role) {
                 $task->raciAssignments()->firstOrCreate(
                     ['company_id' => $company_id,
                         'process_task_id' => $task->id,
-                        'role' => $role], // Controlla se esiste già questo ruolo
+                        'role' => $role],  // Controlla se esiste già questo ruolo
                     [
-
                         'business_function_id' => $businessFunctionId,
                     ]
                 );
             }
-
         });
     }
 
@@ -81,6 +79,14 @@ class ProcessTask extends Model
     public function executions(): HasMany
     {
         return $this->hasMany(TaskExecution::class);
+    }
+
+    /**
+     * Task executions where this process task is the polymorphic target.
+     */
+    public function taskExecutionsAsTarget(): MorphMany
+    {
+        return $this->morphMany(TaskExecution::class, 'target');
     }
 
     /**

@@ -17,6 +17,7 @@ use App\Models\TaskExecution;
 use App\Models\User;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
+use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
@@ -71,9 +72,9 @@ class RequestRegistryResource extends Resource
     // SEZIONI DEL FORM
     // ────────────────────────────────────────────────────────────────
 
-    private static function sectionIdentificazione(): \Filament\Schemas\Components\Section
+    private static function sectionIdentificazione(): Section
     {
-        return \Filament\Schemas\Components\Section::make('Identificazione Richiesta')
+        return Section::make('Identificazione Richiesta')
             ->schema([
                 TextInput::make('request_number')
                     ->label('Numero Protocollo')
@@ -166,7 +167,7 @@ class RequestRegistryResource extends Resource
                     ->columnSpan(1),
                 Select::make('data_subject_id')
                     ->label('Soggetto Interessato')
-                    ->options(fn($get) => self::getDataSubjectOptions($get('data_subject_type')))
+                    ->options(fn ($get) => self::getDataSubjectOptions($get('data_subject_type')))
                     ->searchable()
                     //  ->visible(fn (Get $get) => filled($get('data_subject_type')))
                     ->columnSpan(2),
@@ -199,7 +200,7 @@ class RequestRegistryResource extends Resource
                     ->label('Assegnata a')
                     ->options(function ($get) {
                         $processId = $get('active_process_id');
-                        if (!$processId) {
+                        if (! $processId) {
                             return User::query()->pluck('name', 'id');
                         }
 
@@ -232,7 +233,7 @@ class RequestRegistryResource extends Resource
                     ->label('Processo BPM')
                     ->options(function ($get) {
                         $requestType = $get('request_type');
-                        if (!$requestType) {
+                        if (! $requestType) {
                             return [];
                         }
 
@@ -270,7 +271,7 @@ class RequestRegistryResource extends Resource
                     // ->rows(4)
                     ->columnSpanFull(),
                 // SLA
-                \Filament\Schemas\Components\Grid::make(3)
+                Grid::make(3)
                     ->schema([
                         Toggle::make('sla_breach')
                             ->label('SLA Breach')
@@ -283,7 +284,7 @@ class RequestRegistryResource extends Resource
                 Textarea::make('extension_reason')
                     ->label('Motivazione Estensione')
                     ->rows(2)
-                    ->visible(fn($get) => $get('extension_granted'))
+                    ->visible(fn ($get) => $get('extension_granted'))
                     ->columnSpanFull(),
                 Textarea::make('notes')
                     ->label('Note Interne')
@@ -309,7 +310,7 @@ class RequestRegistryResource extends Resource
                 TextColumn::make('requester_type')
                     ->label('Richiedente')
                     ->badge()
-                    ->formatStateUsing(fn(string $state) => match ($state) {
+                    ->formatStateUsing(fn (string $state) => match ($state) {
                         'interessato' => 'Interessato',
                         'mandatario' => 'Mandatario',
                         'organismo_vigilanza' => 'Org. Vigilanza',
@@ -326,7 +327,7 @@ class RequestRegistryResource extends Resource
                     ->colors([
                         'info' => 'accesso',
                         'danger' => 'cancellazione',
-                        'warning' => fn(string $state) => in_array($state, ['opposizione', 'revoca_consenso']),
+                        'warning' => fn (string $state) => in_array($state, ['opposizione', 'revoca_consenso']),
                         'success' => 'portabilita',
                         'gray' => 'reclamazione',
                     ]),
@@ -352,15 +353,16 @@ class RequestRegistryResource extends Resource
                     ->label('Scadenza')
                     ->date('d/m/Y')
                     ->sortable()
-                    ->color(fn(string $state) => strtotime($state) < now()->timestamp ? Color::Red : null),
-                BadgeColumn::make('status')
+                    ->color(fn (string $state) => strtotime($state) < now()->timestamp ? Color::Red : null),
+                Textarea::make('status')
                     ->label('Stato')
-                    ->formatStateUsing(fn(string $state) => ucfirst(str_replace('_', ' ', $state)))
+                    ->badge()
+                    ->formatStateUsing(fn (string $state) => ucfirst(str_replace('_', ' ', $state)))
                     ->colors([
                         'gray' => 'ricevuta',
                         'info' => 'in_lavorazione',
                         'success' => 'evasa',
-                        'danger' => 'respinta',
+                        // 'danger' => 'respinta',
                         'warning' => 'parzialmente_evasa',
                         'danger' => 'scaduta',
                     ]),
@@ -405,11 +407,11 @@ class RequestRegistryResource extends Resource
                     ->placeholder('Tutti'),
             ])
             ->actions([
-                CreateAction::make('create_task_execution')
+                Action::make('create_task_execution')
                     ->label('Crea Esecuzione Task')
                     ->icon('heroicon-o-play')
                     ->color('success')
-                    ->url(fn($record) => route('filament.resources.task-executions.create', [
+                    ->url(fn ($record) => \App\Filament\Resources\TaskExecutions\TaskExecutionResource::getUrl('create', [
                         'process_id' => $record->active_process_id,
                         'task_id' => $record->process_task_id,
                         'request_registry_id' => $record->id,
@@ -465,7 +467,7 @@ class RequestRegistryResource extends Resource
 
     private static function getDataSubjectOptions(?string $type): array
     {
-        if (!$type) {
+        if (! $type) {
             return [];
         }
 

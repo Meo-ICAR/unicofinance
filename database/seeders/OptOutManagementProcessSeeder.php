@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\BusinessFunction;
 use App\Models\Checklist;
 use App\Models\ChecklistItem;
 use App\Models\Company;
@@ -19,10 +20,15 @@ class OptOutManagementProcessSeeder extends Seeder
     {
         DB::transaction(function () {
             $companyId = Company::first()?->id;
+            $defaultBusinessFunction = BusinessFunction::first();  // Get first business function as default
 
             if (!$companyId) {
                 $this->command->error('Nessuna azienda trovata. Eseguire prima il CompanySeeder.');
+                return;
+            }
 
+            if (!$defaultBusinessFunction) {
+                $this->command->error('Nessuna business function trovata. Eseguire prima il BusinessFunctionSeeder.');
                 return;
             }
 
@@ -38,7 +44,7 @@ class OptOutManagementProcessSeeder extends Seeder
                     'description' => "Procedura di inibizione immediata della numerazione a seguito di opposizione dell'interessato, con aggiornamento della Suppression List e comunicazione di ritorno al Committente.",
                     'target_model' => 'App\Models\Blacklist',
                     'is_active' => true,
-                    'business_function_id' => 1,  // Default business function
+                    'business_function_id' => $defaultBusinessFunction->id,
                 ]
             );
 
@@ -54,7 +60,7 @@ class OptOutManagementProcessSeeder extends Seeder
                 [
                     'name' => 'Interruzione e Registrazione Esito Assoluto',
                     'description' => "Blocco immediato della proposta commerciale e registrazione dell'esito come OPT-OUT.",
-                    'business_function_id' => 1,  // Default business function
+                    'business_function_id' => $defaultBusinessFunction->id,
                 ]
             );
 
@@ -79,7 +85,7 @@ class OptOutManagementProcessSeeder extends Seeder
                 [
                     'name' => 'Inserimento in Suppression List Locale',
                     'description' => 'Pseudonimizzazione del record e inserimento nella Blacklist di blocco del Dialer.',
-                    'business_function_id' => 1,  // Default business function
+                    'business_function_id' => $defaultBusinessFunction->id,
                 ]
             );
 
@@ -117,7 +123,7 @@ class OptOutManagementProcessSeeder extends Seeder
                 [
                     'name' => 'Notifica al Titolare / Utility',
                     'description' => 'Sincronizzazione con il Committente tramite log temporale ed export SFTP di fine giornata.',
-                    'business_function_id' => 1,  // Default business function
+                    'business_function_id' => $defaultBusinessFunction->id,
                 ]
             );
 
