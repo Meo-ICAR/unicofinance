@@ -17,6 +17,7 @@ class Process extends Model
         'business_function_id',
         'owner_function_id',
         'process_macro_category_id',
+        'code',
         'name',
         'description',
         'target_model',

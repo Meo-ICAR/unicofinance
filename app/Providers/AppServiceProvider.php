@@ -2,9 +2,11 @@
 
 namespace App\Providers;
 
+use App\Models\Employee;
 use App\Models\RaciAssignment;
 use App\Models\SocialiteUser;
 use App\Models\TaskExecutionChecklistItem;
+use App\Observers\EmployeeObserver;
 use App\Observers\RaciAssignmentObserver;
 use App\Observers\TaskExecutionChecklistItemObserver;
 use DutchCodingCompany\FilamentSocialite\Events\Login;
@@ -55,5 +57,6 @@ class AppServiceProvider extends ServiceProvider
         });
 
         TaskExecutionChecklistItem::observe(TaskExecutionChecklistItemObserver::class);
+        Employee::observe(EmployeeObserver::class);
     }
 }

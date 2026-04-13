@@ -1,30 +1,23 @@
 <?php
 
 use App\Models\Client;
-use App\Models\Company;
 use App\Rules\Bpm\ForeignerRule;
 
 beforeEach(function () {
-    $this->company = Company::factory()->create();
     $this->rule = new ForeignerRule();
 });
 
-it('returns true for non-Italian citizenship', function () {
-    $client = Client::factory()->make([
-        'company_id' => $this->company->id,
-        'citizenship' => 'FR',
-    ]);
+it('returns true when citizenship is not Italian', function () {
+    $client = new Client(['citizenship' => 'FR']);
 
     expect($this->rule->evaluate($client))->toBeTrue();
 });
 
-it('returns false for Italian citizenship', function () {
-    $client = Client::factory()->make([
-        'company_id' => $this->company->id,
-        'citizenship' => 'IT',
-    ]);
+it('returns true when citizenship is null or missing', function () {
+    $client = new Client();
 
-    expect($this->rule->evaluate($client))->toBeFalse();
+    // When citizenship is null, it's not 'IT', so rule returns true
+    expect($this->rule->evaluate($client))->toBeTrue();
 });
 
 it('implements BusinessRule contract', function () {
@@ -34,4 +27,15 @@ it('implements BusinessRule contract', function () {
 it('can be resolved from container', function () {
     $resolved = app(ForeignerRule::class);
     expect($resolved)->toBeInstanceOf(\App\Contracts\BusinessRule::class);
+});
+
+it('evaluates citizenship attribute correctly', function () {
+    $clientIT = new Client();
+    $clientIT->citizenship = 'IT';
+
+    $clientFR = new Client();
+    $clientFR->citizenship = 'FR';
+
+    expect($this->rule->evaluate($clientIT))->toBeFalse();
+    expect($this->rule->evaluate($clientFR))->toBeTrue();
 });
