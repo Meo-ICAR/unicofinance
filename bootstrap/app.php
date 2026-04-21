@@ -12,7 +12,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // Machine-to-machine API token auth (cross-app BPM triggers)
+        $middleware->alias([
+            'auth.api_token' => \App\Http\Middleware\AuthenticateApiToken::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
