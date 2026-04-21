@@ -90,6 +90,8 @@ class DatabaseSeeder extends Seeder
             // Process Request Mappings
             ProcessRequestMappingSeeder::class,
             PrivacyActionSeeder::class,
+            // Audit & Compliance
+            RegistroSeeder::class,
             // Processi Aggiuntivi
         ]);
     }

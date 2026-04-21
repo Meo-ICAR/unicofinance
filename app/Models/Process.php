@@ -22,6 +22,7 @@ class Process extends Model
         'description',
         'target_model',
         'is_active',
+        'registro',
     ];
 
     protected $casts = [
@@ -59,6 +60,14 @@ class Process extends Model
     }
 
     /**
+     * Get the registro associated with this process.
+     */
+    public function registroEntity()
+    {
+        return $this->belongsTo(Registro::class, 'registro', 'name');
+    }
+
+    /**
      * Scope per filtrare processi che trattano dati particolari.
      */
     public function scopeWithSpecialData($query)
@@ -92,7 +101,8 @@ class Process extends Model
      */
     public function scopeActiveWithRequestType($query, string $requestType)
     {
-        return $query->where('is_active', true)
+        return $query
+            ->where('is_active', true)
             ->whereHas('requestMappings', function ($q) use ($requestType) {
                 $q->where('request_type', $requestType);
             })

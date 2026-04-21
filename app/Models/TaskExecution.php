@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -74,8 +75,6 @@ class TaskExecution extends Model
         return $this->belongsTo(Employee::class);
     }
 
-
-
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);
@@ -97,7 +96,7 @@ class TaskExecution extends Model
             ->logOnly(['status', 'employee_id', 'audit_dms_id'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
-            ->setDescriptionForEvent(fn (string $eventName) => "Pratica {$eventName}");
+            ->setDescriptionForEvent(fn(string $eventName) => "Pratica {$eventName}");
     }
 
     public function processTask(): BelongsTo
@@ -154,5 +153,49 @@ class TaskExecution extends Model
     public function checklistItems()
     {
         return $this->hasMany(TaskExecutionChecklistItem::class);
+    }
+
+    /**
+     * Get the registro name directly from the process chain.
+     * This follows: task_execution -> process_task -> process -> registro
+     */
+    public function getRegistroNameAttribute(): ?string
+    {
+        return $this->processTask?->process?->registro;
+    }
+
+    /**
+     * Get the full registro entity if it exists.
+     * This is a dynamic property that can be accessed as $taskExecution->registroEntity
+     */
+    public function getRegistroEntityAttribute(): ?Registro
+    {
+        $registroName = $this->getRegistroNameAttribute();
+
+        if (!$registroName) {
+            return null;
+        }
+
+        return Registro::where('name', $registroName)->first();
+    }
+
+    /**
+     * Scope to filter task executions by registro name.
+     */
+    public function scopeByRegistro($query, $registroName)
+    {
+        return $query->whereHas('processTask.process', function ($query) use ($registroName) {
+            $query->where('registro', $registroName);
+        });
+    }
+
+    /**
+     * Scope to filter task executions that have an associated registro.
+     */
+    public function scopeWithRegistro($query)
+    {
+        return $query->whereHas('processTask.process', function ($query) {
+            $query->whereNotNull('registro');
+        });
     }
 }
