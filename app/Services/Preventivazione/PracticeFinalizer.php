@@ -10,7 +10,7 @@ use Unico\Core\Models\Pratica;
 use Unico\Core\Models\PraticaStato;
 use Unico\Core\Models\TipoProdotto;
 
-/** Crea la pratica in stato perfezionato e collega il preventivo. */
+/** Apre la pratica del preventivo e, dopo, la porta in stato PERFEZIONARE. */
 class PracticeFinalizer
 {
     public function __construct(private FinancingQuoteRecorder $quotes) {}
@@ -19,19 +19,42 @@ class PracticeFinalizer
      * @param  array<string, mixed>  $profile
      * @param  array{min: float, max: float}  $quotation
      */
-    public function finalize(Fornitore $fornitore, array $profile, array $quotation, User $user): FinancingQuote
+    public function saveQuote(Fornitore $fornitore, array $profile, array $quotation, User $user): FinancingQuote
+    {
+        $pratica = $this->createPratica($fornitore, $profile, $quotation, 'PREVENTIVO');
+
+        return $this->quotes->store($fornitore, $profile, $quotation, 'salvato', $pratica->getKey(), $user);
+    }
+
+    public function perfect(FinancingQuote $quote): FinancingQuote
+    {
+        $pratica = $quote->pratica;
+
+        if ($pratica === null) {
+            throw new QuoteUnavailable('Il preventivo non ha una pratica da perfezionare.');
+        }
+
+        $productName = SimulationContractType::from($quote->contract_type)->productName();
+        $pratica->update([
+            'pratica_stato_id' => $this->status($productName, 'PERFEZIONARE')->getKey(),
+        ]);
+        $quote->update(['status' => 'perfezionato']);
+
+        return $quote->fresh(['pratica.praticaStato', 'pratica.tipoprodotto']);
+    }
+
+    /**
+     * @param  array<string, mixed>  $profile
+     * @param  array{min: float, max: float}  $quotation
+     */
+    private function createPratica(Fornitore $fornitore, array $profile, array $quotation, string $statusCode): Pratica
     {
         $contract = SimulationContractType::from((string) $profile['contract_type']);
         $productName = $contract->productName();
-
         $tipo = TipoProdotto::query()->where('name', $productName)->first();
-        $stato = PraticaStato::query()
-            ->where('codice', 'PERFEZIONATA')
-            ->where('tipo_finanziamento', $productName)
-            ->first();
 
-        if ($tipo === null || $stato === null) {
-            throw new QuoteUnavailable("Non trovo il prodotto o lo stato perfezionato per {$productName}.");
+        if ($tipo === null) {
+            throw new QuoteUnavailable("Non trovo il tipo prodotto {$productName}.");
         }
 
         $pratica = Pratica::query()->create([
@@ -47,7 +70,7 @@ class PracticeFinalizer
             'is_notowned' => false,
             'upload_at' => now(),
             'company_id' => $fornitore->company_id,
-            'pratica_stato_id' => $stato->getKey(),
+            'pratica_stato_id' => $this->status($productName, $statusCode)->getKey(),
             'tipoprodotto_id' => $tipo->getKey(),
             'fornitori_id' => $fornitore->getKey(),
         ]);
@@ -56,6 +79,21 @@ class PracticeFinalizer
             'codice_pratica' => 'SIM-'.now()->format('ymd').'-'.str_pad((string) $pratica->getKey(), 6, '0', STR_PAD_LEFT),
         ]);
 
-        return $this->quotes->store($fornitore, $profile, $quotation, 'perfezionato', $pratica->getKey(), $user);
+        return $pratica;
+    }
+
+    private function status(string $productName, string $code): PraticaStato
+    {
+        return PraticaStato::query()->firstOrCreate(
+            ['codice' => $code, 'tipo_finanziamento' => $productName],
+            [
+                'name' => $code,
+                'ordine' => 0,
+                'is_rejected' => false,
+                'is_working' => true,
+                'is_estingued' => false,
+                'colore' => 'gray',
+            ],
+        );
     }
 }

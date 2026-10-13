@@ -2,6 +2,8 @@
 
 namespace App\Providers\Filament;
 
+use App\Services\Agenti\AgentImpersonationService;
+use Filament\Actions\Action;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -10,6 +12,7 @@ use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\View\PanelsRenderHook;
 use Filament\Widgets\AccountWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -38,6 +41,19 @@ class AgentiPanelProvider extends PanelProvider
             ->widgets([
                 AccountWidget::class,
             ])
+            ->userMenuItems([
+                Action::make('leaveImpersonation')
+                    ->label('Torna all\'admin')
+                    ->icon('heroicon-o-arrow-uturn-left')
+                    ->color('warning')
+                    ->url(fn (): string => route('agenti.impersonation.leave'))
+                    ->postToUrl()
+                    ->visible(fn (): bool => app(AgentImpersonationService::class)->isImpersonating()),
+            ])
+            ->renderHook(
+                PanelsRenderHook::BODY_START,
+                fn (): string => view('filament.agenti.impersonation-banner')->render(),
+            )
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,

@@ -45,6 +45,11 @@ enum SimulationContractType: string implements HasLabel
         };
     }
 
+    public function asksEmployer(): bool
+    {
+        return $this === self::Cessione || $this === self::Delega;
+    }
+
     /**
      * @return list<int>
      */

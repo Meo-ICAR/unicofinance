@@ -13,12 +13,24 @@ class User extends CoreUser implements FilamentUser
     /** @use HasFactory<UserFactory> */
     use HasFactory;
 
+    /**
+     * Profili interni che usano il pannello admin.
+     *
+     * @var list<string>
+     */
+    public const STAFF_ROLES = ['admin', 'super_admin', 'employee', 'inspector', 'user'];
+
     public function canAccessPanel(Panel $panel): bool
     {
         if ($panel->getId() === 'agenti') {
             return $this->fornitore()->exists();
         }
 
-        return true;
+        return $this->isStaff();
+    }
+
+    public function isStaff(): bool
+    {
+        return in_array($this->role, self::STAFF_ROLES, true);
     }
 }

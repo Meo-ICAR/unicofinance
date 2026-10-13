@@ -50,28 +50,80 @@
             </dl>
         </x-filament::section>
 
-        @if (! $preventivoDeciso)
-            <x-filament::section heading="Salvare il preventivo o perfezionarlo?" class="mt-6">
-                <div class="flex flex-wrap gap-3">
-                    <x-filament::button type="button" wire:click="salvaPreventivo" icon="heroicon-o-bookmark">
-                        Salva preventivo
-                    </x-filament::button>
-                    <x-filament::button type="button" color="success" wire:click="perfeziona" icon="heroicon-o-check-circle">
-                        Perfeziona
-                    </x-filament::button>
-                </div>
+        @if ($fase === null)
+            <x-filament::section heading="Salva il preventivo" class="mt-6">
+                <x-filament::button type="button" wire:click="salvaPreventivo" icon="heroicon-o-bookmark">
+                    Salva preventivo
+                </x-filament::button>
             </x-filament::section>
         @else
-            <x-filament::section heading="Concluso" class="mt-6">
+            <x-filament::section heading="Pratica {{ $codicePratica }}" class="mt-6">
                 <p class="text-sm">
-                    Preventivo n.
-                    <strong>{{ $preventivoNumero }}</strong>
-                    @if ($codicePratica)
-                        — pratica <strong>{{ $codicePratica }}</strong>
-                    @else
-                        salvato.
-                    @endif
+                    Preventivo n. <strong>{{ $preventivoNumero }}</strong>
+                    — stato <strong>{{ $statoPratica }}</strong>
                 </p>
+
+                @if ($fase === 'preventivo')
+                    <div class="mt-4">
+                        <x-filament::button type="button" color="success" wire:click="perfeziona" icon="heroicon-o-check-circle">
+                            Perfeziona
+                        </x-filament::button>
+                    </div>
+                @endif
+            </x-filament::section>
+        @endif
+
+        @if ($fase === 'perfezionare')
+            <x-filament::section heading="Documenti del tipo prodotto" class="mt-6">
+                @if ($documentiRichiesti === [])
+                    <p class="text-sm">Nessun documento è definito nel task di questo tipo prodotto.</p>
+                @else
+                    <form wire:submit="caricaDocumenti" class="space-y-4">
+                        {{ $this->uploadsForm }}
+                        <x-filament::button type="submit" icon="heroicon-o-arrow-up-tray">
+                            Carica documenti
+                        </x-filament::button>
+                    </form>
+                @endif
+                @if ($documentiMancanti !== [])
+                    <p class="mt-4 text-sm text-danger-600 dark:text-danger-400">
+                        Mancano ancora: {{ implode(', ', $documentiMancanti) }}.
+                    </p>
+                @endif
+            </x-filament::section>
+        @endif
+
+        @if ($esitiDocumenti !== [])
+            <x-filament::section heading="Documenti della pratica" class="mt-6">
+                <ul class="space-y-2 text-sm">
+                    @foreach ($esitiDocumenti as $esito)
+                        <li>
+                            <strong>{{ $esito['file'] }}</strong>
+                            @if ($esito['tipo'])
+                                — riconosciuto come {{ $esito['tipo'] }}
+                            @else
+                                — tipo non riconosciuto, da verificare
+                            @endif
+                        </li>
+                    @endforeach
+                </ul>
+            </x-filament::section>
+        @endif
+
+        @if ($fase === 'cliente')
+            <x-filament::section heading="Cliente" class="mt-6">
+                <form wire:submit="salvaCliente" class="space-y-4">
+                    {{ $this->clienteForm }}
+                    <x-filament::button type="submit">
+                        Salva cliente
+                    </x-filament::button>
+                </form>
+            </x-filament::section>
+        @endif
+
+        @if ($fase === 'cliente_salvato')
+            <x-filament::section heading="Cliente salvato" class="mt-6">
+                <p class="text-sm">Il cliente è collegato alla pratica come richiedente.</p>
             </x-filament::section>
         @endif
     @endif
