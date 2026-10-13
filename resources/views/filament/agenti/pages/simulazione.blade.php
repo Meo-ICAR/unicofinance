@@ -9,8 +9,8 @@
         </x-filament::section>
     @endif
 
-    @if ($profilo && $esito)
-        <x-filament::section heading="Esito preventivazione" class="mt-6">
+    @if ($profilo && ($esito || $preventivatoreAssente))
+        <x-filament::section :heading="$esito ? 'Esito preventivazione' : 'Simulazione'" class="mt-6">
             <dl class="grid grid-cols-1 gap-4 text-sm sm:grid-cols-3">
                 <div>
                     <dt class="text-gray-500 dark:text-gray-400">Tipo contratto</dt>
@@ -40,14 +40,21 @@
                     <dt class="text-gray-500 dark:text-gray-400">Data decorrenza</dt>
                     <dd class="font-medium">{{ $profilo['data_decorrenza'] }}</dd>
                 </div>
-                <div>
-                    <dt class="text-gray-500 dark:text-gray-400">Importo erogato</dt>
-                    <dd class="font-medium">
-                        da € {{ number_format($esito['min'], 2, ',', '.') }}
-                        a € {{ number_format($esito['max'], 2, ',', '.') }}
-                    </dd>
-                </div>
+                @if ($esito)
+                    <div>
+                        <dt class="text-gray-500 dark:text-gray-400">Importo erogato</dt>
+                        <dd class="font-medium">
+                            da € {{ number_format($esito['min'], 2, ',', '.') }}
+                            a € {{ number_format($esito['max'], 2, ',', '.') }}
+                        </dd>
+                    </div>
+                @endif
             </dl>
+            @if ($preventivatoreAssente)
+                <p class="mt-4 text-sm text-gray-600 dark:text-gray-300">
+                    Preventivatore non configurato: il preventivo si salva senza importo erogato.
+                </p>
+            @endif
         </x-filament::section>
 
         @if ($fase === null)

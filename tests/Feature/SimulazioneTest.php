@@ -226,4 +226,43 @@ XML;
         $this->assertNotContains('employer_id', FinancingClientFields::forContract(SimulationContractType::Mutuo));
         $this->assertContains('salary_quote', FinancingClientFields::forContract(SimulationContractType::Cessione));
     }
+
+    public function test_simulation_is_saved_when_the_quotation_url_is_missing(): void
+    {
+        config([
+            'preventivatore.url' => null,
+            'preventivatore.passkey' => null,
+        ]);
+        Http::fake();
+
+        Livewire::test(Simulazione::class)
+            ->fillForm([
+                'tipo_contratto' => 'cessione',
+                'sesso' => 'F',
+                'data_nascita' => '1980-02-20',
+                'tipo_rapporto' => 'statale',
+                'data_assunzione' => '2015-06-01',
+                'durata' => 120,
+                'quota_cedibile' => 280,
+                'data_decorrenza' => '2027-01-13',
+            ])
+            ->call('simulate')
+            ->assertHasNoFormErrors()
+            ->assertSet('esito', null)
+            ->assertSet('preventivatoreAssente', true)
+            ->assertSee('Salva preventivo')
+            ->call('salvaPreventivo')
+            ->assertSet('statoPratica', 'PREVENTIVO')
+            ->assertSet('fase', 'preventivo');
+
+        Http::assertNothingSent();
+
+        $quote = FinancingQuote::query()->first();
+        $this->assertNotNull($quote);
+        $this->assertNull($quote->disbursed_min);
+        $this->assertNull($quote->disbursed_max);
+        $this->assertSame('salvato', $quote->status);
+        $this->assertSame('PREVENTIVO', $quote->pratica->praticaStato->codice);
+        $this->assertNull($quote->pratica->erogato);
+    }
 }

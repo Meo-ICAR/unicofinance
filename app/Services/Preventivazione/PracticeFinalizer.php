@@ -17,7 +17,7 @@ class PracticeFinalizer
 
     /**
      * @param  array<string, mixed>  $profile
-     * @param  array{min: float, max: float}  $quotation
+     * @param  array{min: ?float, max: ?float}  $quotation
      */
     public function saveQuote(Fornitore $fornitore, array $profile, array $quotation, User $user): FinancingQuote
     {
@@ -45,7 +45,7 @@ class PracticeFinalizer
 
     /**
      * @param  array<string, mixed>  $profile
-     * @param  array{min: float, max: float}  $quotation
+     * @param  array{min: ?float, max: ?float}  $quotation
      */
     private function createPratica(Fornitore $fornitore, array $profile, array $quotation, string $statusCode): Pratica
     {

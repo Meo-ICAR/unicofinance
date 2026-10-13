@@ -29,6 +29,26 @@ class AgentImpersonationService
         return filled(Session::get(self::SESSION_KEY.'.impersonator_id'));
     }
 
+    /** Fornitore dell'agente in sessione, oppure quello collegato all'utente corrente. */
+    public function agentFornitoreId(): ?int
+    {
+        if ($this->isImpersonating()) {
+            $id = Session::get(self::SESSION_KEY.'.fornitore_id');
+
+            return filled($id) ? (int) $id : null;
+        }
+
+        $user = Auth::user();
+
+        if (! $user instanceof User) {
+            return null;
+        }
+
+        $id = $user->fornitore()->value('id');
+
+        return $id !== null ? (int) $id : null;
+    }
+
     /** Avvia l'impersonazione e restituisce l'URL del portale agenti. */
     public function start(User $actor, Fornitore $fornitore): string
     {

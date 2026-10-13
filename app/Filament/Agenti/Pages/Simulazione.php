@@ -78,6 +78,8 @@ class Simulazione extends Page
      */
     public ?array $esito = null;
 
+    public bool $preventivatoreAssente = false;
+
     public ?string $errorePreventivo = null;
 
     /** preventivo | perfezionare | documenti */
@@ -285,6 +287,11 @@ class Simulazione extends Page
         $this->documentiMancanti = [];
         $this->esito = null;
         $this->errorePreventivo = null;
+        $this->preventivatoreAssente = blank(config('preventivatore.url'));
+
+        if ($this->preventivatoreAssente) {
+            return;
+        }
 
         try {
             $result = $quotation->quote($this->bozza);
@@ -303,12 +310,16 @@ class Simulazione extends Page
         $user = Auth::user();
         $fornitore = $this->fornitore();
 
-        if ($this->bozza === null || $this->esito === null || $this->fase !== null || ! $user instanceof User || $fornitore === null) {
+        if ($this->bozza === null || $this->fase !== null || ! $user instanceof User || $fornitore === null) {
+            return;
+        }
+
+        if ($this->esito === null && ! $this->preventivatoreAssente) {
             return;
         }
 
         try {
-            $quote = $finalizer->saveQuote($fornitore, $this->bozza, $this->esito, $user);
+            $quote = $finalizer->saveQuote($fornitore, $this->bozza, $this->esito ?? ['min' => null, 'max' => null], $user);
         } catch (QuoteUnavailable $e) {
             Notification::make()->title($e->getMessage())->danger()->send();
 

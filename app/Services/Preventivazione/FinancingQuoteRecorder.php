@@ -12,7 +12,7 @@ class FinancingQuoteRecorder
 {
     /**
      * @param  array<string, mixed>  $profile
-     * @param  array{min: float, max: float}  $quotation
+     * @param  array{min: ?float, max: ?float}  $quotation
      */
     public function store(Fornitore $fornitore, array $profile, array $quotation, string $status, ?int $praticaId, ?User $user): FinancingQuote
     {

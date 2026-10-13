@@ -33,6 +33,7 @@ class AgentiPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Blue,
             ])
+            ->discoverResources(in: app_path('Filament/Agenti/Resources'), for: 'App\Filament\Agenti\Resources')
             ->discoverPages(in: app_path('Filament/Agenti/Pages'), for: 'App\Filament\Agenti\Pages')
             ->pages([
                 Dashboard::class,
