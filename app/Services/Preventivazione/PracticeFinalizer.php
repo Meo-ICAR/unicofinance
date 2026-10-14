@@ -5,6 +5,7 @@ namespace App\Services\Preventivazione;
 use App\Enums\SimulationContractType;
 use App\Models\FinancingQuote;
 use App\Models\User;
+use Unico\Core\Documents\PracticeTaskDocuments;
 use Unico\Core\Models\Fornitore;
 use Unico\Core\Models\Pratica;
 use Unico\Core\Models\PraticaStato;
@@ -38,10 +39,16 @@ class PracticeFinalizer
         $pratica->update([
             'pratica_stato_id' => $this->status($productName, 'PERFEZIONARE')->getKey(),
         ]);
-        app(ProductTaskDocuments::class)->attachToPractice($pratica);
+        app(PracticeTaskDocuments::class)->attachToPractice($pratica);
         $quote->update(['status' => 'perfezionato']);
 
         return $quote->fresh(['pratica.praticaStato', 'pratica.tipoprodotto']);
+    }
+
+    /** Porta la pratica a un altro stato del suo prodotto (es. FASCICOLO COMPLETO: modulistica da firmare). */
+    public function advance(Pratica $pratica, string $productName, string $statusCode): void
+    {
+        $pratica->update(['pratica_stato_id' => $this->status($productName, $statusCode)->getKey()]);
     }
 
     /**
@@ -63,11 +70,14 @@ class PracticeFinalizer
             'denominazione_agente' => $fornitore->name,
             'partita_iva_agente' => $fornitore->piva,
             'denominazione_prodotto' => $contract->getLabel(),
+            // Prodotti per società: ragione sociale e partita IVA identificano il cliente prima che esista l'anagrafica.
+            'cognome_cliente' => $profile['company_name'] ?? null,
+            'codice_fiscale' => $profile['vat_number'] ?? null,
             'data_inserimento_pratica' => today(),
-            'rata' => $profile['assignable_quota'],
+            'rata' => $profile['assignable_quota'] ?? null,
             'erogato' => $quotation['max'],
             'nrate' => $profile['duration_months'],
-            'amount' => $profile['requested_amount'],
+            'amount' => $profile['requested_amount'] ?? null,
             'is_notowned' => false,
             'upload_at' => now(),
             'company_id' => $fornitore->company_id,

@@ -24,6 +24,8 @@ class FinancingQuote extends Model
         'sex',
         'birth_date',
         'employment_relationship',
+        'company_name',
+        'vat_number',
         'hired_at',
         'starts_at',
         'duration_months',

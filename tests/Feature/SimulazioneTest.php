@@ -8,24 +8,36 @@ use App\Models\FinancingQuote;
 use App\Models\KycQuestionnaire;
 use App\Models\User;
 use App\Support\FinancingClientFields;
-use Database\Seeders\PerfezionamentoDocumentiSeeder;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use Tests\Support\FakeDocumentReader;
 use Tests\TestCase;
 use Unico\Core\Documents\Contracts\DocumentReader;
+use Unico\Core\Documents\PracticeMailReplyHandler;
+use Unico\Core\Documents\PracticeSignaturePackage;
+use Unico\Core\Documents\PracticeTaskDocuments;
+use Unico\Core\Documents\Reminders\ReminderMail;
 use Unico\Core\Models\Client;
+use Unico\Core\Models\Cliente;
+use Unico\Core\Models\Company;
 use Unico\Core\Models\Document;
 use Unico\Core\Models\DocumentAnalysis;
+use Unico\Core\Models\DocumentRequest;
+use Unico\Core\Models\DocumentType;
 use Unico\Core\Models\Fornitore;
+use Unico\Core\Models\IncomingEmail;
+use Unico\Core\Models\MailAccount;
 use Unico\Core\Models\Pratica;
 use Unico\Core\Models\PraticaClient;
+use Unico\Core\Models\SignatureRequest;
+use Unico\Core\Seeders\PerfezionamentoDocumentiSeeder;
 
 class SimulazioneTest extends TestCase
 {
@@ -50,6 +62,7 @@ XML;
         parent::setUp();
 
         config([
+            'unico-core.signature.driver' => 'fake',
             'preventivatore.url' => 'https://preventivatore.test/offerte',
             'preventivatore.passkey' => 'secret',
         ]);
@@ -60,6 +73,8 @@ XML;
         Fornitore::query()->create([
             'name' => 'Agente Simulazione',
             'piva' => '99900000099',
+            'email' => 'agente@races.test',
+            'tel' => '3331112222',
             'user_id' => $user->id,
         ]);
 
@@ -120,29 +135,22 @@ XML;
 
     /**
      * Carica con l'unico campo di upload tutti i documenti richiesti dal task del prodotto: il tipo
-     * si riconosce dal nome del file. Ritorna l'id del tipo «Contratto di finanziamento».
+     * si riconosce dal nome del file. Ritorna gli id dei tipi per nome.
      */
-    private function caricaTuttiIDocumenti(Testable $page): int
+    /** @return array<string, int> */
+    private function caricaTuttiIDocumenti(Testable $page): array
     {
-        $names = [
-            'Contratto di finanziamento' => 'contratto-firmato.pdf',
-            "Carta d'Identità" => 'carta-identita.pdf',
-            'Codice fiscale / Tessera sanitaria' => 'codice-fiscale.pdf',
-        ];
         $files = [];
-        $contractId = 0;
+        $ids = [];
 
         foreach ($page->get('documentiRichiesti') as $document) {
-            if ($document['name'] === 'Contratto di finanziamento') {
-                $contractId = $document['document_type_id'];
-            }
-
-            $files[] = UploadedFile::fake()->createWithContent($names[$document['name']], "%PDF-1.4\n".$document['name']);
+            $ids[$document['name']] = $document['document_type_id'];
+            $files[] = UploadedFile::fake()->createWithContent(Str::slug($document['name']).'.pdf', "%PDF-1.4\n".$document['name']);
         }
 
         $page->set('documenti.files', $files);
 
-        return $contractId;
+        return $ids;
     }
 
     public function test_agent_opens_the_simulation_and_saves_a_cession_quote(): void
@@ -201,6 +209,14 @@ XML;
         $this->perfezionaFinoAiDocumenti($page, 'maria.rossi@example.test', '338 8449842');
         $this->caricaTuttiIDocumenti($page);
 
+        // «Busta paga 1» e «Busta paga 2»: i file della stessa famiglia prendono i numeri liberi, uno ciascuno.
+        $buste = Document::query()
+            ->where('documentable_id', (string) FinancingQuote::query()->first()->pratica->getKey())
+            ->whereHas('documentType', fn ($query) => $query->where('name', 'like', 'Busta paga %'))
+            ->with('documentType')
+            ->get();
+        $this->assertEqualsCanonicalizing(['Busta paga 1', 'Busta paga 2'], $buste->pluck('documentType.name')->all());
+
         $page->assertSet('fase', 'cliente')
             ->assertSee('Datore di lavoro')
             ->assertSee('Quota cedibile')
@@ -210,7 +226,8 @@ XML;
             ->set('cliente.employer_id', $employer->getKey())
             ->tap(fn ($page) => $this->compilaResidenzaKycEConsensi($page))
             ->call('salvaCliente')
-            ->assertSet('fase', 'cliente_salvato');
+            ->assertSet('fase', 'firma')
+            ->assertSet('statoPratica', 'FASCICOLO COMPLETO');
 
         $client = Client::query()->where('tax_code', 'RSSMRA80A01H501U')->first();
         $this->assertNotNull($client);
@@ -243,7 +260,7 @@ XML;
             ->assertSet('statoPratica', 'PREVENTIVO');
 
         $this->perfezionaFinoAiDocumenti($page, 'mario.rossi@example.test', '3492995106');
-        $page->assertSee('Contratto di finanziamento');
+        $page->assertSee('Cedolino pensione 1');
 
         Http::assertSent(function (Request $request): bool {
             parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
@@ -266,9 +283,9 @@ XML;
         $this->assertSame('15000.00', $pratica->amount);
         $this->assertStringStartsWith('SIM-', $pratica->codice_pratica);
 
-        $typeId = $this->caricaTuttiIDocumenti($page);
+        $typeId = $this->caricaTuttiIDocumenti($page)['Cedolino pensione 1'];
 
-        $this->assertContains('Contratto di finanziamento', array_column($page->get('esitiDocumenti'), 'tipo'));
+        $this->assertContains('Cedolino pensione 1', array_column($page->get('esitiDocumenti'), 'tipo'));
         $page->assertSet('fase', 'cliente')
             ->assertSet('cliente.first_name', 'Mario')
             ->assertSet('cliente.tax_code', 'RSSMRA80A01H501U')
@@ -277,7 +294,8 @@ XML;
             ->assertDontSee('Datore di lavoro')
             ->tap(fn ($page) => $this->compilaResidenzaKycEConsensi($page))
             ->call('salvaCliente')
-            ->assertSet('fase', 'cliente_salvato');
+            ->assertSet('fase', 'firma')
+            ->assertSet('statoPratica', 'FASCICOLO COMPLETO');
 
         $document = Document::query()
             ->where('documentable_id', (string) $pratica->getKey())
@@ -315,6 +333,38 @@ XML;
         $this->assertSame('Roma (RM)', $client->birth_place);
         $this->assertSame('Rossi', $pratica->fresh()->cognome_cliente);
         $this->assertTrue(PraticaClient::query()->where('pratica_id', $pratica->getKey())->where('client_id', $client->getKey())->exists());
+        // Modulistica da firmare: stampa dei moduli e invio per la firma OTP al cliente e al collaboratore.
+        $page->assertSee('Modulistica da firmare')
+            ->assertSee('QAV Persona fisica')
+            ->assertDontSee('Informativa Privacy Compass');
+
+        // L'informativa Compass entra solo se la banca della pratica è Compass.
+        $compass = Cliente::query()->where('name', 'COMPASS BANCA S.P.A.')->first();
+        $this->assertNotNull($compass);
+        $page->set('moduli.banca', $compass->getKey())->assertSee('Informativa Privacy Compass');
+        $this->assertSame($compass->getKey(), $pratica->fresh()->clienti_id);
+        $this->assertSame('COMPASS BANCA S.P.A.', $pratica->fresh()->denominazione_banca);
+
+        $moduli = DocumentType::query()->whereIn('id', app(PracticeTaskDocuments::class)->forProductStatus('Prestito', 'FASCICOLO COMPLETO', $compass->getKey())->pluck('document_type_id'))->get();
+        $this->assertEqualsCanonicalizing(['QAV Persona fisica', 'Informativa Privacy Compass', 'Races VERS. 03_2026 - Fascicolo completo retail Prestiti Personali compilabile'], $moduli->pluck('name')->all());
+        $this->assertEqualsCanonicalizing(['QAV Persona fisica', 'Races VERS. 03_2026 - Fascicolo completo retail Prestiti Personali compilabile'], DocumentType::query()->whereIn('id', app(PracticeTaskDocuments::class)->forProductStatus('Prestito', 'FASCICOLO COMPLETO', null)->pluck('document_type_id'))->pluck('name')->all());
+
+        $package = app(PracticeSignaturePackage::class);
+        $before = $package->status($pratica->fresh(), $moduli);
+        $this->assertSame('pronto', $before[$moduli->firstWhere('name', 'QAV Persona fisica')->id]['state']);
+
+        $results = $package->send($pratica->fresh(), $moduli, auth()->user());
+        $byName = collect($results)->keyBy('name');
+        $this->assertTrue($byName['QAV Persona fisica']['ok'], $byName['QAV Persona fisica']['message']);
+        $this->assertSame('inviato per la firma con OTP', $byName['QAV Persona fisica']['message']);
+        $this->assertFalse($byName['Informativa Privacy Compass']['ok']);
+        $this->assertStringContainsString('modulo PDF non disponibile', $byName['Informativa Privacy Compass']['message']);
+        $this->assertTrue($byName['Races VERS. 03_2026 - Fascicolo completo retail Prestiti Personali compilabile']['ok'], $byName['Races VERS. 03_2026 - Fascicolo completo retail Prestiti Personali compilabile']['message']);
+
+        $after = $package->status($pratica->fresh(), $moduli);
+        $this->assertSame('inviato', $after[$moduli->firstWhere('name', 'QAV Persona fisica')->id]['state']);
+        $this->assertGreaterThanOrEqual(2, SignatureRequest::query()->whereIn('document_id', Document::query()->where('documentable_id', (string) $pratica->getKey())->pluck('id'))->count());
+
         $this->assertNotContains('salary_quote', FinancingClientFields::forContract(SimulationContractType::Prestito));
         $this->assertNotContains('employer_id', FinancingClientFields::forContract(SimulationContractType::Prestito));
         $this->assertNotContains('employer_id', FinancingClientFields::forContract(SimulationContractType::Mutuo));
@@ -364,7 +414,160 @@ XML;
         $unknown = Document::query()->where('documentable_id', (string) $pratica->getKey())->where('name', 'foto-vacanza.pdf')->first();
         $this->assertNotNull($unknown);
         $this->assertNull($unknown->document_type_id);
-        $this->assertSame('Informativa privacy', \Unico\Core\Models\DocumentType::find($privacyId)->name);
+        $this->assertSame('Informativa privacy', DocumentType::find($privacyId)->name);
+    }
+
+    public function test_missing_documents_can_be_requested_by_email_and_the_reply_attachments_are_acquired(): void
+    {
+        Mail::fake();
+        Http::fake(['preventivatore.test/*' => Http::response(self::XML)]);
+
+        $page = Livewire::test(Simulazione::class)
+            ->fillForm([
+                'tipo_contratto' => 'prestito',
+                'sesso' => 'M',
+                'data_nascita' => '1955-03-01',
+                'tipo_rapporto' => 'pensionato_inps',
+                'durata' => 84,
+                'importo_richiesto' => 15000,
+                'data_decorrenza' => '2027-01-13',
+            ])
+            ->call('simulate')
+            ->call('salvaPreventivo')
+            ->call('perfeziona')
+            ->call('posticipaInformativa')
+            ->set('contatti.email', 'maria.rossi@example.test')
+            ->set('contatti.phone', '3492995106')
+            ->call('confermaContatti')
+            ->call('richiediAlCliente');
+
+        $pratica = FinancingQuote::query()->first()->pratica;
+
+        Mail::assertSent(ReminderMail::class, function ($mail) use ($pratica): bool {
+            return $mail->hasTo('maria.rossi@example.test')
+                && str_contains($mail->subjectLine, '['.$pratica->codice_pratica.']')
+                && str_contains($mail->bodyContent, 'Informativa privacy')
+                && str_contains($mail->bodyContent, 'Carta d&#039;Identità');
+        });
+
+        $requests = DocumentRequest::query()->where('requestable_id', (string) $pratica->getKey())->get();
+        $this->assertGreaterThanOrEqual(3, $requests->count());
+        $this->assertSame(['richiesto'], $requests->pluck('status')->unique()->all());
+        $this->assertStringContainsString('maria.rossi@example.test', (string) $requests->first()->notes);
+
+        // La risposta del cliente, con gli allegati, si riconosce dal codice pratica e si acquisisce.
+        $company = Company::query()->first() ?? Company::query()->create(['name' => 'Azienda di prova']);
+        $account = MailAccount::query()->create(['name' => 'Prova', 'email_address' => 'prova-'.Str::uuid().'@test.local', 'protocol' => 'imap', 'imap_host' => 'imap.test', 'imap_port' => 993, 'imap_username' => 'x', 'imap_password' => 'x', 'imap_encryption' => 'ssl', 'type' => 'sollecito', 'is_active' => true]);
+        $reply = IncomingEmail::query()->create([
+            'company_id' => $company->getKey(),
+            'mail_account_id' => $account->getKey(),
+            'message_id' => '<reply-'.Str::uuid().'@example.test>',
+            'from_email' => 'Maria.Rossi@example.test',
+            'subject' => 'Re: Documenti ['.$pratica->codice_pratica.']',
+            'received_at' => now(),
+        ]);
+        $identity = UploadedFile::fake()->createWithContent('carta-identita.pdf', "%PDF-1.4\nidentita");
+        $taxCode = UploadedFile::fake()->createWithContent('codice-fiscale.pdf', "%PDF-1.4\ncf");
+        $reply->addMedia($identity->getRealPath())
+            ->usingFileName('carta-identita.pdf')
+            ->toMediaCollection(IncomingEmail::ATTACHMENTS);
+        $reply->addMedia($taxCode->getRealPath())
+            ->usingFileName('codice-fiscale.pdf')
+            ->toMediaCollection(IncomingEmail::ATTACHMENTS);
+
+        $results = app(PracticeMailReplyHandler::class)->process($reply->fresh());
+
+        $this->assertCount(2, $results);
+        $this->assertSame(["Carta d'Identità", 'Codice fiscale / Tessera sanitaria'], collect($results)->map(fn ($r) => $r->type?->name)->all());
+
+        $closed = DocumentRequest::query()->where('requestable_id', (string) $pratica->getKey())->where('status', 'caricato')->count();
+        $this->assertSame(2, $closed);
+        $this->assertSame('documenti_pratica', $reply->fresh()->classification);
+
+        // Un mittente sconosciuto non porta documenti nella pratica.
+        $other = IncomingEmail::query()->create([
+            'company_id' => $company->getKey(),
+            'company_id' => $company->getKey(),
+            'mail_account_id' => $account->getKey(),
+            'message_id' => '<reply-'.Str::uuid().'@example.test>',
+            'from_email' => 'sconosciuto@spam.test',
+            'subject' => 'Re: ['.$pratica->codice_pratica.']',
+            'received_at' => now(),
+        ]);
+        $this->assertSame([], app(PracticeMailReplyHandler::class)->process($other));
+    }
+
+    public function test_a_corporate_product_asks_the_company_data_and_the_administrator_identity_documents(): void
+    {
+        $page = Livewire::test(Simulazione::class)
+            ->fillForm([
+                'tipo_contratto' => 'leasing',
+                'ragione_sociale' => 'Acme S.r.l.',
+                'partita_iva' => '12345678901',
+                'durata' => 60,
+                'importo_richiesto' => 100000,
+                'data_decorrenza' => '2027-01-13',
+            ])
+            ->assertFormFieldHidden('sesso')
+            ->assertFormFieldHidden('data_nascita')
+            ->assertFormFieldHidden('tipo_rapporto')
+            ->call('simulate')
+            ->assertHasNoFormErrors()
+            ->assertSee('Acme S.r.l.')
+            ->assertSet('preventivatoreAssente', true)
+            ->call('salvaPreventivo')
+            ->assertSet('statoPratica', 'PREVENTIVO');
+
+        $quote = FinancingQuote::query()->first();
+        $pratica = $quote->pratica;
+        $this->assertSame('LEASING', $pratica->tipoprodotto->name);
+        $this->assertSame('Acme S.r.l.', $pratica->cognome_cliente);
+        $this->assertSame('12345678901', $pratica->codice_fiscale);
+        $this->assertSame('Acme S.r.l.', $quote->company_name);
+
+        $page->call('perfeziona')
+            ->call('posticipaInformativa')
+            ->set('contatti.email', 'amministrazione@acme.test')
+            ->set('contatti.phone', '0612345678')
+            ->call('confermaContatti')
+            ->assertSet('fase', 'perfezionare');
+
+        $names = array_column($page->get('documentiRichiesti'), 'name');
+        $this->assertContains('Visura camerale', $names);
+        $this->assertContains('Bilancio 2024 depositato', $names);
+        $this->assertContains('Centrale Rischi ultimi 36 mesi', $names);
+        $this->assertNotContains('Contratto di finanziamento', $names);
+        $this->assertNotContains('Races VERS. 06_2025 - Fascicolo completo Corporate compilabile', $names);
+
+        $this->caricaTuttiIDocumenti($page);
+        $page->assertSet('fase', 'cliente');
+
+        // I documenti d'identità sono dell'amministratore: persona collegata alla pratica, non il richiedente.
+        $administrator = PraticaClient::query()->where('pratica_id', $pratica->getKey())->first();
+        $this->assertSame('amministratore', $administrator->role);
+        $this->assertSame('RSSMRA80A01H501U', Client::find($administrator->client_id)->tax_code);
+
+        $page->assertSet('cliente.name', 'Acme S.r.l.')
+            ->assertSet('cliente.vat_number', '12345678901')
+            ->set('cliente.residenza.street', 'Via Roma')
+            ->set('cliente.residenza.numero', '10')
+            ->set('cliente.residenza.zip_code', '00100')
+            ->set('cliente.residenza.city', 'Roma')
+            ->set('cliente.residenza.province', 'rm')
+            ->set('cliente.kyc.financing_purpose', 'fabbisogno_finanziario')
+            ->set('cliente.kyc.legal_nature', 'societa_capitali')
+            ->set('cliente.kyc.geographic_area', 'italia')
+            ->call('salvaCliente')
+            ->assertSet('fase', 'firma')
+            ->assertSet('statoPratica', 'FASCICOLO COMPLETO');
+
+        $company = Client::query()->where('vat_number', '12345678901')->first();
+        $this->assertNotNull($company);
+        $this->assertFalse($company->is_person);
+        $this->assertSame('amministrazione@acme.test', $company->email);
+        $this->assertSame($administrator->client_id, $company->legal_representative_id);
+        $this->assertSame('richiedente', PraticaClient::query()->where('pratica_id', $pratica->getKey())->where('client_id', $company->getKey())->value('role'));
+        $this->assertSame('societa_capitali', KycQuestionnaire::query()->where('client_id', $company->getKey())->first()->legal_nature->value);
     }
 
     public function test_simulation_is_saved_when_the_quotation_url_is_missing(): void

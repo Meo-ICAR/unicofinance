@@ -3,7 +3,10 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Unico\Core\Seeders\ChecklistPerfezionamentoSeeder;
 use Unico\Core\Seeders\CoreDataSeeder;
+use Unico\Core\Seeders\FascicoloCqMappingSeeder;
+use Unico\Core\Seeders\PerfezionamentoDocumentiSeeder;
 
 class DatabaseSeeder extends Seeder
 {
@@ -16,6 +19,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             CoreDataSeeder::class,
             PerfezionamentoDocumentiSeeder::class,
+            ChecklistPerfezionamentoSeeder::class,
             FascicoloCqMappingSeeder::class,
             ListiniProvvigionaliSeeder::class,
         ]);

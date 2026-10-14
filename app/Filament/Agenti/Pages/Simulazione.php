@@ -10,9 +10,7 @@ use App\Models\FinancingQuote;
 use App\Models\KycQuestionnaire;
 use App\Models\User;
 use App\Services\CodiceFiscaleDecoder;
-use App\Services\Preventivazione\PracticeDocumentUploader;
 use App\Services\Preventivazione\PracticeFinalizer;
-use App\Services\Preventivazione\ProductTaskDocuments;
 use App\Services\Preventivazione\QuotationService;
 use App\Services\Preventivazione\QuoteUnavailable;
 use App\Support\FinancingClientFields;
@@ -42,15 +40,22 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\HtmlString;
+use Throwable;
 use Unico\Core\Documents\IntakeResult;
 use Unico\Core\Documents\PracticeDocumentIntake;
+use Unico\Core\Documents\PracticeDocumentRequestMailer;
+use Unico\Core\Documents\PracticeTaskDocuments;
 use Unico\Core\Filament\Schemas\PracticeDocumentsUpload;
+use Unico\Core\Filament\Schemas\PracticeSignaturePackageForm;
 use Unico\Core\Models\Client;
+use Unico\Core\Models\Cliente;
+use Unico\Core\Models\Company;
 use Unico\Core\Models\Document;
 use Unico\Core\Models\DocumentType;
 use Unico\Core\Models\Fornitore;
 use Unico\Core\Models\Pratica;
 use Unico\Core\Models\PraticaClient;
+use Unico\Core\Models\TipoProdottoSub;
 use Unico\Core\Pdf\PracticeModuleData;
 
 /**
@@ -96,7 +101,7 @@ class Simulazione extends Page
 
     public ?string $errorePreventivo = null;
 
-    /** preventivo | informativa | contatti | perfezionare | cliente | cliente_salvato */
+    /** preventivo | informativa | contatti | perfezionare | cliente | firma */
     public ?string $fase = null;
 
     public ?int $quoteId = null;
@@ -144,6 +149,13 @@ class Simulazione extends Page
     public array $esitiDocumenti = [];
 
     /**
+     * Stato dell'elenco della modulistica da firmare.
+     *
+     * @var array<string, mixed>
+     */
+    public array $moduli = [];
+
+    /**
      * Stato del campo di caricamento unico (componente di unico-core).
      *
      * @var array<string, mixed>
@@ -175,7 +187,7 @@ class Simulazione extends Page
         return $schema
             ->components([
                 Wizard::make([
-                    Step::make('Dati della persona')
+                    Step::make('Dati del cliente')
                         ->icon('heroicon-o-user')
                         ->schema([
                             ToggleButtons::make('tipo_contratto')
@@ -202,17 +214,30 @@ class Simulazione extends Page
                                         $set('durata', $contract->defaultDuration());
                                     }
                                 }),
+                            TextInput::make('ragione_sociale')
+                                ->label('Ragione sociale')
+                                ->maxLength(191)
+                                ->visible(fn (Get $get): bool => self::isCorporate($get('tipo_contratto')))
+                                ->required(fn (Get $get): bool => self::isCorporate($get('tipo_contratto'))),
+                            TextInput::make('partita_iva')
+                                ->label('Partita IVA')
+                                ->regex('/^\d{11}$/')
+                                ->validationMessages(['regex' => 'La partita IVA ha 11 cifre.'])
+                                ->visible(fn (Get $get): bool => self::isCorporate($get('tipo_contratto')))
+                                ->required(fn (Get $get): bool => self::isCorporate($get('tipo_contratto'))),
                             ToggleButtons::make('sesso')
                                 ->label('Sesso')
                                 ->options(['M' => 'M', 'F' => 'F'])
                                 ->inline()
-                                ->required(),
+                                ->visible(fn (Get $get): bool => ! self::isCorporate($get('tipo_contratto')))
+                                ->required(fn (Get $get): bool => ! self::isCorporate($get('tipo_contratto'))),
                             DatePicker::make('data_nascita')
                                 ->label('Data di nascita')
                                 ->native(false)
                                 ->displayFormat('d/m/Y')
                                 ->maxDate(today()->subYears(18))
-                                ->required(),
+                                ->visible(fn (Get $get): bool => ! self::isCorporate($get('tipo_contratto')))
+                                ->required(fn (Get $get): bool => ! self::isCorporate($get('tipo_contratto'))),
                             Select::make('tipo_rapporto')
                                 ->label('Tipo amministrazione')
                                 ->options(fn (Get $get): array => EmploymentRelationship::groupedOptions(
@@ -226,7 +251,8 @@ class Simulazione extends Page
                                     ? 'La delega è riservata ai dipendenti.'
                                     : null)
                                 ->native(false)
-                                ->required()
+                                ->visible(fn (Get $get): bool => ! self::isCorporate($get('tipo_contratto')))
+                                ->required(fn (Get $get): bool => ! self::isCorporate($get('tipo_contratto')))
                                 ->live(),
                             DatePicker::make('data_assunzione')
                                 ->label('Data assunzione')
@@ -234,8 +260,8 @@ class Simulazione extends Page
                                 ->displayFormat('d/m/Y')
                                 ->maxDate(today())
                                 ->after('data_nascita')
-                                ->visible(fn (Get $get): bool => self::relationshipFrom($get('tipo_rapporto'))?->isRetiree() === false)
-                                ->required(fn (Get $get): bool => self::relationshipFrom($get('tipo_rapporto'))?->isRetiree() === false),
+                                ->visible(fn (Get $get): bool => ! self::isCorporate($get('tipo_contratto')) && self::relationshipFrom($get('tipo_rapporto'))?->isRetiree() === false)
+                                ->required(fn (Get $get): bool => ! self::isCorporate($get('tipo_contratto')) && self::relationshipFrom($get('tipo_rapporto'))?->isRetiree() === false),
                         ]),
                     Step::make('Dati del finanziamento')
                         ->icon('heroicon-o-banknotes')
@@ -286,13 +312,19 @@ class Simulazione extends Page
         $state = $this->form->getState();
 
         $contract = self::contractTypeFrom($state['tipo_contratto']);
-        $relationship = self::relationshipFrom($state['tipo_rapporto']);
+        $relationship = self::relationshipFrom($state['tipo_rapporto'] ?? null);
         $decorrenza = CarbonImmutable::parse($state['data_decorrenza']);
         $assunzione = filled($state['data_assunzione'] ?? null) ? CarbonImmutable::parse($state['data_assunzione']) : null;
-        $nascita = CarbonImmutable::parse($state['data_nascita']);
+        $nascita = filled($state['data_nascita'] ?? null) ? CarbonImmutable::parse($state['data_nascita']) : null;
 
         $quota = $contract->asksQuotaCedibile() ? (float) $state['quota_cedibile'] : null;
         $importo = $contract->asksQuotaCedibile() ? null : (float) $state['importo_richiesto'];
+
+        if ($contract->isCorporate()) {
+            $this->simulaSocieta($contract, $state, $decorrenza, $importo);
+
+            return;
+        }
 
         $this->bozza = [
             'contract_type' => $contract->value,
@@ -316,23 +348,8 @@ class Simulazione extends Page
             'importo_richiesto' => $importo,
             'data_decorrenza' => $decorrenza->format('d/m/Y'),
         ];
-        $this->fase = null;
-        $this->quoteId = null;
-        $this->preventivoNumero = null;
-        $this->codicePratica = null;
-        $this->statoPratica = null;
-        $this->documentiRichiesti = [];
-        $this->informativaRichiesta = [];
-        $this->informativaAllegati = [];
-        $this->avvisiInformativa = [];
-        $this->contatti = [];
-        $this->esitiDocumenti = [];
-        $this->documenti = [];
-        $this->campiCliente = [];
-        $this->cliente = [];
-        $this->documentiMancanti = [];
+        $this->azzeraPercorso();
         $this->esito = null;
-        $this->errorePreventivo = null;
         $this->preventivatoreAssente = blank(config('preventivatore.url'));
 
         if ($this->preventivatoreAssente) {
@@ -349,6 +366,53 @@ class Simulazione extends Page
         }
 
         $this->esito = ['min' => $result['min'], 'max' => $result['max']];
+    }
+
+    /** Una nuova simulazione riparte dall'inizio: nessuna pratica, documento o dato del cliente della precedente. */
+    private function azzeraPercorso(): void
+    {
+        $this->fase = null;
+        $this->quoteId = null;
+        $this->preventivoNumero = null;
+        $this->codicePratica = null;
+        $this->statoPratica = null;
+        $this->documentiRichiesti = [];
+        $this->informativaRichiesta = [];
+        $this->informativaAllegati = [];
+        $this->avvisiInformativa = [];
+        $this->contatti = [];
+        $this->esitiDocumenti = [];
+        $this->documenti = [];
+        $this->moduli = [];
+        $this->campiCliente = [];
+        $this->cliente = [];
+        $this->documentiMancanti = [];
+        $this->errorePreventivo = null;
+    }
+
+    /** Leasing, chirografario e microcredito: per società, senza dati della persona e senza preventivatore. */
+    private function simulaSocieta(SimulationContractType $contract, array $state, CarbonImmutable $decorrenza, ?float $importo): void
+    {
+        $this->bozza = [
+            'contract_type' => $contract->value,
+            'company_name' => trim((string) $state['ragione_sociale']),
+            'vat_number' => preg_replace('/\s+/', '', (string) $state['partita_iva']),
+            'starts_at' => $decorrenza->toDateString(),
+            'duration_months' => $contract->durationInMonths((int) $state['durata']),
+            'requested_amount' => $importo,
+        ];
+        $this->profilo = [
+            'tipo_contratto' => $contract->getLabel(),
+            'cliente' => $this->bozza['company_name'].' (P.IVA '.$this->bozza['vat_number'].')',
+            'tipo_rapporto' => null,
+            'durata_etichetta' => $contract->durationLabel((int) $state['durata']),
+            'quota_cedibile' => null,
+            'importo_richiesto' => $importo,
+            'data_decorrenza' => $decorrenza->format('d/m/Y'),
+        ];
+        $this->azzeraPercorso();
+        $this->esito = null;
+        $this->preventivatoreAssente = true;
     }
 
     public function salvaPreventivo(PracticeFinalizer $finalizer): void
@@ -379,7 +443,7 @@ class Simulazione extends Page
      * Il perfezionamento parte dall'informativa privacy (task dedicato): si scarica, il cliente la firma
      * con firma olografa e l'agente la carica. Senza task configurato si passa ai contatti.
      */
-    public function perfeziona(ProductTaskDocuments $documents): void
+    public function perfeziona(PracticeTaskDocuments $documents): void
     {
         if ($this->fase !== 'preventivo' || $this->quoteId === null) {
             return;
@@ -429,7 +493,7 @@ class Simulazione extends Page
         return $schema->components($fields)->statePath('informativaAllegati');
     }
 
-    public function caricaInformativa(PracticeDocumentUploader $uploader): void
+    public function caricaInformativa(PracticeDocumentIntake $intake): void
     {
         if ($this->fase !== 'informativa' || $this->quoteId === null) {
             return;
@@ -453,7 +517,7 @@ class Simulazione extends Page
                 continue;
             }
 
-            $stored = $uploader->store($pratica, $file, $candidateIds, $user, (int) $document['document_type_id']);
+            $stored = $intake->storeTyped($pratica, $file, (int) $document['document_type_id'], DocumentType::query()->whereIn('id', $candidateIds)->get(), $user);
 
             foreach ($this->esitoControlli($stored) as $avviso) {
                 $this->avvisiInformativa[] = $document['name'].': '.$avviso;
@@ -526,7 +590,7 @@ class Simulazione extends Page
             ->statePath('contatti');
     }
 
-    public function confermaContatti(PracticeFinalizer $finalizer, ProductTaskDocuments $documents): void
+    public function confermaContatti(PracticeFinalizer $finalizer, PracticeTaskDocuments $documents): void
     {
         if ($this->fase !== 'contatti' || $this->quoteId === null) {
             return;
@@ -549,9 +613,8 @@ class Simulazione extends Page
         }
 
         $productName = SimulationContractType::from($quote->contract_type)->productName();
-        $this->documentiRichiesti = $documents->forProductStatus($productName, 'PERFEZIONARE')
-            // I documenti d'identità (letti dall'AI) per primi: servono a compilare l'anagrafica del cliente.
-            ->sortBy(fn ($requirement): int => $requirement->documentType?->ai_kind === null ? 1 : 0)
+        // Task di stato più check list del prodotto (per gruppo di tipologia lavorativa); l'identità per prima.
+        $this->documentiRichiesti = $documents->forProduct($productName, $this->gruppoLavorativo())
             ->map(fn ($requirement): array => [
                 'document_type_id' => (int) $requirement->document_type_id,
                 'name' => (string) $requirement->documentType?->name,
@@ -571,12 +634,86 @@ class Simulazione extends Page
     public function documentiForm(Schema $schema): Schema
     {
         return $schema
-            ->components(PracticeDocumentsUpload::components(
-                fn (): ?Pratica => FinancingQuote::query()->find($this->quoteId)?->pratica,
-                fn (): Collection => $this->tipiAttesi(),
-                fn (array $results) => $this->dopoCaricamento($results),
-            ))
+            ->components([
+                ...PracticeDocumentsUpload::components(
+                    fn (): ?Pratica => FinancingQuote::query()->find($this->quoteId)?->pratica,
+                    fn (): Collection => $this->tipiAttesi(),
+                    fn (array $results) => $this->dopoCaricamento($results),
+                ),
+                Actions::make([
+                    Action::make('richiediAlCliente')
+                        ->label('Chiedi i documenti al cliente per email')
+                        ->icon('heroicon-o-envelope')
+                        ->color('gray')
+                        ->visible(fn (): bool => $this->documentiDaRichiedere()->isNotEmpty() && filled($this->contatti['email'] ?? null))
+                        ->requiresConfirmation()
+                        ->modalHeading('Invia la richiesta al cliente')
+                        ->modalDescription(fn (): string => 'Invio un\'email a '.($this->contatti['email'] ?? '').', con te in copia ('.($this->emailAgente() ?? 'nessun indirizzo').'), con l\'elenco dei documenti ancora da caricare: il cliente risponde allegandoli e li acquisisco io. Nell\'oggetto c\'è il codice pratica.')
+                        ->modalSubmitActionLabel('Invia')
+                        ->action(fn () => $this->richiediAlCliente()),
+                ]),
+            ])
             ->statePath('documenti');
+    }
+
+    /**
+     * Invia al cliente (e in copia all'agente) la richiesta dei documenti mancanti dall'account email dell'app.
+     * Le risposte con gli allegati si acquisiscono da sole (unico-core: lettura della casella e acquisizione).
+     */
+    public function richiediAlCliente(): void
+    {
+        $pratica = FinancingQuote::query()->find($this->quoteId)?->pratica;
+        $types = $this->documentiDaRichiedere();
+        $email = (string) ($this->contatti['email'] ?? '');
+
+        if ($pratica === null || $types->isEmpty() || $email === '') {
+            return;
+        }
+
+        $nome = trim(($pratica->nome_cliente ?? '').' '.($pratica->cognome_cliente ?? '')) ?: 'cliente';
+
+        try {
+            app(PracticeDocumentRequestMailer::class)->send(
+                $pratica,
+                $types,
+                $email,
+                $nome,
+                $this->emailAgente(),
+                $this->fornitore()?->name,
+                Auth::user(),
+            );
+        } catch (Throwable $e) {
+            report($e);
+            Notification::make()->title('Email non inviata')->body('Non sono riuscito a inviare l\'email: riprova più tardi.')->danger()->send();
+
+            return;
+        }
+
+        Notification::make()->title('Richiesta inviata')->body('Ho scritto a '.$email.' con te in copia: alla risposta con gli allegati i documenti si aggiornano.')->success()->send();
+    }
+
+    /**
+     * Documenti attesi non ancora ricevuti (informativa compresa).
+     *
+     * @return Collection<int, DocumentType>
+     */
+    private function documentiDaRichiedere(): Collection
+    {
+        $pratica = FinancingQuote::query()->find($this->quoteId)?->pratica;
+        $types = $this->tipiAttesi();
+
+        if ($pratica === null || $types->isEmpty()) {
+            return collect();
+        }
+
+        $received = app(PracticeDocumentIntake::class)->received($pratica, $types);
+
+        return $types->reject(fn (DocumentType $type): bool => $received[$type->getKey()] ?? false)->values();
+    }
+
+    private function emailAgente(): ?string
+    {
+        return $this->fornitore()?->email ?: (Auth::user() instanceof User ? Auth::user()->email : null);
     }
 
     /**
@@ -602,6 +739,20 @@ class Simulazione extends Page
         if ($this->documentiMancanti === [] && $this->fase === 'perfezionare') {
             $this->apriCliente($pratica);
         }
+    }
+
+    /** Gruppo documentale della tipologia lavorativa scelta (pensionati, privati, pubblici, parapubblici, autonomi). */
+    private function gruppoLavorativo(): ?string
+    {
+        $relationship = self::relationshipFrom($this->bozza['employment_relationship'] ?? null);
+
+        if ($relationship === null) {
+            return null;
+        }
+
+        $group = TipoProdottoSub::query()->where('name', $relationship->getLabel())->value('employment_document_group');
+
+        return $group instanceof BackedEnum ? $group->value : ($group === null ? null : (string) $group);
     }
 
     /**
@@ -673,14 +824,21 @@ class Simulazione extends Page
             'salary_quote' => TextInput::make('salary_quote')->label('Quota cedibile')->numeric()->prefix('€'),
         ];
 
-        $visible = array_values(array_intersect(array_keys($fields), $this->campiCliente));
+        $corporate = SimulationContractType::tryFrom((string) ($this->bozza['contract_type'] ?? ''))?->isCorporate() === true;
+        $isPerson = fn (?Get $get = null): bool => ! $corporate;
 
-        $isPerson = fn (?Get $get = null): bool => true;
+        if ($corporate) {
+            $fields['name'] = TextInput::make('name')->label('Ragione sociale')->required()->maxLength(191);
+            $fields['vat_number'] = TextInput::make('vat_number')->label('Partita IVA')->required()->regex('/^\d{11}$/')
+                ->validationMessages(['regex' => 'La partita IVA ha 11 cifre.']);
+        }
+
+        $visible = array_values(array_intersect(array_keys($fields), $this->campiCliente));
 
         return $schema
             ->components([
                 ...array_map(fn (string $name) => $fields[$name], $visible),
-                Section::make('Residenza')
+                Section::make($corporate ? 'Sede legale' : 'Residenza')
                     ->statePath('residenza')
                     ->columns(3)
                     ->schema([
@@ -698,8 +856,13 @@ class Simulazione extends Page
                         KycQuestionnaireForm::pepStatus($isPerson, true),
                         KycQuestionnaireForm::financingPurpose($isPerson, true),
                         KycQuestionnaireForm::personSection($isPerson, true),
+                        Section::make('Persona giuridica')
+                            ->columns(2)
+                            ->visible($corporate)
+                            ->schema(KycQuestionnaireForm::companyFields(true)),
                     ]),
                 Section::make('Consensi privacy del cliente')
+                    ->visible(! $corporate)
                     ->description('Dichiarazione di consenso al trattamento dei dati: i consensi non dati restano vuoti.')
                     ->statePath('consensi')
                     ->columns(2)
@@ -720,6 +883,13 @@ class Simulazione extends Page
         }
 
         $state = $this->clienteForm->getState();
+
+        if (SimulationContractType::tryFrom((string) ($this->bozza['contract_type'] ?? ''))?->isCorporate()) {
+            $this->salvaSocieta($state);
+
+            return;
+        }
+
         $decoded = app(CodiceFiscaleDecoder::class)->decodeVerified($state['tax_code'] ?? null);
 
         if ($decoded === null) {
@@ -793,12 +963,166 @@ class Simulazione extends Page
             ['role' => 'richiedente', 'name' => trim($client->first_name.' '.$client->name)],
         );
 
-        $this->fase = 'cliente_salvato';
+        $this->apriFirma($pratica);
+    }
+
+    /**
+     * Cliente società: anagrafica con ragione sociale e partita IVA, sede legale, KYC. I documenti d'identità caricati
+     * sono dell'amministratore, già collegato alla pratica con quel ruolo, e diventa il legale rappresentante.
+     *
+     * @param  array<string, mixed>  $state
+     */
+    private function salvaSocieta(array $state): void
+    {
+        $pratica = FinancingQuote::query()->find($this->quoteId)?->pratica;
+
+        if ($pratica === null) {
+            return;
+        }
+
+        $residenza = Arr::pull($state, 'residenza', []);
+        $kyc = Arr::pull($state, 'kyc', []);
+        Arr::pull($state, 'consensi');
+
+        $attributes = [
+            'company_id' => $pratica->company_id,
+            'is_person' => false,
+            'name' => $state['name'],
+            'vat_number' => $state['vat_number'],
+            'email' => $this->contatti['email'] ?? null,
+            'phone' => $this->contatti['phone'] ?? null,
+        ];
+
+        $client = Client::query()->where('vat_number', $state['vat_number'])->first();
+        $client === null ? $client = Client::query()->create($attributes) : $client->update($attributes);
+
+        $companyId = $pratica->company_id ?? Company::query()->value('id');
+
+        if ($companyId !== null) {
+            $client->branches()->updateOrCreate(['is_main_office' => true], [
+                'company_id' => $companyId,
+                'name' => 'Sede legale',
+                'address' => $residenza['street'] ?? null,
+                'street_number' => $residenza['numero'] ?? null,
+                'zip_code' => $residenza['zip_code'] ?? null,
+                'city' => $residenza['city'] ?? null,
+                'province' => $residenza['province'] ?? null,
+            ]);
+        }
+
+        KycQuestionnaire::query()->create([
+            ...$kyc,
+            'client_id' => $client->getKey(),
+            'pratica_id' => (string) $pratica->getKey(),
+            'status' => KycStatus::Complete,
+            'compiled_at' => now(),
+        ]);
+
+        $administratorId = PraticaClient::query()->where('pratica_id', $pratica->getKey())->where('role', 'amministratore')->value('client_id');
+
+        if ($administratorId !== null && blank($client->legal_representative_id)) {
+            $client->update(['legal_representative_id' => $administratorId]);
+        }
+
+        $pratica->update(['cognome_cliente' => $client->name, 'nome_cliente' => null, 'codice_fiscale' => $client->vat_number]);
+
+        PraticaClient::query()->firstOrCreate(
+            ['pratica_id' => $pratica->getKey(), 'client_id' => $client->getKey()],
+            ['role' => 'richiedente', 'name' => $client->name],
+        );
+
+        $this->apriFirma($pratica);
+    }
+
+    /**
+     * Cliente e KYC compilati: la pratica passa alla fase della modulistica, da stampare e far firmare al cliente con OTP.
+     */
+    private function apriFirma(Pratica $pratica): void
+    {
+        $quote = FinancingQuote::query()->find($this->quoteId);
+        $productName = SimulationContractType::from((string) $quote?->contract_type)->productName();
+
+        app(PracticeFinalizer::class)->advance($pratica, $productName, 'FASCICOLO COMPLETO');
+
+        $this->statoPratica = 'FASCICOLO COMPLETO';
+        $this->fase = 'firma';
+        $this->moduliForm->fill(['banca' => $pratica->clienti_id]);
+    }
+
+    /**
+     * Moduli da stampare e firmare per la pratica: quelli del prodotto, più i documenti specifici della banca scelta
+     * (es. l'informativa Compass solo se la banca è Compass).
+     *
+     * @return Collection<int, DocumentType>
+     */
+    private function tipiModulistica(): Collection
+    {
+        $quote = FinancingQuote::query()->find($this->quoteId);
+        $pratica = $quote?->pratica;
+
+        if ($pratica === null) {
+            return collect();
+        }
+
+        $productName = SimulationContractType::from((string) $quote->contract_type)->productName();
+        $ids = app(PracticeTaskDocuments::class)->forProductStatus($productName, 'FASCICOLO COMPLETO', $pratica->clienti_id)
+            ->pluck('document_type_id');
+
+        return DocumentType::query()->whereIn('id', $ids)->with('pdfModule')->get()->sortBy(fn (DocumentType $type): int => (int) $ids->search($type->getKey()))->values();
+    }
+
+    /** La banca della pratica: decide quali documenti specifici di un istituto vanno stampati. */
+    private function scegliBanca(mixed $bancaId): void
+    {
+        $pratica = FinancingQuote::query()->find($this->quoteId)?->pratica;
+
+        if ($pratica === null) {
+            return;
+        }
+
+        $banca = filled($bancaId) ? Cliente::query()->find($bancaId) : null;
+
+        $pratica->update([
+            'clienti_id' => $banca?->getKey(),
+            'denominazione_banca' => $banca?->name,
+            'abi' => $banca?->abi,
+        ]);
+    }
+
+    /** Modulistica da firmare: elenco, dati mancanti e invio per la firma OTP (componente di unico-core). */
+    public function moduliForm(Schema $schema): Schema
+    {
+        return $schema
+            ->components([
+                Select::make('banca')
+                    ->label('Banca / istituto')
+                    ->helperText('Decide quali documenti specifici di una banca vanno stampati (ad esempio l\'informativa Compass).')
+                    ->options(fn (): array => Cliente::query()->where('is_active', true)->orderBy('name')->pluck('name', 'id')->all())
+                    ->searchable()
+                    ->live()
+                    ->dehydrated(false)
+                    ->afterStateUpdated(fn (mixed $state) => $this->scegliBanca($state)),
+                ...PracticeSignaturePackageForm::components(
+                    fn (): ?Pratica => FinancingQuote::query()->find($this->quoteId)?->pratica,
+                    fn (): Collection => $this->tipiModulistica(),
+                ),
+            ])
+            ->statePath('moduli');
     }
 
     private function apriCliente(Pratica $pratica): void
     {
         $contract = SimulationContractType::from((string) $this->bozza['contract_type']);
+
+        if ($contract->isCorporate()) {
+            $this->campiCliente = ['name', 'vat_number'];
+            $this->cliente = ['name' => $this->bozza['company_name'], 'vat_number' => $this->bozza['vat_number']];
+            $this->fase = 'cliente';
+            $this->clienteForm->fill($this->cliente);
+
+            return;
+        }
+
         $relationship = self::relationshipFrom($this->bozza['employment_relationship']);
         $this->campiCliente = FinancingClientFields::forContract($contract);
 
@@ -823,18 +1147,23 @@ class Simulazione extends Page
     }
 
     /**
-     * Documenti obbligatori del prodotto non ancora ricevuti (l'informativa posticipata non blocca).
+     * Documenti d'identità obbligatori non ancora ricevuti: servono a compilare l'anagrafica, quindi finché mancano non si
+     * passa al cliente. Gli altri documenti della check list si possono caricare anche dopo (o chiedere al cliente per email).
      *
      * @return list<string>
      */
     private function tipiMancanti(Pratica $pratica): array
     {
         $required = collect($this->documentiRichiesti)->where('required', true);
-        $types = DocumentType::query()->whereIn('id', $required->pluck('document_type_id'))->get();
+        $types = DocumentType::query()
+            ->whereIn('id', $required->pluck('document_type_id'))
+            ->whereNotNull('ai_kind')
+            ->whereIn('ai_kind', ['identita', 'codice_fiscale'])
+            ->get();
         $received = app(PracticeDocumentIntake::class)->received($pratica, $types);
 
-        return $required
-            ->reject(fn (array $document): bool => $received[$document['document_type_id']] ?? false)
+        return $types
+            ->reject(fn (DocumentType $type): bool => $received[$type->getKey()] ?? false)
             ->pluck('name')
             ->values()
             ->all();
@@ -896,6 +1225,11 @@ class Simulazione extends Page
         $user = Auth::user();
 
         return $user instanceof User ? $user->fornitore : null;
+    }
+
+    private static function isCorporate(mixed $state): bool
+    {
+        return self::contractTypeFrom($state)?->isCorporate() === true;
     }
 
     private static function contractTypeFrom(mixed $state): ?SimulationContractType

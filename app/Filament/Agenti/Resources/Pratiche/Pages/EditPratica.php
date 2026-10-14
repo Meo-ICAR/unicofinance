@@ -4,8 +4,8 @@ namespace App\Filament\Agenti\Resources\Pratiche\Pages;
 
 use App\Filament\Agenti\Resources\Pratiche\PraticaResource;
 use App\Models\Client;
-use App\Services\Preventivazione\ProductTaskDocuments;
 use Filament\Resources\Pages\EditRecord;
+use Unico\Core\Documents\PracticeTaskDocuments;
 use Unico\Core\Models\Pratica;
 
 class EditPratica extends EditRecord
@@ -21,7 +21,7 @@ class EditPratica extends EditRecord
         $pratica = $this->getRecord();
 
         if ($pratica instanceof Pratica) {
-            app(ProductTaskDocuments::class)->attachToPractice($pratica);
+            app(PracticeTaskDocuments::class)->attachToPractice($pratica);
         }
     }
 

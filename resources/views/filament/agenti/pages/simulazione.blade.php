@@ -16,10 +16,18 @@
                     <dt class="text-gray-500 dark:text-gray-400">Tipo contratto</dt>
                     <dd class="font-medium">{{ $profilo['tipo_contratto'] }}</dd>
                 </div>
-                <div>
-                    <dt class="text-gray-500 dark:text-gray-400">Tipo amministrazione</dt>
-                    <dd class="font-medium">{{ $profilo['tipo_rapporto'] }}</dd>
-                </div>
+                @if (! empty($profilo['cliente']))
+                    <div>
+                        <dt class="text-gray-500 dark:text-gray-400">Cliente</dt>
+                        <dd class="font-medium">{{ $profilo['cliente'] }}</dd>
+                    </div>
+                @endif
+                @if ($profilo['tipo_rapporto'])
+                    <div>
+                        <dt class="text-gray-500 dark:text-gray-400">Tipo amministrazione</dt>
+                        <dd class="font-medium">{{ $profilo['tipo_rapporto'] }}</dd>
+                    </div>
+                @endif
                 <div>
                     <dt class="text-gray-500 dark:text-gray-400">Durata</dt>
                     <dd class="font-medium">{{ $profilo['durata_etichetta'] }}</dd>
@@ -52,7 +60,11 @@
             </dl>
             @if ($preventivatoreAssente)
                 <p class="mt-4 text-sm text-gray-600 dark:text-gray-300">
-                    Preventivatore non configurato: il preventivo si salva senza importo erogato.
+                    @if (($profilo['cliente'] ?? null) !== null)
+                        Per questo prodotto non c'è un preventivo automatico: la pratica si salva senza importo erogato.
+                    @else
+                        Preventivatore non configurato: il preventivo si salva senza importo erogato.
+                    @endif
                 </p>
             @endif
         </x-filament::section>
@@ -127,7 +139,7 @@
             </x-filament::section>
         @endif
 
-        @if ($fase === 'perfezionare')
+        @if (in_array($fase, ['perfezionare', 'cliente', 'firma'], true))
             {{ $this->documentiForm }}
             @if ($documentiMancanti !== [])
                 <p class="mt-4 text-sm text-danger-600 dark:text-danger-400">
@@ -164,10 +176,8 @@
             </x-filament::section>
         @endif
 
-        @if ($fase === 'cliente_salvato')
-            <x-filament::section heading="Cliente salvato" class="mt-6">
-                <p class="text-sm">Il cliente è collegato alla pratica come richiedente.</p>
-            </x-filament::section>
+        @if ($fase === 'firma')
+            {{ $this->moduliForm }}
         @endif
     @endif
 </x-filament-panels::page>
