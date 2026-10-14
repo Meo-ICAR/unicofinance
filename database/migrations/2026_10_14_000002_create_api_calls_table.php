@@ -6,13 +6,21 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /** Il registro sta sul database core, condiviso fra le app Unico. */
+    public function getConnection()
+    {
+        return config('unico-core.connection');
+    }
+
     public function up(): void
     {
-        if (Schema::hasTable('api_calls')) {
+        $schema = Schema::connection($this->getConnection());
+
+        if ($schema->hasTable('api_calls')) {
             return;
         }
 
-        Schema::create('api_calls', function (Blueprint $table) {
+        $schema->create('api_calls', function (Blueprint $table) {
             $table->comment('Registro delle chiamate a web service esterni (Cerved, sanctions.io, Openapi) con esito e costo.');
             $table->id();
             $table->string('provider', 30)->index();
@@ -38,6 +46,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('api_calls');
+        Schema::connection($this->getConnection())->dropIfExists('api_calls');
     }
 };

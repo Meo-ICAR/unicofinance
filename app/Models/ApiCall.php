@@ -6,6 +6,7 @@ use App\Enums\ApiCallStatus;
 use App\Enums\ApiProvider;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Unico\Core\Concerns\UsesCoreConnection;
 
 /**
  * Chiamata a un web service esterno, con esito e costo.
@@ -15,6 +16,8 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  */
 class ApiCall extends Model
 {
+    use UsesCoreConnection;
+
     /**
      * @var array<int, string>
      */
