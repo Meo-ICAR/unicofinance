@@ -128,23 +128,12 @@
         @endif
 
         @if ($fase === 'perfezionare')
-            <x-filament::section heading="Documenti del tipo prodotto" class="mt-6">
-                @if ($documentiRichiesti === [])
-                    <p class="text-sm">Nessun documento è definito nel task di questo tipo prodotto.</p>
-                @else
-                    <form wire:submit="caricaDocumenti" class="space-y-4">
-                        {{ $this->uploadsForm }}
-                        <x-filament::button type="submit" icon="heroicon-o-arrow-up-tray">
-                            Carica documenti
-                        </x-filament::button>
-                    </form>
-                @endif
-                @if ($documentiMancanti !== [])
-                    <p class="mt-4 text-sm text-danger-600 dark:text-danger-400">
-                        Mancano ancora: {{ implode(', ', $documentiMancanti) }}.
-                    </p>
-                @endif
-            </x-filament::section>
+            {{ $this->documentiForm }}
+            @if ($documentiMancanti !== [])
+                <p class="mt-4 text-sm text-danger-600 dark:text-danger-400">
+                    Mancano ancora: {{ implode(', ', $documentiMancanti) }}.
+                </p>
+            @endif
         @endif
 
         @if ($esitiDocumenti !== [])

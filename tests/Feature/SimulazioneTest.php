@@ -23,7 +23,6 @@ use Unico\Core\Documents\Contracts\DocumentReader;
 use Unico\Core\Models\Client;
 use Unico\Core\Models\Document;
 use Unico\Core\Models\DocumentAnalysis;
-use Unico\Core\Models\DocumentType;
 use Unico\Core\Models\Fornitore;
 use Unico\Core\Models\Pratica;
 use Unico\Core\Models\PraticaClient;
@@ -119,23 +118,29 @@ XML;
             ->set('cliente.consensi.third_parties', true);
     }
 
+    /**
+     * Carica con l'unico campo di upload tutti i documenti richiesti dal task del prodotto: il tipo
+     * si riconosce dal nome del file. Ritorna l'id del tipo «Contratto di finanziamento».
+     */
     private function caricaTuttiIDocumenti(Testable $page): int
     {
+        $names = [
+            'Contratto di finanziamento' => 'contratto-firmato.pdf',
+            "Carta d'Identità" => 'carta-identita.pdf',
+            'Codice fiscale / Tessera sanitaria' => 'codice-fiscale.pdf',
+        ];
+        $files = [];
         $contractId = 0;
 
         foreach ($page->get('documentiRichiesti') as $document) {
-            $id = $document['document_type_id'];
-
             if ($document['name'] === 'Contratto di finanziamento') {
-                $contractId = $id;
-                DocumentType::query()->whereKey($id)->update(['regex' => 'contratto']);
+                $contractId = $document['document_type_id'];
             }
 
-            $name = $document['name'] === 'Contratto di finanziamento' ? 'contratto.pdf' : 'documento-'.$id.'.pdf';
-            $page->set('allegati.'.$id, [UploadedFile::fake()->createWithContent($name, "%PDF-1.4\n".$document['name'])]);
+            $files[] = UploadedFile::fake()->createWithContent($names[$document['name']], "%PDF-1.4\n".$document['name']);
         }
 
-        $page->call('caricaDocumenti');
+        $page->set('documenti.files', $files);
 
         return $contractId;
     }
@@ -314,6 +319,52 @@ XML;
         $this->assertNotContains('employer_id', FinancingClientFields::forContract(SimulationContractType::Prestito));
         $this->assertNotContains('employer_id', FinancingClientFields::forContract(SimulationContractType::Mutuo));
         $this->assertContains('salary_quote', FinancingClientFields::forContract(SimulationContractType::Cessione));
+    }
+
+    public function test_privacy_notice_can_be_postponed_and_the_single_upload_ticks_what_it_recognizes(): void
+    {
+        Http::fake(['preventivatore.test/*' => Http::response(self::XML)]);
+
+        $page = Livewire::test(Simulazione::class)
+            ->fillForm([
+                'tipo_contratto' => 'prestito',
+                'sesso' => 'M',
+                'data_nascita' => '1955-03-01',
+                'tipo_rapporto' => 'pensionato_inps',
+                'durata' => 84,
+                'importo_richiesto' => 15000,
+                'data_decorrenza' => '2027-01-13',
+            ])
+            ->call('simulate')
+            ->call('salvaPreventivo')
+            ->call('perfeziona')
+            ->assertSet('fase', 'informativa')
+            ->call('posticipaInformativa')
+            ->assertSet('fase', 'contatti')
+            ->set('contatti.email', 'mario.rossi@example.test')
+            ->set('contatti.phone', '3492995106')
+            ->call('confermaContatti')
+            ->assertSet('fase', 'perfezionare');
+
+        $privacyId = $page->get('informativaRichiesta')[0]['document_type_id'];
+        $this->assertSame([], $page->get('documenti.ricevuti') ?? []);
+
+        $page->set('documenti.files', [
+            UploadedFile::fake()->createWithContent('informativa-firmata.pdf', "%PDF-1.4\ninformativa"),
+            UploadedFile::fake()->createWithContent('foto-vacanza.pdf', "%PDF-1.4\naltro"),
+        ])
+            ->assertSet('documenti.files', [])
+            ->assertSet('documenti.ricevuti', [$privacyId]);
+
+        $esiti = collect($page->get('esitiDocumenti'))->pluck('tipo', 'file');
+        $this->assertSame('Informativa privacy', $esiti['informativa-firmata.pdf']);
+        $this->assertNull($esiti['foto-vacanza.pdf']);
+
+        $pratica = FinancingQuote::query()->first()->pratica;
+        $unknown = Document::query()->where('documentable_id', (string) $pratica->getKey())->where('name', 'foto-vacanza.pdf')->first();
+        $this->assertNotNull($unknown);
+        $this->assertNull($unknown->document_type_id);
+        $this->assertSame('Informativa privacy', \Unico\Core\Models\DocumentType::find($privacyId)->name);
     }
 
     public function test_simulation_is_saved_when_the_quotation_url_is_missing(): void

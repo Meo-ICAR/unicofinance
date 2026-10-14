@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Unico\Core\Documents\DocumentPipeline;
+use Unico\Core\Documents\Listeners\AnalyzeUploadedDocument;
 use Unico\Core\Enums\DocumentStatus;
 use Unico\Core\Models\Document;
 use Unico\Core\Models\DocumentType;
@@ -50,9 +51,10 @@ class PracticeDocumentUploader
             ])->save();
         }
 
-        $document->addMedia($file->getRealPath())
+        // L'analisi parte da qui, con i tipi candidati: quella automatica sul caricamento la duplicherebbe.
+        AnalyzeUploadedDocument::suspendedWhile(fn () => $document->addMedia($file->getRealPath())
             ->usingFileName($file->getClientOriginalName())
-            ->toMediaCollection(Document::COLLECTION);
+            ->toMediaCollection(Document::COLLECTION));
 
         $candidates = DocumentType::query()->whereIn('id', $ids)->get();
 

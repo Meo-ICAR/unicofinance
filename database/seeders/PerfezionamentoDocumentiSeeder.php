@@ -23,10 +23,40 @@ class PerfezionamentoDocumentiSeeder extends Seeder
         'Codice fiscale / Tessera sanitaria' => 'codice_fiscale',
     ];
 
+    /**
+     * Riconoscimento dal nome del file (regex); se non basta decide l'AI fra i documenti attesi (`is_ai_check`).
+     * nome tipo documento => regex.
+     *
+     * @var array<string, string>
+     */
+    private const RICONOSCIMENTO = [
+        ProductTaskDocuments::PRIVACY_DOCUMENT => '/informativa|privacy/i',
+        "Carta d'Identità" => '/carta.*identit|identit|patente|passaporto|\\bci\\b/i',
+        'Codice fiscale / Tessera sanitaria' => '/codice.?fiscale|tessera.?sanitaria|\\bcf\\b|\\bts\\b/i',
+        'Contratto di finanziamento' => '/contratto/i',
+    ];
+
     public function run(): void
     {
         $this->informativa();
         $this->documentiIdentificativi();
+        $this->riconoscimento();
+    }
+
+    private function riconoscimento(): void
+    {
+        foreach (self::RICONOSCIMENTO as $name => $regex) {
+            $type = DocumentType::query()->where('name', $name)->first();
+
+            if ($type === null) {
+                continue;
+            }
+
+            $type->forceFill([
+                'regex' => $type->regex ?: $regex,
+                'is_ai_check' => true,
+            ])->save();
+        }
     }
 
     private function informativa(): void

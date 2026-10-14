@@ -19,6 +19,7 @@ use App\Support\FinancingClientFields;
 use BackedEnum;
 use Carbon\CarbonImmutable;
 use Closure;
+use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
@@ -27,6 +28,7 @@ use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\ToggleButtons;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Schemas\Components\Actions;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
@@ -35,15 +37,21 @@ use Filament\Schemas\Components\Wizard\Step;
 use Filament\Schemas\Schema;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\HtmlString;
+use Unico\Core\Documents\IntakeResult;
+use Unico\Core\Documents\PracticeDocumentIntake;
+use Unico\Core\Filament\Schemas\PracticeDocumentsUpload;
 use Unico\Core\Models\Client;
 use Unico\Core\Models\Document;
+use Unico\Core\Models\DocumentType;
 use Unico\Core\Models\Fornitore;
 use Unico\Core\Models\Pratica;
 use Unico\Core\Models\PraticaClient;
+use Unico\Core\Pdf\PracticeModuleData;
 
 /**
  * Wizard: dati della persona, dati del finanziamento, preventivazione, salva o perfeziona.
@@ -136,9 +144,11 @@ class Simulazione extends Page
     public array $esitiDocumenti = [];
 
     /**
+     * Stato del campo di caricamento unico (componente di unico-core).
+     *
      * @var array<string, mixed>
      */
-    public array $allegati = [];
+    public array $documenti = [];
 
     /**
      * @var list<string>
@@ -317,7 +327,7 @@ class Simulazione extends Page
         $this->avvisiInformativa = [];
         $this->contatti = [];
         $this->esitiDocumenti = [];
-        $this->allegati = [];
+        $this->documenti = [];
         $this->campiCliente = [];
         $this->cliente = [];
         $this->documentiMancanti = [];
@@ -408,6 +418,14 @@ class Simulazione extends Page
                 ->maxSize(10240);
         }
 
+        $fields[] = Actions::make([
+            Action::make('posticipaInformativa')
+                ->label('Carica più tardi')
+                ->color('gray')
+                ->icon('heroicon-o-clock')
+                ->action(fn () => $this->posticipaInformativa()),
+        ]);
+
         return $schema->components($fields)->statePath('informativaAllegati');
     }
 
@@ -448,6 +466,16 @@ class Simulazione extends Page
                 ->body(implode("\n", $this->avvisiInformativa))
                 ->warning()
                 ->send();
+        }
+
+        $this->apriContatti();
+    }
+
+    /** L'informativa resta fra i documenti da caricare: si può consegnare più tardi con il caricamento unico. */
+    public function posticipaInformativa(): void
+    {
+        if ($this->fase !== 'informativa') {
+            return;
         }
 
         $this->apriContatti();
@@ -532,62 +560,61 @@ class Simulazione extends Page
             ->values()
             ->all();
         $this->rememberQuote($quote, 'PERFEZIONARE', 'perfezionare');
+        $this->documentiMancanti = [];
+        $this->documentiForm->fill();
     }
 
-    public function uploadsForm(Schema $schema): Schema
+    /**
+     * Elenco dei documenti richiesti con un solo campo di caricamento: ogni file viene riconosciuto (regex, poi AI),
+     * letto, archiviato e i dati dell'identità compilano l'anagrafica del cliente (componente di unico-core).
+     */
+    public function documentiForm(Schema $schema): Schema
     {
-        $fields = [];
-
-        foreach ($this->documentiRichiesti as $document) {
-            $fields[] = FileUpload::make((string) $document['document_type_id'])
-                ->label($document['name'])
-                ->required($document['required'])
-                ->storeFiles(false)
-                ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png'])
-                ->maxSize(10240);
-        }
-
-        return $schema->components($fields)->statePath('allegati');
+        return $schema
+            ->components(PracticeDocumentsUpload::components(
+                fn (): ?Pratica => FinancingQuote::query()->find($this->quoteId)?->pratica,
+                fn (): Collection => $this->tipiAttesi(),
+                fn (array $results) => $this->dopoCaricamento($results),
+            ))
+            ->statePath('documenti');
     }
 
-    public function caricaDocumenti(PracticeDocumentUploader $uploader): void
+    /**
+     * @param  list<IntakeResult>  $results
+     */
+    private function dopoCaricamento(array $results): void
     {
-        if ($this->fase !== 'perfezionare' || $this->quoteId === null) {
-            return;
-        }
-
-        $state = $this->uploadsForm->getState();
-        $quote = FinancingQuote::query()->find($this->quoteId);
-        $pratica = $quote?->pratica;
-        $user = Auth::user();
-
-        if ($pratica === null || ! $user instanceof User) {
-            return;
-        }
-
-        $candidateIds = array_column($this->documentiRichiesti, 'document_type_id');
-
-        foreach ($this->documentiRichiesti as $document) {
-            $file = $this->uploadedFile($state[(string) $document['document_type_id']] ?? $state[$document['document_type_id']] ?? null);
-
-            if ($file === null) {
-                continue;
-            }
-
-            $stored = $uploader->store($pratica, $file, $candidateIds, $user, (int) $document['document_type_id']);
+        foreach ($results as $result) {
             $this->esitiDocumenti[] = [
-                'file' => $file->getClientOriginalName(),
-                'tipo' => $stored->documentType?->name,
+                'file' => $result->fileName,
+                'tipo' => $result->type?->name,
             ];
+        }
+
+        $pratica = FinancingQuote::query()->find($this->quoteId)?->pratica;
+
+        if ($pratica === null) {
+            return;
         }
 
         $this->documentiMancanti = $this->tipiMancanti($pratica);
 
-        if ($this->documentiMancanti !== []) {
-            return;
+        if ($this->documentiMancanti === [] && $this->fase === 'perfezionare') {
+            $this->apriCliente($pratica);
         }
+    }
 
-        $this->apriCliente($pratica);
+    /**
+     * Documenti attesi: informativa (se non ancora consegnata) e quelli del task del prodotto.
+     *
+     * @return Collection<int, DocumentType>
+     */
+    private function tipiAttesi(): Collection
+    {
+        $ids = collect([...array_column($this->informativaRichiesta, 'document_type_id'), ...array_column($this->documentiRichiesti, 'document_type_id')])->unique()->values();
+        $types = DocumentType::query()->whereIn('id', $ids)->get()->keyBy('id');
+
+        return $ids->map(fn (int $id): ?DocumentType => $types->get($id))->filter()->values();
     }
 
     public function clienteForm(Schema $schema): Schema
@@ -716,7 +743,7 @@ class Simulazione extends Page
             return;
         }
 
-        $client = Client::query()->create([
+        $attributes = [
             'company_id' => $pratica->company_id,
             'is_person' => true,
             'email' => $this->contatti['email'] ?? null,
@@ -726,11 +753,19 @@ class Simulazione extends Page
             'consent_profiling_at' => ($consensi['profiling'] ?? false) ? now() : null,
             'consent_third_parties_at' => ($consensi['third_parties'] ?? false) ? now() : null,
             ...$state,
-        ]);
+        ];
+
+        // I documenti d'identità caricati hanno già creato il cliente: si completa, altrimenti si crea.
+        $client = app(PracticeModuleData::class)->findClient($pratica);
+
+        if ($client === null) {
+            $client = Client::query()->create($attributes);
+        } else {
+            $client->update($attributes);
+        }
 
         // Le persone fisiche hanno la residenza negli indirizzi (le sedi sono per le società).
-        $client->addresses()->create([
-            'address_type_id' => 1,
+        $client->addresses()->updateOrCreate(['address_type_id' => 1], [
             'name' => 'Residenza',
             'street' => $residenza['street'] ?? null,
             'numero' => $residenza['numero'] ?? null,
@@ -753,12 +788,10 @@ class Simulazione extends Page
             'codice_fiscale' => $client->tax_code,
         ]);
 
-        PraticaClient::query()->create([
-            'pratica_id' => $pratica->getKey(),
-            'client_id' => $client->getKey(),
-            'role' => 'richiedente',
-            'name' => trim($client->first_name.' '.$client->name),
-        ]);
+        PraticaClient::query()->firstOrCreate(
+            ['pratica_id' => $pratica->getKey(), 'client_id' => $client->getKey()],
+            ['role' => 'richiedente', 'name' => trim($client->first_name.' '.$client->name)],
+        );
 
         $this->fase = 'cliente_salvato';
     }
@@ -773,9 +806,15 @@ class Simulazione extends Page
             $this->campiCliente = array_values(array_diff($this->campiCliente, ['hiring_date']));
         }
 
+        $client = app(PracticeModuleData::class)->findClient($pratica);
+
         $this->cliente = array_filter([
-            ...$this->datiLettiDaiDocumenti($pratica),
-            'sex' => $this->bozza['sex'] ?? null,
+            'first_name' => $client?->first_name,
+            'name' => $client?->name,
+            'tax_code' => $client?->tax_code,
+            'birth_date' => $client?->birth_date?->toDateString(),
+            'birth_place' => $client?->birth_place,
+            'sex' => $client?->sex ?? $this->bozza['sex'] ?? null,
             'hiring_date' => $this->bozza['hired_at'] ?? null,
             'salary_quote' => $this->bozza['assignable_quota'] ?? null,
         ], fn (mixed $value): bool => filled($value));
@@ -784,64 +823,21 @@ class Simulazione extends Page
     }
 
     /**
-     * Dati anagrafici letti dall'AI sui documenti d'identità e sul codice fiscale caricati: l'agente li conferma o li corregge.
+     * Documenti obbligatori del prodotto non ancora ricevuti (l'informativa posticipata non blocca).
      *
-     * @return array<string, string>
-     */
-    private function datiLettiDaiDocumenti(Pratica $pratica): array
-    {
-        $letti = [];
-
-        $documents = Document::query()
-            ->where('documentable_type', 'pratica')
-            ->where('documentable_id', (string) $pratica->getKey())
-            ->whereHas('documentType', fn ($query) => $query->whereIn('ai_kind', ['identita', 'codice_fiscale']))
-            ->with('documentType')
-            ->get()
-            ->sortBy(fn (Document $document): int => $document->documentType?->ai_kind === 'identita' ? 0 : 1);
-
-        foreach ($documents as $document) {
-            $fields = $document->analyses()->where('kind', 'extraction')->latest('id')->first()?->result['fields'] ?? null;
-
-            if (! is_array($fields)) {
-                continue;
-            }
-
-            foreach (['name' => 'surname', 'first_name' => 'name', 'tax_code' => 'fiscal_code'] as $client => $field) {
-                $value = is_string($fields[$field] ?? null) ? trim($fields[$field]) : '';
-
-                if ($value !== '' && ! isset($letti[$client])) {
-                    $letti[$client] = $client === 'tax_code' ? strtoupper(str_replace(' ', '', $value)) : $value;
-                }
-            }
-        }
-
-        return $letti;
-    }
-
-    /**
      * @return list<string>
      */
     private function tipiMancanti(Pratica $pratica): array
     {
-        $presenti = Document::query()
-            ->where('documentable_type', 'pratica')
-            ->where('documentable_id', (string) $pratica->getKey())
-            ->whereNotNull('document_type_id')
-            ->whereHas('media', fn ($query) => $query->where('collection_name', Document::COLLECTION))
-            ->pluck('document_type_id')
-            ->map(fn (mixed $id): int => (int) $id)
+        $required = collect($this->documentiRichiesti)->where('required', true);
+        $types = DocumentType::query()->whereIn('id', $required->pluck('document_type_id'))->get();
+        $received = app(PracticeDocumentIntake::class)->received($pratica, $types);
+
+        return $required
+            ->reject(fn (array $document): bool => $received[$document['document_type_id']] ?? false)
+            ->pluck('name')
+            ->values()
             ->all();
-
-        $mancanti = [];
-
-        foreach ($this->documentiRichiesti as $document) {
-            if (! in_array($document['document_type_id'], $presenti, true)) {
-                $mancanti[] = $document['name'];
-            }
-        }
-
-        return $mancanti;
     }
 
     private function compilaDaCodiceFiscale(?string $state, Set $set): void
