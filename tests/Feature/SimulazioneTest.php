@@ -5,16 +5,21 @@ namespace Tests\Feature;
 use App\Enums\SimulationContractType;
 use App\Filament\Agenti\Pages\Simulazione;
 use App\Models\FinancingQuote;
+use App\Models\KycQuestionnaire;
 use App\Models\User;
 use App\Support\FinancingClientFields;
+use Database\Seeders\PerfezionamentoDocumentiSeeder;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
+use Tests\Support\FakeDocumentReader;
 use Tests\TestCase;
+use Unico\Core\Documents\Contracts\DocumentReader;
 use Unico\Core\Models\Client;
 use Unico\Core\Models\Document;
 use Unico\Core\Models\DocumentAnalysis;
@@ -59,8 +64,80 @@ XML;
             'user_id' => $user->id,
         ]);
 
+        $this->seed(PerfezionamentoDocumentiSeeder::class);
+        $this->reader = new FakeDocumentReader;
+        $this->app->instance(DocumentReader::class, $this->reader);
+
         Filament::setCurrentPanel('agenti');
         $this->actingAs($user);
+    }
+
+    private FakeDocumentReader $reader;
+
+    /** Informativa firmata, contatti e caricamento di tutti i documenti richiesti dal task del prodotto. */
+    private function perfezionaFinoAiDocumenti(Testable $page, string $email, string $phone): Testable
+    {
+        $page->call('perfeziona')->assertSet('fase', 'informativa');
+        $privacyId = $page->get('informativaRichiesta')[0]['document_type_id'];
+
+        $page->set('informativaAllegati.'.$privacyId, [UploadedFile::fake()->createWithContent('informativa-firmata.pdf', "%PDF-1.4\ninformativa privacy firmata")])
+            ->call('caricaInformativa')
+            ->assertSet('fase', 'contatti')
+            ->assertSet('statoPratica', 'PREVENTIVO')
+            ->assertSet('avvisiInformativa', [])
+            ->call('confermaContatti')
+            ->assertHasErrors(['contatti.email' => 'required', 'contatti.phone' => 'required'])
+            ->set('contatti.email', $email)
+            ->set('contatti.phone', $phone)
+            ->call('confermaContatti')
+            ->assertHasNoErrors()
+            ->assertSet('statoPratica', 'PERFEZIONARE');
+
+        return $page;
+    }
+
+    /**
+     * Residenza, KYC e consensi: dati del cliente che servono a stampare i moduli.
+     */
+    private function compilaResidenzaKycEConsensi(Testable $page): Testable
+    {
+        return $page
+            ->set('cliente.residenza.street', 'Via Verdi')
+            ->set('cliente.residenza.numero', '7')
+            ->set('cliente.residenza.zip_code', '00100')
+            ->set('cliente.residenza.city', 'Roma')
+            ->set('cliente.residenza.province', 'rm')
+            ->set('cliente.kyc.pep_status', 'nessuna')
+            ->set('cliente.kyc.financing_purpose', 'personale_familiare')
+            ->set('cliente.kyc.economic_activity', 'dipendente')
+            ->set('cliente.kyc.activity_sector', 'commercio_servizi')
+            ->set('cliente.kyc.activity_location', 'regione_residenza')
+            ->set('cliente.kyc.financing_nature', 'cessione_quinto')
+            ->set('cliente.kyc.income_band', 'fino_100k')
+            ->set('cliente.kyc.wealth_band', 'fino_500k')
+            ->set('cliente.consensi.marketing', true)
+            ->set('cliente.consensi.third_parties', true);
+    }
+
+    private function caricaTuttiIDocumenti(Testable $page): int
+    {
+        $contractId = 0;
+
+        foreach ($page->get('documentiRichiesti') as $document) {
+            $id = $document['document_type_id'];
+
+            if ($document['name'] === 'Contratto di finanziamento') {
+                $contractId = $id;
+                DocumentType::query()->whereKey($id)->update(['regex' => 'contratto']);
+            }
+
+            $name = $document['name'] === 'Contratto di finanziamento' ? 'contratto.pdf' : 'documento-'.$id.'.pdf';
+            $page->set('allegati.'.$id, [UploadedFile::fake()->createWithContent($name, "%PDF-1.4\n".$document['name'])]);
+        }
+
+        $page->call('caricaDocumenti');
+
+        return $contractId;
     }
 
     public function test_agent_opens_the_simulation_and_saves_a_cession_quote(): void
@@ -116,19 +193,17 @@ XML;
             'company_id' => $quote->pratica->company_id,
         ]);
 
-        $page->call('perfeziona')->assertSet('statoPratica', 'PERFEZIONARE');
-        $typeId = $page->get('documentiRichiesti')[0]['document_type_id'];
-        DocumentType::query()->whereKey($typeId)->update(['regex' => 'contratto']);
+        $this->perfezionaFinoAiDocumenti($page, 'maria.rossi@example.test', '338 8449842');
+        $this->caricaTuttiIDocumenti($page);
 
-        $page->set('allegati.'.$typeId, [UploadedFile::fake()->createWithContent('contratto.pdf', "%PDF-1.4\ncontratto di finanziamento")])
-            ->call('caricaDocumenti')
-            ->assertSet('fase', 'cliente')
+        $page->assertSet('fase', 'cliente')
             ->assertSee('Datore di lavoro')
             ->assertSee('Quota cedibile')
             ->set('cliente.first_name', 'Maria')
             ->set('cliente.name', 'Rossi')
             ->set('cliente.tax_code', 'RSSMRA80A01H501U')
             ->set('cliente.employer_id', $employer->getKey())
+            ->tap(fn ($page) => $this->compilaResidenzaKycEConsensi($page))
             ->call('salvaCliente')
             ->assertSet('fase', 'cliente_salvato');
 
@@ -160,10 +235,10 @@ XML;
             ->call('simulate')
             ->assertHasNoFormErrors()
             ->call('salvaPreventivo')
-            ->assertSet('statoPratica', 'PREVENTIVO')
-            ->call('perfeziona')
-            ->assertSet('statoPratica', 'PERFEZIONARE')
-            ->assertSee('Contratto di finanziamento');
+            ->assertSet('statoPratica', 'PREVENTIVO');
+
+        $this->perfezionaFinoAiDocumenti($page, 'mario.rossi@example.test', '3492995106');
+        $page->assertSee('Contratto di finanziamento');
 
         Http::assertSent(function (Request $request): bool {
             parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
@@ -186,23 +261,23 @@ XML;
         $this->assertSame('15000.00', $pratica->amount);
         $this->assertStringStartsWith('SIM-', $pratica->codice_pratica);
 
-        $typeId = $page->get('documentiRichiesti')[0]['document_type_id'];
-        DocumentType::query()->whereKey($typeId)->update(['regex' => 'contratto']);
+        $typeId = $this->caricaTuttiIDocumenti($page);
 
-        $page->set('allegati.'.$typeId, [UploadedFile::fake()->createWithContent('contratto.pdf', "%PDF-1.4\ncontratto di finanziamento")])
-            ->call('caricaDocumenti')
-            ->assertSet('fase', 'cliente')
-            ->assertSet('esitiDocumenti.0.tipo', 'Contratto di finanziamento')
+        $this->assertContains('Contratto di finanziamento', array_column($page->get('esitiDocumenti'), 'tipo'));
+        $page->assertSet('fase', 'cliente')
+            ->assertSet('cliente.first_name', 'Mario')
+            ->assertSet('cliente.tax_code', 'RSSMRA80A01H501U')
             ->assertSee('Reddito netto mensile')
             ->assertDontSee('Quota cedibile')
             ->assertDontSee('Datore di lavoro')
-            ->set('cliente.first_name', 'Mario')
-            ->set('cliente.name', 'Rossi')
-            ->set('cliente.tax_code', 'RSSMRA80A01H501U')
+            ->tap(fn ($page) => $this->compilaResidenzaKycEConsensi($page))
             ->call('salvaCliente')
             ->assertSet('fase', 'cliente_salvato');
 
-        $document = Document::query()->where('documentable_id', (string) $pratica->getKey())->first();
+        $document = Document::query()
+            ->where('documentable_id', (string) $pratica->getKey())
+            ->where('document_type_id', $typeId)
+            ->first();
         $this->assertNotNull($document);
         $this->assertSame($typeId, (int) $document->document_type_id);
         $this->assertSame('pratica', $document->documentable_type);
@@ -217,6 +292,20 @@ XML;
 
         $client = Client::query()->where('tax_code', 'RSSMRA80A01H501U')->first();
         $this->assertNotNull($client);
+        $this->assertSame('mario.rossi@example.test', $client->email);
+        $this->assertSame('3492995106', $client->phone);
+        $this->assertSame('Mario', $client->first_name);
+
+        $address = $client->addresses()->first();
+        $this->assertSame('Roma', $address->city);
+        $this->assertSame('RM', $address->province);
+        $this->assertSame(1, (int) $address->address_type_id);
+        $this->assertNotNull($client->consent_marketing_at);
+        $this->assertNotNull($client->consent_third_parties_at);
+        $this->assertNull($client->consent_group_at);
+        $kyc = KycQuestionnaire::query()->where('client_id', $client->getKey())->first();
+        $this->assertSame('nessuna', $kyc->pep_status->value);
+        $this->assertSame('complete', $kyc->status->value);
         $this->assertSame('1980-01-01', $client->birth_date->toDateString());
         $this->assertSame('Roma (RM)', $client->birth_place);
         $this->assertSame('Rossi', $pratica->fresh()->cognome_cliente);

@@ -12,6 +12,30 @@ use Unico\Core\Models\Task;
 /** Documenti del task di pratica collegato al tipo prodotto e allo stato. */
 class ProductTaskDocuments
 {
+    /** Task di pratica (senza trigger) con l'informativa privacy da far firmare al cliente. */
+    public const PRIVACY_TASK = 'Informativa privacy';
+
+    /** Tipo documento dell'informativa: `document_url` indica da dove scaricare il modulo. */
+    public const PRIVACY_DOCUMENT = 'Informativa privacy';
+
+    /**
+     * Documenti dell'informativa privacy da far firmare prima del perfezionamento.
+     *
+     * @return Collection<int, DocumentRequirement>
+     */
+    public function privacy(): Collection
+    {
+        $task = Task::query()
+            ->where('taskable', 'pratica')
+            ->where('is_active', true)
+            ->where('name', self::PRIVACY_TASK)
+            ->first();
+
+        return $task === null
+            ? collect()
+            : $task->documentRequirements()->with('documentType')->orderBy('sort_order')->get();
+    }
+
     /**
      * @return Collection<int, DocumentRequirement>
      */

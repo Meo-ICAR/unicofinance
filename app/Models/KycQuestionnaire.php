@@ -2,7 +2,17 @@
 
 namespace App\Models;
 
+use App\Enums\KycActivityLocation;
+use App\Enums\KycActivitySector;
+use App\Enums\KycEconomicActivity;
+use App\Enums\KycFinancingNature;
+use App\Enums\KycGeographicArea;
+use App\Enums\KycIncomeBand;
+use App\Enums\KycLegalNature;
+use App\Enums\KycPepStatus;
+use App\Enums\KycRiskLevel;
 use App\Enums\KycStatus;
+use App\Enums\KycWealthBand;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -13,23 +23,29 @@ class KycQuestionnaire extends Model
 
     protected $guarded = ['id'];
 
+    /** Tabella dell'app: senza, una relazione dal cliente (database core) erediterebbe la connessione core. */
+    public function getConnectionName(): ?string
+    {
+        return config('database.default');
+    }
+
     protected function casts(): array
     {
         return [
-            'pep_status' => \App\Enums\KycPepStatus::class,
-            'risk_level' => \App\Enums\KycRiskLevel::class,
+            'pep_status' => KycPepStatus::class,
+            'risk_level' => KycRiskLevel::class,
             'status' => KycStatus::class,
             'compiled_at' => 'datetime',
             'verified_at' => 'datetime',
-            'economic_activity' => \App\Enums\KycEconomicActivity::class,
-            'activity_sector' => \App\Enums\KycActivitySector::class,
-            'activity_location' => \App\Enums\KycActivityLocation::class,
-            'financing_nature' => \App\Enums\KycFinancingNature::class,
-            'income_band' => \App\Enums\KycIncomeBand::class,
-            'wealth_band' => \App\Enums\KycWealthBand::class,
+            'economic_activity' => KycEconomicActivity::class,
+            'activity_sector' => KycActivitySector::class,
+            'activity_location' => KycActivityLocation::class,
+            'financing_nature' => KycFinancingNature::class,
+            'income_band' => KycIncomeBand::class,
+            'wealth_band' => KycWealthBand::class,
             'acts_for_third_party' => 'boolean',
-            'legal_nature' => \App\Enums\KycLegalNature::class,
-            'geographic_area' => \App\Enums\KycGeographicArea::class,
+            'legal_nature' => KycLegalNature::class,
+            'geographic_area' => KycGeographicArea::class,
         ];
     }
 

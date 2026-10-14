@@ -3,8 +3,11 @@
 namespace App\Filament\Agenti\Pages;
 
 use App\Enums\EmploymentRelationship;
+use App\Enums\KycStatus;
 use App\Enums\SimulationContractType;
+use App\Filament\Resources\Clients\Schemas\KycQuestionnaireForm;
 use App\Models\FinancingQuote;
+use App\Models\KycQuestionnaire;
 use App\Models\User;
 use App\Services\CodiceFiscaleDecoder;
 use App\Services\Preventivazione\PracticeDocumentUploader;
@@ -20,15 +23,18 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\ToggleButtons;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Components\Wizard;
 use Filament\Schemas\Components\Wizard\Step;
 use Filament\Schemas\Schema;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Storage;
@@ -82,7 +88,7 @@ class Simulazione extends Page
 
     public ?string $errorePreventivo = null;
 
-    /** preventivo | perfezionare | documenti */
+    /** preventivo | informativa | contatti | perfezionare | cliente | cliente_salvato */
     public ?string $fase = null;
 
     public ?int $quoteId = null;
@@ -92,6 +98,32 @@ class Simulazione extends Page
     public ?string $codicePratica = null;
 
     public ?string $statoPratica = null;
+
+    /**
+     * Informativa privacy da scaricare e far firmare al cliente prima di ogni dato personale.
+     *
+     * @var list<array{document_type_id: int, name: string, required: bool, url: ?string}>
+     */
+    public array $informativaRichiesta = [];
+
+    /**
+     * @var array<string, mixed>
+     */
+    public array $informativaAllegati = [];
+
+    /**
+     * Controlli dell'informativa non superati: avvisano l'agente, ma non bloccano il perfezionamento.
+     *
+     * @var list<string>
+     */
+    public array $avvisiInformativa = [];
+
+    /**
+     * Email e cellulare del cliente, chiesti prima di perfezionare e scritti sul cliente quando si salva.
+     *
+     * @var array<string, mixed>
+     */
+    public array $contatti = [];
 
     /**
      * @var list<array{document_type_id: int, name: string, required: bool}>
@@ -280,6 +312,10 @@ class Simulazione extends Page
         $this->codicePratica = null;
         $this->statoPratica = null;
         $this->documentiRichiesti = [];
+        $this->informativaRichiesta = [];
+        $this->informativaAllegati = [];
+        $this->avvisiInformativa = [];
+        $this->contatti = [];
         $this->esitiDocumenti = [];
         $this->allegati = [];
         $this->campiCliente = [];
@@ -329,11 +365,146 @@ class Simulazione extends Page
         $this->rememberQuote($quote, 'PREVENTIVO', 'preventivo');
     }
 
-    public function perfeziona(PracticeFinalizer $finalizer, ProductTaskDocuments $documents): void
+    /**
+     * Il perfezionamento parte dall'informativa privacy (task dedicato): si scarica, il cliente la firma
+     * con firma olografa e l'agente la carica. Senza task configurato si passa ai contatti.
+     */
+    public function perfeziona(ProductTaskDocuments $documents): void
     {
         if ($this->fase !== 'preventivo' || $this->quoteId === null) {
             return;
         }
+
+        $this->informativaRichiesta = $documents->privacy()
+            ->filter(fn ($requirement): bool => $requirement->documentType !== null)
+            ->map(fn ($requirement): array => [
+                'document_type_id' => (int) $requirement->document_type_id,
+                'name' => (string) $requirement->documentType->name,
+                'required' => (bool) $requirement->is_required,
+                'url' => filled($requirement->documentType->document_url) ? (string) $requirement->documentType->document_url : null,
+            ])
+            ->values()
+            ->all();
+
+        if ($this->informativaRichiesta === []) {
+            $this->apriContatti();
+
+            return;
+        }
+
+        $this->fase = 'informativa';
+    }
+
+    public function informativaForm(Schema $schema): Schema
+    {
+        $fields = [];
+
+        foreach ($this->informativaRichiesta as $document) {
+            $fields[] = FileUpload::make((string) $document['document_type_id'])
+                ->label($document['name'])
+                ->required($document['required'])
+                ->storeFiles(false)
+                ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png'])
+                ->maxSize(10240);
+        }
+
+        return $schema->components($fields)->statePath('informativaAllegati');
+    }
+
+    public function caricaInformativa(PracticeDocumentUploader $uploader): void
+    {
+        if ($this->fase !== 'informativa' || $this->quoteId === null) {
+            return;
+        }
+
+        $state = $this->informativaForm->getState();
+        $pratica = FinancingQuote::query()->find($this->quoteId)?->pratica;
+        $user = Auth::user();
+
+        if ($pratica === null || ! $user instanceof User) {
+            return;
+        }
+
+        $candidateIds = array_column($this->informativaRichiesta, 'document_type_id');
+        $this->avvisiInformativa = [];
+
+        foreach ($this->informativaRichiesta as $document) {
+            $file = $this->uploadedFile($state[(string) $document['document_type_id']] ?? $state[$document['document_type_id']] ?? null);
+
+            if ($file === null) {
+                continue;
+            }
+
+            $stored = $uploader->store($pratica, $file, $candidateIds, $user, (int) $document['document_type_id']);
+
+            foreach ($this->esitoControlli($stored) as $avviso) {
+                $this->avvisiInformativa[] = $document['name'].': '.$avviso;
+            }
+        }
+
+        if ($this->avvisiInformativa !== []) {
+            Notification::make()
+                ->title('Informativa da verificare')
+                ->body(implode("\n", $this->avvisiInformativa))
+                ->warning()
+                ->send();
+        }
+
+        $this->apriContatti();
+    }
+
+    private function apriContatti(): void
+    {
+        $this->fase = 'contatti';
+        $this->contattiForm->fill($this->contatti);
+    }
+
+    /**
+     * Problemi trovati dai controlli di unico-core sul documento, oppure l'avviso che resta da verificare.
+     *
+     * @return list<string>
+     */
+    private function esitoControlli(Document $document): array
+    {
+        $analysis = $document->analyses()->where('kind', 'extraction')->latest('id')->first();
+
+        if ($analysis === null || $analysis->outcome === 'passed') {
+            return $analysis === null ? ['non controllato automaticamente: lo verifica il back office.'] : [];
+        }
+
+        $issues = array_values(array_filter((array) ($analysis->result['issues'] ?? []), 'is_string'));
+
+        return $issues !== [] ? $issues : ['non è stato possibile controllarlo: lo verifica il back office.'];
+    }
+
+    public function contattiForm(Schema $schema): Schema
+    {
+        return $schema
+            ->components([
+                TextInput::make('email')
+                    ->label('Email del cliente')
+                    ->email()
+                    ->required()
+                    ->maxLength(255),
+                TextInput::make('phone')
+                    ->label('Cellulare del cliente')
+                    ->tel()
+                    ->required()
+                    ->regex('/^\+?[0-9 .\-\/]{6,20}$/')
+                    ->validationMessages(['regex' => 'Inserisci un numero di cellulare valido.'])
+                    ->maxLength(50),
+            ])
+            ->columns(2)
+            ->statePath('contatti');
+    }
+
+    public function confermaContatti(PracticeFinalizer $finalizer, ProductTaskDocuments $documents): void
+    {
+        if ($this->fase !== 'contatti' || $this->quoteId === null) {
+            return;
+        }
+
+        $this->contatti = $this->contattiForm->getState();
 
         $quote = FinancingQuote::query()->find($this->quoteId);
 
@@ -351,6 +522,8 @@ class Simulazione extends Page
 
         $productName = SimulationContractType::from($quote->contract_type)->productName();
         $this->documentiRichiesti = $documents->forProductStatus($productName, 'PERFEZIONARE')
+            // I documenti d'identità (letti dall'AI) per primi: servono a compilare l'anagrafica del cliente.
+            ->sortBy(fn ($requirement): int => $requirement->documentType?->ai_kind === null ? 1 : 0)
             ->map(fn ($requirement): array => [
                 'document_type_id' => (int) $requirement->document_type_id,
                 'name' => (string) $requirement->documentType?->name,
@@ -414,7 +587,7 @@ class Simulazione extends Page
             return;
         }
 
-        $this->apriCliente();
+        $this->apriCliente($pratica);
     }
 
     public function clienteForm(Schema $schema): Schema
@@ -475,8 +648,41 @@ class Simulazione extends Page
 
         $visible = array_values(array_intersect(array_keys($fields), $this->campiCliente));
 
+        $isPerson = fn (?Get $get = null): bool => true;
+
         return $schema
-            ->components(array_map(fn (string $name) => $fields[$name], $visible))
+            ->components([
+                ...array_map(fn (string $name) => $fields[$name], $visible),
+                Section::make('Residenza')
+                    ->statePath('residenza')
+                    ->columns(3)
+                    ->schema([
+                        TextInput::make('street')->label('Via, piazza')->required()->maxLength(255)->columnSpan(2),
+                        TextInput::make('numero')->label('Numero civico')->maxLength(20),
+                        TextInput::make('zip_code')->label('CAP')->required()->regex('/^\d{5}$/')->validationMessages(['regex' => 'Il CAP ha 5 cifre.']),
+                        TextInput::make('city')->label('Città')->required()->maxLength(100),
+                        TextInput::make('province')->label('Provincia (sigla)')->required()->length(2)
+                            ->dehydrateStateUsing(fn (?string $state): ?string => filled($state) ? strtoupper(trim($state)) : null),
+                    ]),
+                Section::make('Adeguata verifica (KYC)')
+                    ->statePath('kyc')
+                    ->columns(2)
+                    ->schema([
+                        KycQuestionnaireForm::pepStatus($isPerson, true),
+                        KycQuestionnaireForm::financingPurpose($isPerson, true),
+                        KycQuestionnaireForm::personSection($isPerson, true),
+                    ]),
+                Section::make('Consensi privacy del cliente')
+                    ->description('Dichiarazione di consenso al trattamento dei dati: i consensi non dati restano vuoti.')
+                    ->statePath('consensi')
+                    ->columns(2)
+                    ->schema([
+                        Toggle::make('marketing')->label('Promozione di nuovi prodotti e servizi del Titolare'),
+                        Toggle::make('group')->label('Promozione di prodotti di società del Gruppo'),
+                        Toggle::make('profiling')->label('Rilevazione della soddisfazione e delle preferenze'),
+                        Toggle::make('third_parties')->label('Promozione di prodotti di società terze'),
+                    ]),
+            ])
             ->statePath('cliente');
     }
 
@@ -499,6 +705,10 @@ class Simulazione extends Page
         $state['birth_place'] = $decoded['birth_place'];
         $state['sex'] = $decoded['sex'];
 
+        $residenza = Arr::pull($state, 'residenza', []);
+        $kyc = Arr::pull($state, 'kyc', []);
+        $consensi = Arr::pull($state, 'consensi', []);
+
         $quote = FinancingQuote::query()->find($this->quoteId);
         $pratica = $quote?->pratica;
 
@@ -509,7 +719,32 @@ class Simulazione extends Page
         $client = Client::query()->create([
             'company_id' => $pratica->company_id,
             'is_person' => true,
+            'email' => $this->contatti['email'] ?? null,
+            'phone' => $this->contatti['phone'] ?? null,
+            'consent_marketing_at' => ($consensi['marketing'] ?? false) ? now() : null,
+            'consent_group_at' => ($consensi['group'] ?? false) ? now() : null,
+            'consent_profiling_at' => ($consensi['profiling'] ?? false) ? now() : null,
+            'consent_third_parties_at' => ($consensi['third_parties'] ?? false) ? now() : null,
             ...$state,
+        ]);
+
+        // Le persone fisiche hanno la residenza negli indirizzi (le sedi sono per le società).
+        $client->addresses()->create([
+            'address_type_id' => 1,
+            'name' => 'Residenza',
+            'street' => $residenza['street'] ?? null,
+            'numero' => $residenza['numero'] ?? null,
+            'zip_code' => $residenza['zip_code'] ?? null,
+            'city' => $residenza['city'] ?? null,
+            'province' => $residenza['province'] ?? null,
+        ]);
+
+        KycQuestionnaire::query()->create([
+            ...$kyc,
+            'client_id' => $client->getKey(),
+            'pratica_id' => (string) $pratica->getKey(),
+            'status' => KycStatus::Complete,
+            'compiled_at' => now(),
         ]);
 
         $pratica->update([
@@ -528,7 +763,7 @@ class Simulazione extends Page
         $this->fase = 'cliente_salvato';
     }
 
-    private function apriCliente(): void
+    private function apriCliente(Pratica $pratica): void
     {
         $contract = SimulationContractType::from((string) $this->bozza['contract_type']);
         $relationship = self::relationshipFrom($this->bozza['employment_relationship']);
@@ -539,12 +774,49 @@ class Simulazione extends Page
         }
 
         $this->cliente = array_filter([
+            ...$this->datiLettiDaiDocumenti($pratica),
             'sex' => $this->bozza['sex'] ?? null,
             'hiring_date' => $this->bozza['hired_at'] ?? null,
             'salary_quote' => $this->bozza['assignable_quota'] ?? null,
         ], fn (mixed $value): bool => filled($value));
         $this->fase = 'cliente';
         $this->clienteForm->fill($this->cliente);
+    }
+
+    /**
+     * Dati anagrafici letti dall'AI sui documenti d'identità e sul codice fiscale caricati: l'agente li conferma o li corregge.
+     *
+     * @return array<string, string>
+     */
+    private function datiLettiDaiDocumenti(Pratica $pratica): array
+    {
+        $letti = [];
+
+        $documents = Document::query()
+            ->where('documentable_type', 'pratica')
+            ->where('documentable_id', (string) $pratica->getKey())
+            ->whereHas('documentType', fn ($query) => $query->whereIn('ai_kind', ['identita', 'codice_fiscale']))
+            ->with('documentType')
+            ->get()
+            ->sortBy(fn (Document $document): int => $document->documentType?->ai_kind === 'identita' ? 0 : 1);
+
+        foreach ($documents as $document) {
+            $fields = $document->analyses()->where('kind', 'extraction')->latest('id')->first()?->result['fields'] ?? null;
+
+            if (! is_array($fields)) {
+                continue;
+            }
+
+            foreach (['name' => 'surname', 'first_name' => 'name', 'tax_code' => 'fiscal_code'] as $client => $field) {
+                $value = is_string($fields[$field] ?? null) ? trim($fields[$field]) : '';
+
+                if ($value !== '' && ! isset($letti[$client])) {
+                    $letti[$client] = $client === 'tax_code' ? strtoupper(str_replace(' ', '', $value)) : $value;
+                }
+            }
+        }
+
+        return $letti;
     }
 
     /**

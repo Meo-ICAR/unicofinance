@@ -80,6 +80,53 @@
             </x-filament::section>
         @endif
 
+        @if ($fase === 'informativa')
+            <x-filament::section heading="Informativa privacy" description="Prima dei dati personali: scarica il modulo, fallo firmare al cliente con firma olografa e carica la copia firmata (foto o PDF)." class="mt-6">
+                <ul class="mb-4 space-y-2 text-sm">
+                    @foreach ($informativaRichiesta as $documento)
+                        <li>
+                            <strong>{{ $documento['name'] }}</strong>
+                            @if ($documento['url'])
+                                —
+                                <a href="{{ $documento['url'] }}" target="_blank" rel="noopener" class="text-primary-600 underline dark:text-primary-400">
+                                    Scarica il modulo
+                                </a>
+                            @else
+                                — modulo non disponibile per il download: contatta il back office.
+                            @endif
+                        </li>
+                    @endforeach
+                </ul>
+                <form wire:submit="caricaInformativa" class="space-y-4">
+                    {{ $this->informativaForm }}
+                    <x-filament::button type="submit" icon="heroicon-o-arrow-up-tray">
+                        Carica l'informativa firmata
+                    </x-filament::button>
+                </form>
+            </x-filament::section>
+        @endif
+
+        @if ($avvisiInformativa !== [] && $fase !== 'informativa')
+            <x-filament::section heading="Informativa da verificare" class="mt-6">
+                <ul class="space-y-1 text-sm text-warning-600 dark:text-warning-400">
+                    @foreach ($avvisiInformativa as $avviso)
+                        <li>{{ $avviso }}</li>
+                    @endforeach
+                </ul>
+            </x-filament::section>
+        @endif
+
+        @if ($fase === 'contatti')
+            <x-filament::section heading="Contatti del cliente" description="Email e cellulare sono obbligatori per perfezionare la pratica." class="mt-6">
+                <form wire:submit="confermaContatti" class="space-y-4">
+                    {{ $this->contattiForm }}
+                    <x-filament::button type="submit" color="success" icon="heroicon-o-check-circle">
+                        Conferma e perfeziona
+                    </x-filament::button>
+                </form>
+            </x-filament::section>
+        @endif
+
         @if ($fase === 'perfezionare')
             <x-filament::section heading="Documenti del tipo prodotto" class="mt-6">
                 @if ($documentiRichiesti === [])

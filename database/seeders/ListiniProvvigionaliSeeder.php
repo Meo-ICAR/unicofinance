@@ -27,11 +27,11 @@ class ListiniProvvigionaliSeeder extends Seeder
         '0029' => ['TFS', 'TFS'],
     ];
 
-    /** nome produttore => codici listino per le proprie pratiche */
+    /** codice fiscale del produttore => codici listino per le proprie pratiche */
     private const ASSEGNAZIONI = [
-        'ALBANESE  Manlio' => ['0018', '0024', '0020', '0026', '0029'],
-        'CAMPANELLA GIORGIO AUDENO' => ['0019', '0029', '0023', '0027', '0020'],
-        'FABBRI GABRIELE' => ['0017', '0021', '0023', '0028', '0029'],
+        'LBNMNL82C07D643K' => ['0018', '0024', '0020', '0026', '0029'],
+        'CMPGGD78E07I158X' => ['0019', '0029', '0023', '0027', '0020'],
+        'FBBGRL71A24C573U' => ['0017', '0021', '0023', '0028', '0029'],
     ];
 
     /** Listini per le pratiche dei fornitori coordinati. */
@@ -39,9 +39,9 @@ class ListiniProvvigionaliSeeder extends Seeder
         '0029' => ['TFS', 'TFS'],
     ];
 
-    /** nome produttore => codici listino per le pratiche dei fornitori che coordina */
+    /** codice fiscale del produttore => codici listino per le pratiche dei fornitori che coordina */
     private const ASSEGNAZIONI_COORDINATORE = [
-        'CAMPANELLA GIORGIO AUDENO' => ['0029'],
+        'CMPGGD78E07I158X' => ['0029'],
     ];
 
     public function run(): void
@@ -61,7 +61,7 @@ class ListiniProvvigionaliSeeder extends Seeder
 
         foreach ([false => self::ASSEGNAZIONI, true => self::ASSEGNAZIONI_COORDINATORE] as $coordinamento => $assegnazioni) {
             foreach ($assegnazioni as $nome => $codes) {
-                $fornitore = Fornitore::where('name', $nome)->firstOrFail();
+                $fornitore = Fornitore::where('cf', $nome)->firstOrFail();
 
                 foreach ($codes as $code) {
                     $listini[(int) $coordinamento][$code]->fornitori()->syncWithoutDetaching([$fornitore->id]);
