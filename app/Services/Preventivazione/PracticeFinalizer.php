@@ -38,6 +38,7 @@ class PracticeFinalizer
         $pratica->update([
             'pratica_stato_id' => $this->status($productName, 'PERFEZIONARE')->getKey(),
         ]);
+        app(ProductTaskDocuments::class)->attachToPractice($pratica);
         $quote->update(['status' => 'perfezionato']);
 
         return $quote->fresh(['pratica.praticaStato', 'pratica.tipoprodotto']);

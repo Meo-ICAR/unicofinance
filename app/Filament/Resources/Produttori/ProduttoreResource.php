@@ -7,7 +7,6 @@ use App\Filament\Resources\Produttori\Pages\ListProduttori;
 use App\Models\User;
 use BackedEnum;
 use Filament\Resources\Resource;
-use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -54,7 +53,12 @@ class ProduttoreResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->where('is_active', true);
+        return parent::getEloquentQuery()
+            ->where('is_active', true)
+            ->where(function (Builder $query): void {
+                $query->whereNull('dismissed_at')
+                    ->orWhere('dismissed_at', '>', today());
+            });
     }
 
     public static function table(Table $table): Table
@@ -74,9 +78,6 @@ class ProduttoreResource extends Resource
                 TextColumn::make('user.email')
                     ->label('Accesso portale')
                     ->placeholder('Nessun accesso'),
-                IconColumn::make('is_active')
-                    ->label('Attivo')
-                    ->boolean(),
             ])
             ->defaultSort('name')
             ->recordActions([

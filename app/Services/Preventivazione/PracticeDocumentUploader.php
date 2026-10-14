@@ -22,19 +22,33 @@ class PracticeDocumentUploader
     /**
      * @param  Collection<int, DocumentType>|list<int>  $candidateTypeIds
      */
-    public function store(Pratica $pratica, UploadedFile $file, Collection|array $candidateTypeIds, ?User $user): Document
+    public function store(Pratica $pratica, UploadedFile $file, Collection|array $candidateTypeIds, ?User $user, ?int $documentTypeId = null): Document
     {
         $ids = $candidateTypeIds instanceof Collection ? $candidateTypeIds->all() : $candidateTypeIds;
 
-        $document = Document::query()->create([
-            'company_id' => $pratica->company_id,
-            'documentable_type' => 'pratica',
-            'documentable_id' => (string) $pratica->getKey(),
-            'name' => $file->getClientOriginalName(),
-            'status' => DocumentStatus::PENDING,
-            'user_id' => $user?->getKey(),
-            'uploaded_by' => $user?->getKey(),
-        ]);
+        $document = $documentTypeId === null ? null : Document::query()
+            ->where('documentable_type', 'pratica')
+            ->where('documentable_id', (string) $pratica->getKey())
+            ->where('document_type_id', $documentTypeId)
+            ->first();
+
+        if ($document === null) {
+            $document = Document::query()->create([
+                'company_id' => $pratica->company_id,
+                'documentable_type' => 'pratica',
+                'documentable_id' => (string) $pratica->getKey(),
+                'document_type_id' => $documentTypeId,
+                'name' => $file->getClientOriginalName(),
+                'status' => DocumentStatus::PENDING,
+                'user_id' => $user?->getKey(),
+                'uploaded_by' => $user?->getKey(),
+            ]);
+        } else {
+            $document->forceFill([
+                'user_id' => $user?->getKey() ?? $document->user_id,
+                'uploaded_by' => $user?->getKey() ?? $document->uploaded_by,
+            ])->save();
+        }
 
         $document->addMedia($file->getRealPath())
             ->usingFileName($file->getClientOriginalName())
@@ -46,6 +60,12 @@ class PracticeDocumentUploader
             'classify' => true,
             'candidates' => $candidates,
         ]);
+
+        $document = $document->fresh('documentType');
+
+        if ($document->status === DocumentStatus::PENDING && $document->getFirstMedia(Document::COLLECTION) !== null) {
+            $document->update(['status' => DocumentStatus::UPLOADED]);
+        }
 
         return $document->fresh('documentType');
     }

@@ -82,6 +82,23 @@ return [
             'engine' => 'InnoDB',
         ],
 
+        // Provvigioni della pratica: restano sul database di Proforma.
+        'proforma' => [
+            'driver' => 'mysql',
+            'host' => env('PROFORMA_DB_HOST', env('CORE_DB_HOST', '127.0.0.1')),
+            'port' => env('PROFORMA_DB_PORT', env('CORE_DB_PORT', '3306')),
+            'database' => env('PROFORMA_DB_DATABASE', 'proforma_core'),
+            'username' => env('PROFORMA_DB_USERNAME', env('CORE_DB_USERNAME', env('DB_USERNAME', 'root'))),
+            'password' => env('PROFORMA_DB_PASSWORD', env('CORE_DB_PASSWORD', env('DB_PASSWORD', ''))),
+            'unix_socket' => env('DB_SOCKET', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'engine' => 'InnoDB',
+        ],
+
         'mariadb' => [
             'driver' => 'mariadb',
             'url' => env('DB_URL'),

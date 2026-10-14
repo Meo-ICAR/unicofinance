@@ -401,7 +401,7 @@ class Simulazione extends Page
                 continue;
             }
 
-            $stored = $uploader->store($pratica, $file, $candidateIds, $user);
+            $stored = $uploader->store($pratica, $file, $candidateIds, $user, (int) $document['document_type_id']);
             $this->esitiDocumenti[] = [
                 'file' => $file->getClientOriginalName(),
                 'tipo' => $stored->documentType?->name,
@@ -556,6 +556,7 @@ class Simulazione extends Page
             ->where('documentable_type', 'pratica')
             ->where('documentable_id', (string) $pratica->getKey())
             ->whereNotNull('document_type_id')
+            ->whereHas('media', fn ($query) => $query->where('collection_name', Document::COLLECTION))
             ->pluck('document_type_id')
             ->map(fn (mixed $id): int => (int) $id)
             ->all();

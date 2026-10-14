@@ -35,4 +35,24 @@ return [
         ],
     ],
 
+    'aml' => [
+        'api_key' => env('AML_API_KEY'),
+        'base_url' => env('AML_API_URL', 'https://api.sanctions.io'),
+        'min_score' => env('AML_MIN_SCORE', 0.88),
+        'cost' => env('AML_COST_PER_CALL', 0),
+    ],
+
+    'openapi' => [
+        'token' => env('OPENAPI_TOKEN'),
+        'company_url' => env('OPENAPI_COMPANY_URL', 'https://company.openapi.com'),
+        'cost_advanced' => env('OPENAPI_COST_ADVANCED', 0.10),
+        'cost_shareholders' => env('OPENAPI_COST_SHAREHOLDERS', 0.03),
+    ],
+
+    'cerved' => [
+        'api_key' => env('CERVED_API_KEY'),
+        'url' => env('CERVED_URL'),
+        'cost' => env('CERVED_COST_PER_CALL', 0),
+    ],
+
 ];

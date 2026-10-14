@@ -50,13 +50,23 @@ class ProduttoriImpersonationTest extends TestCase
             'user_id' => $inactiveAgent->id,
             'is_active' => false,
         ]);
+        $ceasedAgent = User::factory()->create(['role' => 'fornitore']);
+        $ceased = $this->fornitore([
+            'name' => $marker.' cessato',
+            'user_id' => $ceasedAgent->id,
+            'dismissed_at' => now()->subDay()->toDateString(),
+        ]);
+        $endingLater = $this->fornitore([
+            'name' => $marker.' futuro',
+            'dismissed_at' => now()->addMonth()->toDateString(),
+        ]);
 
         $this->actingAs($staff);
 
         Livewire::test(ListProduttori::class)
             ->searchTable($marker)
-            ->assertCanSeeTableRecords([$active, $withoutAccess])
-            ->assertCanNotSeeTableRecords([$inactive])
+            ->assertCanSeeTableRecords([$active, $withoutAccess, $endingLater])
+            ->assertCanNotSeeTableRecords([$inactive, $ceased])
             ->assertActionVisible(TestAction::make('impersonateFornitore')->table($active))
             ->assertActionHidden(TestAction::make('impersonateFornitore')->table($withoutAccess))
             ->callAction(TestAction::make('impersonateFornitore')->table($active))
@@ -111,9 +121,15 @@ class ProduttoriImpersonationTest extends TestCase
         $staff = User::factory()->create(['role' => 'admin']);
         $agent = User::factory()->create(['role' => 'fornitore']);
         $fornitore = $this->fornitore(['user_id' => $agent->id, 'is_active' => false]);
+        $ceased = $this->fornitore([
+            'user_id' => $agent->id,
+            'dismissed_at' => now()->subDay()->toDateString(),
+        ]);
 
         $this->actingAs($staff);
 
-        $this->assertFalse(app(AgentImpersonationService::class)->canImpersonate($staff, $fornitore));
+        $service = app(AgentImpersonationService::class);
+        $this->assertFalse($service->canImpersonate($staff, $fornitore));
+        $this->assertFalse($service->canImpersonate($staff, $ceased));
     }
 }

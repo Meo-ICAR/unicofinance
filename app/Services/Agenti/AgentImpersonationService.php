@@ -17,7 +17,7 @@ class AgentImpersonationService
 
     public function canImpersonate(?User $actor, Fornitore $fornitore): bool
     {
-        if ($actor === null || ! $actor->isStaff() || ! $fornitore->is_active) {
+        if ($actor === null || ! $actor->isStaff() || ! $this->isActiveProducer($fornitore)) {
             return false;
         }
 
@@ -98,6 +98,15 @@ class AgentImpersonationService
         Session::forget(self::SESSION_KEY);
 
         return ProduttoreResource::getUrl(panel: 'admin');
+    }
+
+    private function isActiveProducer(Fornitore $fornitore): bool
+    {
+        if (! $fornitore->is_active) {
+            return false;
+        }
+
+        return $fornitore->dismissed_at === null || $fornitore->dismissed_at->gt(today());
     }
 
     private function resolveAgentUser(Fornitore $fornitore): ?User
