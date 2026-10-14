@@ -2,7 +2,11 @@
 
 namespace App\Providers;
 
+use App\Models\ListinoProvvigionale;
+use App\Pdf\KycModuleDataProvider;
 use Illuminate\Support\ServiceProvider;
+use Unico\Core\Models\Fornitore;
+use Unico\Core\UnicoCoreServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -11,7 +15,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->tag(KycModuleDataProvider::class, 'unico-core.module-data-providers');
     }
 
     /**
@@ -19,10 +23,16 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Il modello Fornitore è del pacchetto core: i listini si aggiungono come relazione dinamica.
+        Fornitore::resolveRelationUsing('listiniProvvigionali', fn (Fornitore $fornitore) => $fornitore
+            ->belongsToMany(ListinoProvvigionale::class, 'fornitori_listini_provvigionali', 'fornitori_id', 'listino_provvigionale_id')
+            ->withPivot('coordinamento')
+            ->withTimestamps());
+
         // Le tabelle condivise stanno su unico_core_test. Si caricano le migration del
         // pacchetto solo se UNICO_CORE_MIGRATE=true (database proprio o test).
         if (config('database.unico_core_migrate')) {
-            $this->loadMigrationsFrom(\Unico\Core\UnicoCoreServiceProvider::migrationsPath());
+            $this->loadMigrationsFrom(UnicoCoreServiceProvider::migrationsPath());
         }
     }
 }

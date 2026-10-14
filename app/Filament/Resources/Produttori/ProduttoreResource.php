@@ -4,9 +4,14 @@ namespace App\Filament\Resources\Produttori;
 
 use App\Filament\Actions\ImpersonateFornitoreAction;
 use App\Filament\Resources\Produttori\Pages\ListProduttori;
+use App\Filament\Resources\Produttori\Pages\ViewProduttore;
+use App\Filament\Resources\Produttori\RelationManagers\ListiniProvvigionaliRelationManager;
 use App\Models\User;
 use BackedEnum;
+use Filament\Actions\Action;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -61,6 +66,22 @@ class ProduttoreResource extends Resource
             });
     }
 
+    public static function infolist(Schema $schema): Schema
+    {
+        return $schema->components([
+            TextEntry::make('name')->label('Produttore'),
+            TextEntry::make('email')->label('Email'),
+            TextEntry::make('piva')->label('P. IVA'),
+        ]);
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            ListiniProvvigionaliRelationManager::class,
+        ];
+    }
+
     public static function table(Table $table): Table
     {
         return $table
@@ -81,6 +102,10 @@ class ProduttoreResource extends Resource
             ])
             ->defaultSort('name')
             ->recordActions([
+                Action::make('listini')
+                    ->label('Listini')
+                    ->icon('heroicon-o-rectangle-stack')
+                    ->url(fn (Fornitore $record): string => static::getUrl('view', ['record' => $record])),
                 ImpersonateFornitoreAction::make(),
             ]);
     }
@@ -89,6 +114,7 @@ class ProduttoreResource extends Resource
     {
         return [
             'index' => ListProduttori::route('/'),
+            'view' => ViewProduttore::route('/{record}'),
         ];
     }
 }
