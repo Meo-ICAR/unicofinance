@@ -7,7 +7,6 @@ use App\Filament\Resources\ListinoProvvigionales\Pages\EditListinoProvvigionale;
 use App\Filament\Resources\ListinoProvvigionales\Pages\ListListinoProvvigionales;
 use App\Filament\Resources\ListinoProvvigionales\Pages\ViewListinoProvvigionale;
 use App\Filament\Resources\ListinoProvvigionales\RelationManagers\FornitoriRelationManager;
-use App\Filament\Resources\ListinoProvvigionales\RelationManagers\ProdottiRelationManager;
 use App\Filament\Resources\ListinoProvvigionales\Schemas\ListinoProvvigionaleForm;
 use App\Filament\Resources\ListinoProvvigionales\Schemas\ListinoProvvigionaleInfolist;
 use App\Filament\Resources\ListinoProvvigionales\Tables\ListinoProvvigionalesTable;
@@ -60,7 +59,6 @@ class ListinoProvvigionaleResource extends Resource
     public static function getRelations(): array
     {
         return [
-            ProdottiRelationManager::class,
             FornitoriRelationManager::class,
         ];
     }

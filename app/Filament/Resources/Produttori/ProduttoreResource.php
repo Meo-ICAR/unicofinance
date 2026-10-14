@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Produttori;
 use App\Filament\Actions\ImpersonateFornitoreAction;
 use App\Filament\Resources\Produttori\Pages\ListProduttori;
 use App\Filament\Resources\Produttori\Pages\ViewProduttore;
+use App\Filament\Resources\Produttori\RelationManagers\IstitutiBloccatiRelationManager;
 use App\Filament\Resources\Produttori\RelationManagers\ListiniProvvigionaliRelationManager;
 use App\Models\User;
 use BackedEnum;
@@ -12,6 +13,7 @@ use Filament\Actions\Action;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -79,6 +81,7 @@ class ProduttoreResource extends Resource
     {
         return [
             ListiniProvvigionaliRelationManager::class,
+            IstitutiBloccatiRelationManager::class,
         ];
     }
 
@@ -96,9 +99,11 @@ class ProduttoreResource extends Resource
                 TextColumn::make('piva')
                     ->label('P. IVA')
                     ->searchable(),
-                TextColumn::make('user.email')
-                    ->label('Accesso portale')
-                    ->placeholder('Nessun accesso'),
+                IconColumn::make('accesso_portale')
+                    ->label('Portale')
+                    ->state(fn (Fornitore $record): bool => $record->user_id !== null)
+                    ->boolean()
+                    ->tooltip(fn (Fornitore $record): string => $record->user?->email ?? 'Nessun accesso'),
             ])
             ->defaultSort('name')
             ->recordActions([

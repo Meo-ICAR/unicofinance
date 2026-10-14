@@ -3,16 +3,20 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Unico\Core\Concerns\UsesCoreConnection;
 use Unico\Core\Models\Fornitore;
 use Unico\Core\Models\TipoProdotto;
 
-/** Tabella provvigionale (listino), legata ai prodotti e assegnata a più produttori. */
+/**
+ * Tabella provvigionale (listino): un prodotto, una percentuale e un ruolo
+ * (pratiche dirette o pratiche di fornitori coordinati). Si assegna a più produttori.
+ */
 class ListinoProvvigionale extends Model
 {
-    use UsesCoreConnection;
+    /** Database dell'app: le relazioni dal core altrimenti erediterebbero la connessione core. */
+    protected $connection = 'mysql';
 
     protected $table = 'listini_provvigionali';
 
@@ -20,25 +24,35 @@ class ListinoProvvigionale extends Model
 
     protected function casts(): array
     {
-        return ['is_active' => 'boolean'];
+        return [
+            'is_active' => 'boolean',
+            'coordinamento' => 'boolean',
+            'value' => 'decimal:4',
+        ];
     }
 
-    public function righe(): HasMany
+    public function tipoprodotto(): BelongsTo
     {
-        return $this->hasMany(ListinoProvvigionaleProdotto::class, 'listino_provvigionale_id');
+        return $this->belongsTo(TipoProdotto::class, 'tipoprodotto_id');
     }
 
-    public function prodotti(): BelongsToMany
+    /**
+     * Nome della tabella di assegnazione con il database: le query sul fornitore
+     * (database core) la raggiungono con una join fra database diversi.
+     */
+    public static function assegnazioniTable(): string
     {
-        return $this->belongsToMany(TipoProdotto::class, 'listini_provvigionali_prodotti', 'listino_provvigionale_id', 'tipoprodotto_id')
-            ->withPivot('value')
-            ->withTimestamps();
+        return (new static)->getConnection()->getDatabaseName().'.fornitori_listini_provvigionali';
+    }
+
+    public function assegnazioni(): HasMany
+    {
+        return $this->hasMany(ListinoProvvigionaleFornitore::class, 'listino_provvigionale_id');
     }
 
     public function fornitori(): BelongsToMany
     {
-        return $this->belongsToMany(Fornitore::class, 'fornitori_listini_provvigionali', 'listino_provvigionale_id', 'fornitori_id')
-            ->withPivot('coordinamento')
+        return $this->belongsToMany(Fornitore::class, static::assegnazioniTable(), 'listino_provvigionale_id', 'fornitori_id')
             ->withTimestamps();
     }
 }

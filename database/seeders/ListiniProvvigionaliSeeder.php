@@ -7,7 +7,7 @@ use Illuminate\Database\Seeder;
 use Unico\Core\Models\Fornitore;
 use Unico\Core\Models\TipoProdotto;
 
-/** Listini provvigionali con percentuale dummy (4), assegnati ad Albanese e Campanella. */
+/** Listini provvigionali con percentuale dummy (4), assegnati ad Albanese, Campanella e Fabbri. */
 class ListiniProvvigionaliSeeder extends Seeder
 {
     private const VALORE_DUMMY = 4;
@@ -34,7 +34,12 @@ class ListiniProvvigionaliSeeder extends Seeder
         'FABBRI GABRIELE' => ['0017', '0021', '0023', '0028', '0029'],
     ];
 
-    /** nome produttore => codici listino per le pratiche in cui coordina */
+    /** Listini per le pratiche dei fornitori coordinati. */
+    private const LISTINI_COORDINATORE = [
+        '0029' => ['TFS', 'TFS'],
+    ];
+
+    /** nome produttore => codici listino per le pratiche dei fornitori che coordina */
     private const ASSEGNAZIONI_COORDINATORE = [
         'CAMPANELLA GIORGIO AUDENO' => ['0029'],
     ];
@@ -43,12 +48,15 @@ class ListiniProvvigionaliSeeder extends Seeder
     {
         $listini = [];
 
-        foreach (self::LISTINI as $code => [$name, $prodotto]) {
-            $listino = ListinoProvvigionale::updateOrCreate(['code' => $code], ['name' => $name, 'is_active' => true]);
-            $tipo = TipoProdotto::where('tipo_prodotto', $prodotto)->firstOrFail();
+        foreach ([false => self::LISTINI, true => self::LISTINI_COORDINATORE] as $coordinamento => $definizioni) {
+            foreach ($definizioni as $code => [$name, $prodotto]) {
+                $tipo = TipoProdotto::where('tipo_prodotto', $prodotto)->firstOrFail();
 
-            $listino->righe()->firstOrCreate(['tipoprodotto_id' => $tipo->id], ['value' => self::VALORE_DUMMY]);
-            $listini[$code] = $listino;
+                $listini[(int) $coordinamento][$code] = ListinoProvvigionale::updateOrCreate(
+                    ['code' => $code, 'coordinamento' => $coordinamento],
+                    ['name' => $name, 'tipoprodotto_id' => $tipo->id, 'value' => self::VALORE_DUMMY, 'is_active' => true],
+                );
+            }
         }
 
         foreach ([false => self::ASSEGNAZIONI, true => self::ASSEGNAZIONI_COORDINATORE] as $coordinamento => $assegnazioni) {
@@ -56,14 +64,7 @@ class ListiniProvvigionaliSeeder extends Seeder
                 $fornitore = Fornitore::where('name', $nome)->firstOrFail();
 
                 foreach ($codes as $code) {
-                    $esiste = $listini[$code]->fornitori()
-                        ->where('fornitoris.id', $fornitore->id)
-                        ->wherePivot('coordinamento', $coordinamento)
-                        ->exists();
-
-                    if (! $esiste) {
-                        $listini[$code]->fornitori()->attach($fornitore->id, ['coordinamento' => $coordinamento]);
-                    }
+                    $listini[(int) $coordinamento][$code]->fornitori()->syncWithoutDetaching([$fornitore->id]);
                 }
             }
         }
