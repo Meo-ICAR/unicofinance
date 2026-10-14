@@ -53,6 +53,7 @@ class ListinoProvvigionale extends Model
     public function fornitori(): BelongsToMany
     {
         return $this->belongsToMany(Fornitore::class, static::assegnazioniTable(), 'listino_provvigionale_id', 'fornitori_id')
+            ->withPivot('predefinito')
             ->withTimestamps();
     }
 }

@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Produttori\RelationManagers;
 use Filament\Actions\AttachAction;
 use Filament\Actions\DetachAction;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -41,6 +42,7 @@ class ListiniProvvigionaliRelationManager extends RelationManager
                     ->formatStateUsing(fn (bool $state): string => $state ? 'Coordinatore' : 'Diretto')
                     ->color(fn (bool $state): string => $state ? 'warning' : 'success'),
                 TextColumn::make('value')->label('%')->suffix('%'),
+                IconColumn::make('predefinito')->label('Predefinito')->boolean()->state(fn ($record): bool => (bool) $record->pivot?->predefinito),
             ])
             ->defaultSort('code')
             ->headerActions([

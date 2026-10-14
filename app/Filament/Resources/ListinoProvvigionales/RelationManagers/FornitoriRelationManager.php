@@ -6,6 +6,7 @@ use App\Models\ListinoProvvigionale;
 use Filament\Actions\AttachAction;
 use Filament\Actions\DetachAction;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -34,6 +35,7 @@ class FornitoriRelationManager extends RelationManager
             ->allowDuplicates()
             ->columns([
                 TextColumn::make('name')->label('Produttore')->searchable(),
+                IconColumn::make('predefinito')->label('Predefinito')->boolean()->state(fn ($record): bool => (bool) $record->pivot?->predefinito),
             ])
             ->headerActions([
                 AttachAction::make()

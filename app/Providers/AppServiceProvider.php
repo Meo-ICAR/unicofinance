@@ -28,6 +28,7 @@ class AppServiceProvider extends ServiceProvider
         // Il modello Fornitore è del pacchetto core: i listini si aggiungono come relazione dinamica.
         Fornitore::resolveRelationUsing('listiniProvvigionali', fn (Fornitore $fornitore) => $fornitore
             ->belongsToMany(ListinoProvvigionale::class, ListinoProvvigionale::assegnazioniTable(), 'fornitori_id', 'listino_provvigionale_id')
+            ->withPivot('predefinito')
             ->withTimestamps());
 
         // Divieti istituto-produttore: la tabella è del database dell'app e la chiave è un UUID.
