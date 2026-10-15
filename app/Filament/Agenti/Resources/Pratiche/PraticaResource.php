@@ -64,9 +64,10 @@ class PraticaResource extends Resource
         return false;
     }
 
+    /** Una pratica presa in carico da un istruttore (`employee_id`) non si modifica più dall'agente. */
     public static function canEdit(Model $record): bool
     {
-        return true;
+        return blank($record->employee_id);
     }
 
     public static function canDelete(Model $record): bool
@@ -255,12 +256,13 @@ class PraticaResource extends Resource
                 TextColumn::make('nome_cliente')->label('Nome')->searchable(),
                 TextColumn::make('tipoprodotto.name')->label('Tipo prodotto')->sortable(),
                 TextColumn::make('praticaStato.codice')->label('Stato')->badge(),
+                TextColumn::make('employee.name')->label('In carico a')->placeholder('Da assegnare'),
                 TextColumn::make('amount')->label('Importo')->money('EUR')->sortable(),
                 TextColumn::make('data_inserimento_pratica')->label('Inserita il')->date('d/m/Y')->sortable(),
             ])
-            ->recordUrl(fn (Pratica $record): string => static::getUrl('edit', ['record' => $record]))
+            ->recordUrl(fn (Pratica $record): ?string => static::canEdit($record) ? static::getUrl('edit', ['record' => $record]) : null)
             ->recordActions([
-                EditAction::make()->label('Perfeziona'),
+                EditAction::make()->label('Perfeziona')->visible(fn (Pratica $record): bool => static::canEdit($record)),
             ]);
     }
 

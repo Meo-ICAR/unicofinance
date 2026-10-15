@@ -31,6 +31,11 @@ Gestionale per **mediatori creditizi**: raccolta della documentazione, istruttor
 | `admin` | `/admin` | back office e istruttoria | Pratiche, Clienti, Istituti, Produttori, Listini provvigionali |
 | `agenti` | `/agenti` | agenti (anche impersonati dal back office) | le proprie Pratiche ("Perfeziona") e i Clienti di quelle pratiche |
 
+**Dashboard.**
+- *Admin (istruttori):* Da prendere in carico (pratiche senza `employee_id`, con presa in carico), Pratiche in corso, Documenti da seguire, Documenti in scadenza, In attesa della banca, Documenti in firma. I filtri sono preimpostati sull'istruttore collegato all'utente (`employees.user_id`); «Da prendere in carico» mostra di default solo le pratiche inserite negli ultimi 30 giorni.
+- *Agenti:* Preventivi da perfezionare (si riprendono nella Simulazione con `?preventivo=ID`, oppure si eliminano anche in blocco insieme alla pratica in stato PREVENTIVO), Le mie pratiche in corso, Documenti da consegnare.
+- **Una pratica presa in carico da un istruttore (`employee_id`) non è più modificabile dall'agente**: sparisce l'azione «Perfeziona» e la pagina di modifica risponde 403.
+
 ## Funzioni principali
 
 ### Pratica

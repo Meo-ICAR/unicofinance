@@ -40,6 +40,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\HtmlString;
+use Livewire\Attributes\Url;
 use Throwable;
 use Unico\Core\Documents\IntakeResult;
 use Unico\Core\Documents\PracticeDocumentIntake;
@@ -177,9 +178,62 @@ class Simulazione extends Page
      */
     public array $documentiMancanti = [];
 
+    /** Preventivo salvato da riprendere e perfezionare (dall'elenco «Preventivi da perfezionare»). */
+    #[Url(as: 'preventivo')]
+    public ?int $preventivoDaPerfezionare = null;
+
     public function mount(): void
     {
         $this->form->fill();
+
+        if ($this->preventivoDaPerfezionare !== null) {
+            $this->riprendiPreventivo($this->preventivoDaPerfezionare);
+        }
+    }
+
+    /** Riporta nella pagina un preventivo salvato dell'agente, pronto da perfezionare; non più disponibile se è già in carico a un istruttore. */
+    private function riprendiPreventivo(int $id): void
+    {
+        $quote = FinancingQuote::query()
+            ->with('pratica')
+            ->where('fornitore_id', $this->fornitore()?->getKey() ?? 0)
+            ->where('status', 'salvato')
+            ->find($id);
+
+        if ($quote === null || $quote->pratica?->employee_id !== null) {
+            Notification::make()->title('Preventivo non disponibile')->body('Non esiste, è già perfezionato oppure è in carico all\'istruttoria.')->warning()->send();
+
+            return;
+        }
+
+        $contract = SimulationContractType::from($quote->contract_type);
+        $this->bozza = [
+            'contract_type' => $quote->contract_type,
+            'sex' => $quote->sex,
+            'birth_date' => $quote->birth_date?->toDateString(),
+            'employment_relationship' => $quote->employment_relationship,
+            'hired_at' => $quote->hired_at?->toDateString(),
+            'starts_at' => $quote->starts_at?->toDateString(),
+            'duration_months' => $quote->duration_months,
+            'assignable_quota' => $quote->assignable_quota,
+            'requested_amount' => $quote->requested_amount,
+            'age_at_start' => $quote->age_at_start,
+            'seniority_months' => $quote->seniority_months,
+            'company_name' => $quote->company_name,
+            'vat_number' => $quote->vat_number,
+        ];
+        $this->esito = $quote->disbursed_min !== null ? ['min' => (float) $quote->disbursed_min, 'max' => (float) $quote->disbursed_max] : null;
+        $this->preventivatoreAssente = $this->esito === null;
+        $this->profilo = [
+            'tipo_contratto' => $contract->getLabel(),
+            'cliente' => $quote->company_name ? $quote->company_name.' (P.IVA '.$quote->vat_number.')' : null,
+            'tipo_rapporto' => self::relationshipFrom($quote->employment_relationship)?->getLabel(),
+            'durata_etichetta' => $quote->duration_months.' mesi',
+            'quota_cedibile' => $quote->assignable_quota !== null ? (float) $quote->assignable_quota : null,
+            'importo_richiesto' => $quote->requested_amount !== null ? (float) $quote->requested_amount : null,
+            'data_decorrenza' => $quote->starts_at?->format('d/m/Y'),
+        ];
+        $this->rememberQuote($quote, 'PREVENTIVO', 'preventivo');
     }
 
     public function form(Schema $schema): Schema
