@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Istituti\Tables;
 
+use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -34,6 +35,7 @@ class IstitutiTable
             ->defaultSort('name')
             ->recordActions([
                 ViewAction::make(),
+                EditAction::make()->label('Portale'),
             ]);
     }
 }

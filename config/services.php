@@ -43,6 +43,7 @@ return [
     ],
 
     'openapi' => [
+        'cost_creditscore' => (float) env('OPENAPI_COST_CREDITSCORE', 0),
         'token' => env('OPENAPI_TOKEN'),
         'company_url' => env('OPENAPI_COMPANY_URL', 'https://company.openapi.com'),
         'cost_advanced' => env('OPENAPI_COST_ADVANCED', 0.10),

@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\Clients\Tables;
 
+use App\Filament\Resources\Clients\ClientResource;
+use App\Models\Client;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -183,6 +185,7 @@ class ClientsTable
             ->filters([
                 //
             ])
+            ->recordUrl(fn (Client $record): string => ClientResource::getUrl('edit', ['record' => $record]))
             ->recordActions([
                 ViewAction::make(),
                 EditAction::make(),

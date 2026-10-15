@@ -2,6 +2,7 @@
 
 namespace App\Filament\Agenti\Resources\Pratiche\Schemas;
 
+use App\Filament\Agenti\Resources\Clients\ClientResource;
 use App\Models\Client;
 use App\Models\Pratica;
 use App\Services\AmlScreeningService;
@@ -12,10 +13,60 @@ use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
+use Livewire\Component;
+use Unico\Core\Models\PraticaClient;
 
 /** Interrogazioni Cerved, sanctions.io e Openapi, come sulla scheda cliente di unicoloan. */
 class ClienteApiActions
 {
+    /**
+     * Apre la scheda cliente del richiedente; se non esiste la crea dai dati della pratica e la collega come richiedente.
+     */
+    public static function schedaCliente(): Action
+    {
+        return Action::make('schedaCliente')
+            ->label('Scheda cliente')
+            ->tooltip(fn (?Pratica $record): string => $record?->richiedente !== null ? 'Apri la scheda cliente' : 'Crea la scheda cliente')
+            ->icon('heroicon-m-identification')
+            ->action(function (Get $get, ?Pratica $record, Component $livewire): void {
+                $taxCode = strtoupper(preg_replace('/\s+/', '', (string) $get('codice_fiscale')));
+
+                if ($record === null || $taxCode === '') {
+                    Notification::make()->title('Inserisci il codice fiscale')->body('La scheda cliente si apre dal codice fiscale o dalla partita IVA del richiedente.')->warning()->send();
+
+                    return;
+                }
+
+                $client = Client::query()->where('tax_code', $taxCode)->orWhere('vat_number', $taxCode)->first();
+
+                if ($client === null) {
+                    $client = Client::query()->create([
+                        'company_id' => $record->company_id,
+                        'is_person' => strlen($taxCode) !== 11,
+                        'name' => $get('cognome_cliente') ?: 'Cliente',
+                        'first_name' => $get('nome_cliente'),
+                        'tax_code' => strlen($taxCode) === 11 ? null : $taxCode,
+                        'vat_number' => strlen($taxCode) === 11 ? $taxCode : null,
+                        'email' => $get('cliente_email') ?: null,
+                        'phone' => $get('cliente_cellulare') ?: null,
+                    ]);
+
+                    Notification::make()->title('Scheda cliente creata')->success()->send();
+                }
+
+                PraticaClient::query()->firstOrCreate(
+                    ['pratica_id' => $record->getKey(), 'client_id' => $client->getKey()],
+                    ['role' => 'richiedente', 'name' => trim($client->first_name.' '.$client->name)],
+                );
+
+                if (blank($record->codice_fiscale)) {
+                    $record->update(['codice_fiscale' => $taxCode]);
+                }
+
+                $livewire->redirect(ClientResource::getUrl('edit', ['record' => $client]));
+            });
+    }
+
     public static function cerved(): Action
     {
         return Action::make('cerved')

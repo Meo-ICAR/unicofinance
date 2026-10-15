@@ -16,6 +16,7 @@ class IstitutoInfolist
                 TextEntry::make('abi')->label('ABI')->placeholder('-'),
                 TextEntry::make('piva')->label('P. IVA')->placeholder('-'),
                 TextEntry::make('email')->label('Email')->placeholder('-'),
+                TextEntry::make('portal_url')->label('Portale pratiche')->placeholder('-'),
                 IconEntry::make('is_active')->label('Attivo')->boolean(),
             ]);
     }

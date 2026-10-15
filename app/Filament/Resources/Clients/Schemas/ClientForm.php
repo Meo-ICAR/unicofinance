@@ -2,13 +2,17 @@
 
 namespace App\Filament\Resources\Clients\Schemas;
 
+use App\Enums\ApiProvider;
 use App\Enums\EmploymentRelationship;
 use App\Enums\FinancingSection;
 use App\Filament\Resources\Clients\Pages\EditClient;
 use App\Models\Client;
 use App\Services\AmlScreeningService;
+use App\Services\ApiCallLogger;
 use App\Services\CodiceFiscaleDecoder;
 use App\Services\PartitaIva;
+use App\Support\ControlloRichiedente;
+use Closure;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
@@ -25,6 +29,7 @@ use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Database\Eloquent\Builder;
+use Unico\Core\Clients\OpenApiCreditScoreService;
 
 class ClientForm
 {
@@ -35,18 +40,46 @@ class ClientForm
         return $schema
             ->components([
                 Section::make()
-                    ->columns(3)
+                    ->columns(4)
                     ->schema([
                         TextInput::make('name')
                             ->label(fn (Get $get): string => $get('is_person') ? 'Cognome' : 'Ragione sociale')
                             ->required()
                             ->maxLength(255)
-                            ->columnSpan(2),
+                            ->live(onBlur: true)
+                            ->columnSpan(fn (Get $get): int => $get('is_person') ? 1 : 2),
+                        // Cessione, delega e prestito sono per persone fisiche: se il cliente è legato a uno di questi prodotti l'interruttore resta acceso.
                         Toggle::make('is_person')
                             ->label('Persona fisica')
                             ->default(true)
                             ->inline(false)
-                            ->live(),
+                            ->live()
+                            ->disabled(fn (?Client $record): bool => self::soloPersonaFisica($record))
+                            ->dehydrated()
+                            ->helperText(fn (?Client $record): ?string => self::soloPersonaFisica($record) ? 'Legato a cessione, delega o prestito: persona fisica.' : null),
+                        TextInput::make('first_name')
+                            ->label('Nome')
+                            ->maxLength(255)
+                            ->live(onBlur: true)
+                            ->visible(fn (Get $get): bool => (bool) $get('is_person')),
+                        TextInput::make('tax_code')
+                            ->label(fn (Get $get): string => $get('is_person') ? 'Codice fiscale' : 'Partita IVA')
+                            ->maxLength(16)
+                            ->live(onBlur: true)
+                            ->rule(fn (Get $get): Closure => function (string $attribute, mixed $value, Closure $fail) use ($get): void {
+                                $error = ControlloRichiedente::taxCodeError((string) $value, (bool) $get('is_person'));
+
+                                if ($error !== null) {
+                                    $fail($error);
+                                }
+                            })
+                            ->afterStateUpdated(function (?string $state, Get $get, Set $set): void {
+                                ControlloRichiedente::warn($state, (bool) $get('is_person'), $get('name'), $get('first_name'));
+                                self::decodeTaxCode($state, $get, $set);
+                            })
+                            ->suffixActions([
+                                self::creditScoreAction(),
+                            ]),
                     ])
                     ->columnSpanFull(),
                 Tabs::make('Cliente')
@@ -56,19 +89,6 @@ class ClientForm
                         Tab::make('Anagrafica')
                             ->icon(Heroicon::OutlinedUser)
                             ->schema([
-                                Section::make('Dati identificativi')
-                                    ->columns(2)
-                                    ->schema([
-                                        TextInput::make('first_name')
-                                            ->label('Nome')
-                                            ->maxLength(255)
-                                            ->visible(fn (Get $get): bool => (bool) $get('is_person')),
-                                        TextInput::make('tax_code')
-                                            ->label(fn (Get $get): string => $get('is_person') ? 'Codice fiscale' : 'Partita IVA')
-                                            ->maxLength(16)
-                                            ->live(onBlur: true)
-                                            ->afterStateUpdated(fn (?string $state, Get $get, Set $set) => self::decodeTaxCode($state, $get, $set)),
-                                    ]),
                                 Section::make('Contatti')
                                     ->columns(2)
                                     ->schema([
@@ -176,7 +196,6 @@ class ClientForm
                             ]),
                         Tab::make('Verifiche')
                             ->icon(Heroicon::OutlinedShieldCheck)
-                            ->visible(fn (Get $get): bool => (bool) $get('is_person'))
                             ->schema([
                                 Section::make('Valutazione rischio')
                                     ->columns(3)
@@ -190,7 +209,7 @@ class ClientForm
                                         self::amlAction(),
                                     ])
                                     ->schema([
-                                        Toggle::make('is_pep')->label('PEP (esposto politicamente)'),
+                                        Toggle::make('is_pep')->label('PEP (esposto politicamente)')->visible(fn (Get $get): bool => (bool) $get('is_person')),
                                         Toggle::make('is_sanctioned')->label('Sanzionato / blacklist'),
                                         Toggle::make('is_art108')->label('Esente art. 108 TUB'),
                                         Toggle::make('is_remote_interaction')->label('Interazione a distanza'),
@@ -249,6 +268,69 @@ class ClientForm
         return collect(EmploymentRelationship::cases())
             ->filter(fn (EmploymentRelationship $relationship): bool => $relationship->isRetiree())
             ->contains(fn (EmploymentRelationship $relationship): bool => $relationship->getLabel() === $typology);
+    }
+
+    /** Cessione, delega e prestito sono prodotti per persone fisiche. */
+    private static function soloPersonaFisica(?Client $record): bool
+    {
+        return $record?->exists === true
+            && $record->pratiche()->whereHas('tipoprodotto', fn (Builder $query) => $query->whereIn('name', ['Cessione', 'Delega', 'Prestito']))->exists();
+    }
+
+    /**
+     * Credit score da Openapi (GET /IT-creditscore-top/{codice fiscale}): per ora la richiesta è simulata,
+     * senza chiamata, e si conferma con una notifica che il servizio si sta attivando.
+     */
+    private static function creditScoreAction(): Action
+    {
+        return Action::make('creditScore')
+            ->label('Credit score')
+            ->tooltip('Richiedi il credit score a Openapi')
+            ->icon(Heroicon::OutlinedChartBar)
+            ->requiresConfirmation()
+            ->modalHeading('Richiedere il credit score?')
+            ->modalDescription('Il credit score viene richiesto a Openapi con il codice fiscale del cliente. Per ora la richiesta è simulata: non parte nessuna chiamata e non si paga.')
+            ->modalSubmitActionLabel('Richiedi')
+            ->action(function (Get $get, ?Client $record): void {
+                $taxCode = strtoupper(preg_replace('/\s+/', '', (string) $get('tax_code')));
+                $error = ControlloRichiedente::taxCodeError($taxCode, (bool) $get('is_person'));
+
+                if ($taxCode === '' || $error !== null) {
+                    Notification::make()->title($error ?? 'Inserire prima il codice fiscale o la partita IVA')->warning()->send();
+
+                    return;
+                }
+
+                $startedAt = microtime(true);
+
+                try {
+                    $result = app(OpenApiCreditScoreService::class)->request($taxCode);
+                } catch (\Throwable $e) {
+                    Notification::make()->title('Credit score')->body($e->getMessage())->danger()->send();
+
+                    return;
+                }
+
+                app(ApiCallLogger::class)->record(
+                    ApiProvider::OpenapiCreditScore,
+                    'creditscore',
+                    $record,
+                    ['method' => $result['method'], 'url' => $result['url']],
+                    $startedAt,
+                    null,
+                    true,
+                    'Richiesta simulata',
+                    cost: 0,
+                    response: ['simulated' => true],
+                );
+
+                Notification::make()
+                    ->title('Credit score: richiesta attivata')
+                    ->body("Simulazione: nessuna chiamata effettuata. Verrà interrogato {$result['method']} {$result['url']}")
+                    ->success()
+                    ->persistent()
+                    ->send();
+            });
     }
 
     private static function decodeTaxCode(?string $state, Get $get, Set $set): void

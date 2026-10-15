@@ -7,6 +7,8 @@ use App\Filament\Agenti\Resources\Pratiche\Pages\EditPratica;
 use App\Filament\Agenti\Resources\Pratiche\Pages\ListPratiche;
 use App\Filament\Agenti\Resources\Pratiche\PraticaResource;
 use App\Models\ApiCall;
+use App\Models\Client;
+use App\Models\KycQuestionnaire;
 use App\Models\User;
 use App\Services\Agenti\AgentImpersonationService;
 use Filament\Actions\Testing\TestAction;
@@ -90,9 +92,17 @@ class PraticheAgenteTest extends TestCase
 
         Livewire::test(EditPratica::class, ['record' => $own->getKey()])
             ->assertOk()
-            ->assertSee('Finanziamento')
-            ->assertSee('Cliente')
+            ->assertSee('Richiedente')
+            ->assertSee('Prodotto richiesto')
             ->assertSee('Dettagli')
+            // Cessione: rata; gli altri prodotti: importo richiesto e durata.
+            ->assertFormFieldVisible('rata')
+            ->assertFormFieldHidden('amount')
+            ->assertFormFieldHidden('nrate')
+            ->assertFormFieldExists('is_notowned')
+            ->assertFormFieldExists('clienti_id')
+            ->assertFormFieldExists('codice_pratica')
+            ->assertFormFieldExists('data_inserimento_pratica')
             ->assertSee('Address')
             ->assertSee('Pratiche')
             ->assertFormSet(['cognome_cliente' => 'Rossi'])
@@ -118,7 +128,7 @@ class PraticheAgenteTest extends TestCase
                 ->exists()
         );
 
-        $client = \App\Models\Client::query()->create([
+        $client = Client::query()->create([
             'name' => 'Rossi',
             'first_name' => 'Mario',
             'tax_code' => 'RSSMRA80A01H501U',
@@ -152,7 +162,7 @@ class PraticheAgenteTest extends TestCase
         $this->assertSame('IT60X0542811101000000123456', $client->iban);
         $this->assertSame(
             'low',
-            \App\Models\KycQuestionnaire::query()->where('client_id', $client->getKey())->value('risk_level'),
+            KycQuestionnaire::query()->where('client_id', $client->getKey())->value('risk_level'),
         );
     }
 
@@ -209,7 +219,7 @@ class PraticheAgenteTest extends TestCase
             ]),
         ]);
 
-        $person = \App\Models\Client::query()->create([
+        $person = Client::query()->create([
             'name' => 'Rossi',
             'first_name' => 'Mario',
             'tax_code' => 'RSSMRA80A01H501U',
@@ -239,7 +249,7 @@ class PraticheAgenteTest extends TestCase
         $this->assertTrue(ApiCall::query()->where('provider', ApiProvider::Cerved)->where('subject_id', (string) $person->getKey())->exists());
         $this->assertTrue(ApiCall::query()->where('provider', ApiProvider::SanctionsIo)->where('subject_id', (string) $person->getKey())->exists());
 
-        $company = \App\Models\Client::query()->create([
+        $company = Client::query()->create([
             'name' => 'Vecchia ragione',
             'tax_code' => '12485671007',
             'is_person' => false,

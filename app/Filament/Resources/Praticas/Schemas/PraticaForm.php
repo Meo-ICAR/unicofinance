@@ -2,7 +2,12 @@
 
 namespace App\Filament\Resources\Praticas\Schemas;
 
+use App\Filament\Resources\Clients\ClientResource;
+use App\Models\Client;
 use App\Models\Pratica;
+use App\Services\Istruttoria\RichiedentePratica;
+use App\Services\PortaleBanca;
+use App\Support\ControlloRichiedente;
 use Closure;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
@@ -19,9 +24,10 @@ use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
+use Livewire\Component;
 use Unico\Core\Clients\OpenApiCompanyService;
 use Unico\Core\Models\Cliente;
-use Unico\Core\Support\CodiceFiscale;
+use Unico\Core\Models\TipoProdotto;
 
 class PraticaForm
 {
@@ -37,7 +43,7 @@ class PraticaForm
                             ->icon(Heroicon::OutlinedUser)
                             ->schema([
                                 Section::make('Richiedente')
-                                    ->columns(3)
+                                    ->columns(4)
                                     ->schema([
                                         Toggle::make('richiedente_persona_fisica')
                                             ->label('Persona fisica')
@@ -47,8 +53,7 @@ class PraticaForm
                                             ->default(true)
                                             ->afterStateHydrated(fn (Toggle $component, ?Pratica $record) => $component->state(
                                                 ! preg_match('/^(IT)?\d{11}$/i', trim((string) $record?->codice_fiscale)),
-                                            ))
-                                            ->columnSpanFull(),
+                                            )),
                                         TextInput::make('cognome_cliente')
                                             ->label(fn (Get $get): string => $get('richiedente_persona_fisica') ? 'Cognome' : 'Ragione sociale')
                                             ->live(onBlur: true)
@@ -69,25 +74,43 @@ class PraticaForm
                                                 }
                                             })
                                             ->afterStateUpdated(fn (?string $state, Get $get) => self::warnAboutTaxCode($state, $get))
-                                            ->suffixAction(self::openApiAction()),
+                                            ->suffixActions([
+                                                self::schedaClienteAction(),
+                                                self::openApiAction(),
+                                            ]),
                                     ]),
                                 Section::make('Prodotto richiesto')
-                                    ->columns(2)
+                                    ->columns(3)
                                     ->schema([
-                                        TextInput::make('codice_pratica')->label('Codice pratica'),
-                                        Select::make('fornitori_id')
-                                            ->label('Agente')
-                                            ->relationship('fornitori', 'name')
-                                            ->searchable()
-                                            ->preload(),
+                                        Toggle::make('is_notowned')->label('Impegno di terzi')->inline(false),
                                         Select::make('tipoprodotto_id')
                                             ->label('Tipo prodotto')
                                             ->relationship('tipoprodotto', 'name')
                                             ->searchable()
-                                            ->preload(),
-                                        TextInput::make('denominazione_prodotto')->label('Prodotto'),
+                                            ->preload()
+                                            ->live(),
+                                        Select::make('clienti_id')
+                                            ->label('Banca')
+                                            ->relationship('clienti', 'name')
+                                            ->searchable()
+                                            ->preload()
+                                            ->live()
+                                            ->afterStateUpdated(fn (Set $set, ?string $state) => $set('denominazione_banca', $state ? Cliente::query()->whereKey($state)->value('name') : null))
+                                            ->suffixAction(
+                                                Action::make('portaleBanca')
+                                                    ->label('Portale della banca')
+                                                    ->tooltip('Apri il portale della banca per inserire la pratica')
+                                                    ->icon(Heroicon::OutlinedArrowTopRightOnSquare)
+                                                    ->url(fn (Get $get): ?string => PortaleBanca::url($get('clienti_id')), shouldOpenInNewTab: true)
+                                                    ->visible(fn (Get $get): bool => PortaleBanca::url($get('clienti_id')) !== null),
+                                            ),
+                                        Hidden::make('denominazione_banca'),
+                                        // Cessione e delega si calcolano sulla rata; gli altri prodotti su importo richiesto e durata.
+                                        TextInput::make('rata')->label('Rata')->numeric()->prefix('€')->visible(fn (Get $get): bool => self::sullaRata($get)),
+                                        TextInput::make('amount')->label('Importo richiesto')->numeric()->prefix('€')->visible(fn (Get $get): bool => ! self::sullaRata($get)),
+                                        TextInput::make('nrate')->label('Durata (mesi)')->numeric()->integer()->visible(fn (Get $get): bool => ! self::sullaRata($get)),
+                                        TextInput::make('codice_pratica')->label('Numero pratica'),
                                         DatePicker::make('data_inserimento_pratica')->label('Data richiesta'),
-                                        Toggle::make('is_notowned')->label('Impegno di terzi')->inline(false),
                                     ]),
                             ]),
                         Tab::make('Dati di lavorazione')
@@ -106,14 +129,12 @@ class PraticaForm
                                             ->relationship('employee', 'name')
                                             ->searchable()
                                             ->preload(),
-                                        Select::make('clienti_id')
-                                            ->label('Banca')
-                                            ->relationship('clienti', 'name')
+                                        Select::make('fornitori_id')
+                                            ->label('Agente')
+                                            ->relationship('fornitori', 'name')
                                             ->searchable()
-                                            ->preload()
-                                            ->live()
-                                            ->afterStateUpdated(fn (Set $set, ?string $state) => $set('denominazione_banca', $state ? Cliente::query()->whereKey($state)->value('name') : null)),
-                                        Hidden::make('denominazione_banca'),
+                                            ->preload(),
+                                        TextInput::make('denominazione_prodotto')->label('Prodotto'),
                                         TextInput::make('assicurazione')->label('Assicurazione'),
                                     ]),
                                 Section::make('Avanzamento')
@@ -125,6 +146,7 @@ class PraticaForm
                                         DatePicker::make('rejected_at')->label('Rifiuto'),
                                     ]),
                                 Section::make('Offerta')
+                                    ->hidden()
                                     ->columns(2)
                                     ->schema([
                                         DatePicker::make('offer_valid_until')->label('Offerta valida fino al'),
@@ -137,11 +159,8 @@ class PraticaForm
                                 Section::make('Importi')
                                     ->columns(3)
                                     ->schema([
-                                        TextInput::make('amount')->label('Importo lordo')->numeric()->prefix('€'),
                                         TextInput::make('net')->label('Importo netto')->numeric()->prefix('€'),
                                         TextInput::make('erogato')->label('Erogato')->numeric()->prefix('€'),
-                                        TextInput::make('rata')->label('Rata')->numeric()->prefix('€'),
-                                        TextInput::make('nrate')->label('Numero rate')->numeric()->integer(),
                                     ]),
                                 Section::make('Mediazione e costi')
                                     ->columns(3)
@@ -157,44 +176,60 @@ class PraticaForm
             ]);
     }
 
+    /** Cessione e delega si calcolano sulla rata. */
+    private static function sullaRata(Get $get): bool
+    {
+        return in_array(TipoProdotto::query()->whereKey($get('tipoprodotto_id'))->value('name'), ['Cessione', 'Delega'], true);
+    }
+
+    /**
+     * Apre la scheda cliente del richiedente (la crea dai dati della pratica se manca).
+     */
+    private static function schedaClienteAction(): Action
+    {
+        return Action::make('schedaCliente')
+            ->label('Scheda cliente')
+            ->tooltip(fn (?Pratica $record): string => $record !== null && self::schedaEsiste($record) ? 'Apri la scheda cliente' : 'Crea la scheda cliente')
+            ->icon(Heroicon::OutlinedIdentification)
+            ->action(function (Get $get, ?Pratica $record, Component $livewire): void {
+                if ($record === null || blank($get('codice_fiscale'))) {
+                    Notification::make()->title('Inserisci il codice fiscale o la partita IVA')->warning()->send();
+
+                    return;
+                }
+
+                // La scheda nasce dai dati inseriti nel form, anche se la pratica non è ancora stata salvata.
+                $record->fill([
+                    'codice_fiscale' => $get('codice_fiscale'),
+                    'cognome_cliente' => $get('cognome_cliente'),
+                    'nome_cliente' => $get('nome_cliente'),
+                ]);
+                $client = app(RichiedentePratica::class)->ensureClient($record);
+
+                if ($client === null) {
+                    return;
+                }
+
+                $livewire->redirect(ClientResource::getUrl('edit', ['record' => $client]));
+            });
+    }
+
+    private static function schedaEsiste(Pratica $pratica): bool
+    {
+        $code = strtoupper(trim((string) $pratica->codice_fiscale));
+
+        return $code !== '' && Client::query()->where(fn ($query) => $query->where('tax_code', $code)->orWhere('vat_number', $code))->exists();
+    }
+
     /** Controllo con le routine di unico-core: codice fiscale per le persone, partita IVA per le società. */
     private static function taxCodeError(string $value, bool $isPerson): ?string
     {
-        $value = trim($value);
-
-        if ($value === '') {
-            return null;
-        }
-
-        if ($isPerson) {
-            return CodiceFiscale::parse($value) === null ? 'Il codice fiscale non è valido.' : null;
-        }
-
-        return controllaPartitaIva(strtoupper($value));
+        return ControlloRichiedente::taxCodeError($value, $isPerson);
     }
 
     private static function warnAboutTaxCode(?string $state, Get $get): void
     {
-        $isPerson = (bool) $get('richiedente_persona_fisica');
-        $error = self::taxCodeError((string) $state, $isPerson);
-
-        if ($error !== null) {
-            Notification::make()->title($error)->warning()->send();
-
-            return;
-        }
-
-        if ($isPerson && filled($state) && filled($get('cognome_cliente')) && filled($get('nome_cliente'))) {
-            $mismatches = CodiceFiscale::mismatches((string) $state, (string) $get('cognome_cliente'), (string) $get('nome_cliente'));
-
-            if ($mismatches !== []) {
-                Notification::make()
-                    ->title('Il codice fiscale non corrisponde a nome e cognome')
-                    ->body(collect($mismatches)->map(fn (array $m): string => "{$m['field']}: atteso {$m['expected']}, trovato {$m['found']}")->implode(' · '))
-                    ->warning()
-                    ->send();
-            }
-        }
+        ControlloRichiedente::warn($state, (bool) $get('richiedente_persona_fisica'), $get('cognome_cliente'), $get('nome_cliente'));
     }
 
     /** Dati societari da Openapi (a pagamento) per la partita IVA indicata. */

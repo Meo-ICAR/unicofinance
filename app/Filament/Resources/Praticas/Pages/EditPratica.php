@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Praticas\Pages;
 
+use App\Filament\Concerns\RegistraCambioStato;
 use App\Filament\Resources\Praticas\PraticaResource;
 use App\Models\BlacklistClienteFornitore;
 use App\Models\Pratica;
@@ -14,15 +15,24 @@ use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Contracts\Support\Htmlable;
 use Unico\Core\Models\Cliente;
 
 class EditPratica extends EditRecord
 {
+    use RegistraCambioStato;
+
     protected static string $resource = PraticaResource::class;
+
+    public function getTitle(): string|Htmlable
+    {
+        return $this->getHeading();
+    }
 
     protected function afterSave(): void
     {
         app(RichiedentePratica::class)->ensureClient($this->getRecord());
+        $this->registraCambioStato();
     }
 
     protected function getHeaderActions(): array

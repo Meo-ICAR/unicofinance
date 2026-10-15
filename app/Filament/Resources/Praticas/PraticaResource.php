@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\Praticas;
 
+use App\Filament\RelationManagers\CointestatariGarantiRelationManager;
+use App\Filament\RelationManagers\ImmobileRelationManager;
 use App\Filament\RelationManagers\ImpegniTerziRelationManager;
 use App\Filament\RelationManagers\ProvvigioniRelationManager;
 use App\Filament\Resources\Praticas\Pages\CreatePratica;
@@ -15,6 +17,8 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Database\Eloquent\Model;
 use Unico\Core\Filament\RelationManagers\DocumentsRelationManager;
 use UnitEnum;
 
@@ -38,6 +42,12 @@ class PraticaResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'codice_pratica';
 
+    /** Nei titoli e nelle briciole di pane la pratica è il cognome o la ragione sociale del richiedente, non il codice. */
+    public static function getRecordTitle(?Model $record): string|Htmlable|null
+    {
+        return $record?->cognome_cliente ?: $record?->codice_pratica;
+    }
+
     public static function form(Schema $schema): Schema
     {
         return PraticaForm::configure($schema);
@@ -54,6 +64,8 @@ class PraticaResource extends Resource
             DocumentsRelationManager::class,
             ProvvigioniRelationManager::class,
             ImpegniTerziRelationManager::class,
+            CointestatariGarantiRelationManager::class,
+            ImmobileRelationManager::class,
         ];
     }
 

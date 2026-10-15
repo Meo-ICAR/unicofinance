@@ -2,13 +2,16 @@
 
 namespace App\Filament\Resources\Istituti;
 
+use App\Filament\Resources\Istituti\Pages\EditIstituto;
 use App\Filament\Resources\Istituti\Pages\ListIstituti;
 use App\Filament\Resources\Istituti\Pages\ViewIstituto;
+use App\Filament\Resources\Istituti\RelationManagers\DocumentiIstitutoRelationManager;
 use App\Filament\Resources\Istituti\RelationManagers\ProduttoriBloccatiRelationManager;
 use App\Filament\Resources\Istituti\Schemas\IstitutoInfolist;
 use App\Filament\Resources\Istituti\Tables\IstitutiTable;
 use App\Models\User;
 use BackedEnum;
+use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -48,14 +51,27 @@ class IstitutoResource extends Resource
         return false;
     }
 
+    /** Dell'istituto si modificano solo i riferimenti web; il resto è anagrafica condivisa. */
     public static function canEdit(Model $record): bool
     {
-        return false;
+        return static::canViewAny();
     }
 
     public static function canDelete(Model $record): bool
     {
         return false;
+    }
+
+    public static function form(Schema $schema): Schema
+    {
+        return $schema->components([
+            TextInput::make('website')->label('Sito')->url()->maxLength(255),
+            TextInput::make('portal_url')
+                ->label('Portale per l\'immissione delle pratiche')
+                ->helperText('Il collegamento compare accanto alla banca nella pratica dell\'agente.')
+                ->url()
+                ->maxLength(255),
+        ]);
     }
 
     public static function infolist(Schema $schema): Schema
@@ -72,6 +88,7 @@ class IstitutoResource extends Resource
     {
         return [
             ProduttoriBloccatiRelationManager::class,
+            DocumentiIstitutoRelationManager::class,
             DocumentsRelationManager::class,
         ];
     }
@@ -81,6 +98,7 @@ class IstitutoResource extends Resource
         return [
             'index' => ListIstituti::route('/'),
             'view' => ViewIstituto::route('/{record}'),
+            'edit' => EditIstituto::route('/{record}/edit'),
         ];
     }
 }

@@ -38,6 +38,12 @@ class Client extends CoreClient
             ->ofMany(['data_inserimento_pratica' => 'max', 'id' => 'max']);
     }
 
+    /** Soggetti collegati a una persona giuridica: soci, amministratori, titolari effettivi. */
+    public function soci(): HasMany
+    {
+        return $this->hasMany(ClientRelation::class, 'company_id');
+    }
+
     public function pratiche(): HasMany
     {
         return $this->hasMany(Pratica::class, 'codice_fiscale', 'tax_code');

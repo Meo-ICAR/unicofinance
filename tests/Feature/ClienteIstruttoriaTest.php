@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Filament\RelationManagers\AddressesRelationManager;
+use App\Filament\RelationManagers\SociRelationManager;
 use App\Filament\Resources\Clients\ClientResource;
 use App\Filament\Resources\Clients\Pages\EditClient;
 use App\Models\Client;
@@ -62,7 +63,7 @@ class ClienteIstruttoriaTest extends TestCase
     public function test_the_client_resource_attaches_documents_and_addresses(): void
     {
         $this->assertSame(
-            [DocumentsRelationManager::class, AddressesRelationManager::class],
+            [DocumentsRelationManager::class, SociRelationManager::class, AddressesRelationManager::class],
             ClientResource::getRelations(),
         );
     }
