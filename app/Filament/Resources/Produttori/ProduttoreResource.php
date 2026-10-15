@@ -84,10 +84,10 @@ class ProduttoreResource extends Resource
     public static function getRelations(): array
     {
         return [
+            DocumentsRelationManager::class,
             ListiniProvvigionaliRelationManager::class,
             IstitutiBloccatiRelationManager::class,
             BranchesRelationManager::class,
-            DocumentsRelationManager::class,
         ];
     }
 

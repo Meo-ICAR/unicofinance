@@ -110,6 +110,7 @@ class PraticaForm
                                         TextInput::make('amount')->label('Importo richiesto')->numeric()->prefix('€')->visible(fn (Get $get): bool => ! self::sullaRata($get)),
                                         TextInput::make('nrate')->label('Durata (mesi)')->numeric()->integer()->visible(fn (Get $get): bool => ! self::sullaRata($get)),
                                         TextInput::make('codice_pratica')->label('Numero pratica'),
+                                        TextInput::make('codice_pratica_banca')->label('Codice pratica banca')->helperText('Assegnato dalla banca sul suo portale')->maxLength(100),
                                         DatePicker::make('data_inserimento_pratica')->label('Data richiesta'),
                                     ]),
                             ]),

@@ -198,6 +198,7 @@ class PraticaResource extends Resource
                         ->integer()
                         ->visible(fn (Get $get): bool => ! $sulla_rata($get)),
                     TextInput::make('codice_pratica')->label('Numero pratica')->maxLength(255),
+                    TextInput::make('codice_pratica_banca')->label('Codice pratica banca')->helperText('Assegnato dalla banca sul suo portale')->maxLength(100),
                     DatePicker::make('data_inserimento_pratica')
                         ->label('Data richiesta')
                         ->native(false)

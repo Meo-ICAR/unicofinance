@@ -19,6 +19,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Unico\Core\Filament\RelationManagers\DocumentsRelationManager;
 use Unico\Core\Models\PraticaClient;
 
 /**
@@ -108,6 +109,14 @@ class ClientResource extends Resource
             ->recordActions([
                 EditAction::make()->label('Apri scheda'),
             ]);
+    }
+
+    /** La documentazione è il fulcro dell'istruttoria: prima scheda anche sul cliente dell'agente. */
+    public static function getRelations(): array
+    {
+        return [
+            DocumentsRelationManager::class,
+        ];
     }
 
     public static function getPages(): array

@@ -87,9 +87,9 @@ class IstitutoResource extends Resource
     public static function getRelations(): array
     {
         return [
-            ProduttoriBloccatiRelationManager::class,
-            DocumentiIstitutoRelationManager::class,
             DocumentsRelationManager::class,
+            DocumentiIstitutoRelationManager::class,
+            ProduttoriBloccatiRelationManager::class,
         ];
     }
 
