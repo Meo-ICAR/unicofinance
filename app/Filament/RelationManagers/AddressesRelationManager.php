@@ -22,7 +22,7 @@ class AddressesRelationManager extends RelationManager
 {
     protected static string $relationship = 'addresses';
 
-    protected static ?string $title = 'Address';
+    protected static ?string $title = 'Indirizzi';
 
     protected static ?string $modelLabel = 'Indirizzo';
 
@@ -30,7 +30,7 @@ class AddressesRelationManager extends RelationManager
 
     public static function canViewForRecord(Model $ownerRecord, string $pageClass): bool
     {
-        return $ownerRecord instanceof Pratica;
+        return $ownerRecord instanceof Pratica || $ownerRecord instanceof Client;
     }
 
     public function getRelationship(): Relation|Builder

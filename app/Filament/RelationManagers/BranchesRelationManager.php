@@ -15,6 +15,7 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
+use Unico\Core\Models\Fornitore;
 
 class BranchesRelationManager extends RelationManager
 {
@@ -28,7 +29,7 @@ class BranchesRelationManager extends RelationManager
 
     public static function canViewForRecord(Model $ownerRecord, string $pageClass): bool
     {
-        return $ownerRecord instanceof Pratica;
+        return $ownerRecord instanceof Pratica || $ownerRecord instanceof Fornitore;
     }
 
     public function form(Schema $schema): Schema

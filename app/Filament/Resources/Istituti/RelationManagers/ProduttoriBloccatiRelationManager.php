@@ -10,6 +10,7 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -20,7 +21,7 @@ class ProduttoriBloccatiRelationManager extends RelationManager
 {
     protected static string $relationship = 'blacklistProduttori';
 
-    protected static ?string $title = 'Produttori bloccati';
+    protected static ?string $title = 'Blacklist';
 
     protected static ?string $modelLabel = 'Divieto';
 
@@ -36,20 +37,21 @@ class ProduttoriBloccatiRelationManager extends RelationManager
     {
         return $schema
             ->components([
-                Select::make('fornitore_id')
-                    ->label('Produttore')
-                    ->options(fn () => Fornitore::query()->where('is_active', true)->orderBy('name')->pluck('name', 'id'))
-                    ->searchable()
-                    ->required()
-                    ->unique(
-                        BlacklistClienteFornitore::class,
-                        'fornitore_id',
-                        ignoreRecord: true,
-                        modifyRuleUsing: fn ($rule) => $rule->where('cliente_id', (string) $this->getOwnerRecord()->getKey()),
-                    ),
-                Textarea::make('motivo')->label('Motivo'),
-                DatePicker::make('data_inizio')->label('Dal'),
-                DatePicker::make('data_fine')->label('Al')->afterOrEqual('data_inizio'),
+                Grid::make(2)->schema([
+                    Select::make('fornitore_id')
+                        ->label('Produttore')
+                        ->options(fn () => Fornitore::query()->where('is_active', true)->orderBy('name')->pluck('name', 'id'))
+                        ->searchable()
+                        ->required()
+                        ->unique(
+                            BlacklistClienteFornitore::class,
+                            'fornitore_id',
+                            ignoreRecord: true,
+                            modifyRuleUsing: fn ($rule) => $rule->where('cliente_id', (string) $this->getOwnerRecord()->getKey()),
+                        ),
+                    DatePicker::make('data_inizio')->label('Dal')->default(now()),
+                ]),
+                Textarea::make('motivo')->label('Motivo')->columnSpanFull(),
             ]);
     }
 

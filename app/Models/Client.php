@@ -31,6 +31,13 @@ class Client extends CoreClient
         return $this->hasOne(KycQuestionnaire::class, 'client_id')->latestOfMany();
     }
 
+    /** Ultima pratica inserita dal cliente: ne determina i dati pertinenti sulla scheda. */
+    public function ultimaPratica(): HasOne
+    {
+        return $this->hasOne(Pratica::class, 'codice_fiscale', 'tax_code')
+            ->ofMany(['data_inserimento_pratica' => 'max', 'id' => 'max']);
+    }
+
     public function pratiche(): HasMany
     {
         return $this->hasMany(Pratica::class, 'codice_fiscale', 'tax_code');

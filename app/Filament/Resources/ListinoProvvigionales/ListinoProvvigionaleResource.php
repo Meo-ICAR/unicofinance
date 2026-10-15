@@ -28,6 +28,8 @@ class ListinoProvvigionaleResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'name';
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Configurazione';
+
     protected static ?string $navigationLabel = 'Listini provvigionali';
 
     protected static ?string $modelLabel = 'Listino provvigionale';

@@ -14,6 +14,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
+use Unico\Core\Filament\RelationManagers\DocumentsRelationManager;
 use Unico\Core\Models\Cliente;
 
 /** Banche e istituti finanziari (clienti del mediatore), in sola lettura. */
@@ -26,6 +27,8 @@ class IstitutoResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBuildingLibrary;
 
     protected static ?string $recordTitleAttribute = 'name';
+
+    protected static string|\UnitEnum|null $navigationGroup = 'Configurazione';
 
     protected static ?string $navigationLabel = 'Istituti';
 
@@ -69,6 +72,7 @@ class IstitutoResource extends Resource
     {
         return [
             ProduttoriBloccatiRelationManager::class,
+            DocumentsRelationManager::class,
         ];
     }
 

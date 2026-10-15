@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Produttori;
 
 use App\Filament\Actions\ImpersonateFornitoreAction;
+use App\Filament\RelationManagers\BranchesRelationManager;
 use App\Filament\Resources\Produttori\Pages\ListProduttori;
 use App\Filament\Resources\Produttori\Pages\ViewProduttore;
 use App\Filament\Resources\Produttori\RelationManagers\IstitutiBloccatiRelationManager;
@@ -18,6 +19,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Unico\Core\Filament\RelationManagers\DocumentsRelationManager;
 use Unico\Core\Models\Fornitore;
 
 class ProduttoreResource extends Resource
@@ -27,6 +29,8 @@ class ProduttoreResource extends Resource
     protected static ?string $slug = 'produttori';
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-user-group';
+
+    protected static string|\UnitEnum|null $navigationGroup = 'Configurazione';
 
     protected static ?string $navigationLabel = 'Produttori';
 
@@ -82,6 +86,8 @@ class ProduttoreResource extends Resource
         return [
             ListiniProvvigionaliRelationManager::class,
             IstitutiBloccatiRelationManager::class,
+            BranchesRelationManager::class,
+            DocumentsRelationManager::class,
         ];
     }
 

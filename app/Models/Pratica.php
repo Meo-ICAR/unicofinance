@@ -60,4 +60,10 @@ class Pratica extends CorePratica
 
         return $relation->whereKeyNot($this->getKey());
     }
+
+    /** Impegni di terzi (finanziamenti in corso altrove) dello stesso codice fiscale o partita IVA. */
+    public function impegniTerzi(): HasMany
+    {
+        return $this->praticheRichiedente()->where('is_notowned', true);
+    }
 }
