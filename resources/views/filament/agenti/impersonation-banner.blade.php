@@ -20,3 +20,9 @@
         </form>
     </div>
 @endif
+
+@if (\Unico\Core\Signature\SignatureDemo::attiva())
+    <div class="fi-demo-banner bg-info-600 px-4 py-2 text-center text-sm text-white dark:bg-info-500">
+        <strong>Modalità dimostrazione:</strong> la firma OTP è simulata, nessun SMS viene inviato e nessuna firma ha valore.
+    </div>
+@endif

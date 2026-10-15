@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\ListinoProvvigionales\Tables;
 
+use App\Models\ListinoProvvigionale;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\IconColumn;
@@ -30,10 +31,15 @@ class ListinoProvvigionalesTable
                 IconColumn::make('coordinamento')
                     ->label('Coordinatore')
                     ->boolean(),
+                TextColumn::make('riepilogo_voci')
+                    ->label('Voci')
+                    ->state(fn (ListinoProvvigionale $record): string => $record->riepilogoVoci() ?: $record->value.'%')
+                    ->wrap(),
                 TextColumn::make('value')
-                    ->label('%')
+                    ->label('% principale')
                     ->suffix('%')
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('assegnazioni_count')
                     ->label('Produttori')
                     ->counts('assegnazioni'),
@@ -48,6 +54,7 @@ class ListinoProvvigionalesTable
                     ->label('Prodotto')
                     ->options(fn () => TipoProdotto::query()->orderBy('name')->pluck('name', 'id')),
             ])
+            ->modifyQueryUsing(fn ($query) => $query->with(['voci', 'tipoprodotto']))
             ->defaultSort('code')
             ->recordActions([
                 ViewAction::make(),

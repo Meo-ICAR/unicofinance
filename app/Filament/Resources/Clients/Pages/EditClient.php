@@ -6,6 +6,7 @@ use App\Enums\FinancingSection;
 use App\Enums\FinancingType;
 use App\Filament\Resources\Clients\ClientResource;
 use App\Models\Client;
+use App\Services\Istruttoria\DatoreDiLavoro;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ViewAction;
 use Filament\Resources\Pages\EditRecord;
@@ -40,6 +41,11 @@ class EditClient extends EditRecord
         }
 
         return "Ultima pratica {$client->ultimaPratica->codice_pratica} · {$type->getLabel()}: sono mostrati solo i dati pertinenti.";
+    }
+
+    protected function afterSave(): void
+    {
+        app(DatoreDiLavoro::class)->eredita($this->getRecord());
     }
 
     protected function getHeaderActions(): array

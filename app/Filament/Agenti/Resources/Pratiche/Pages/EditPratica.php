@@ -6,6 +6,7 @@ use App\Filament\Agenti\Resources\Pratiche\PraticaResource;
 use App\Filament\Concerns\RegistraCambioStato;
 use App\Models\Client;
 use App\Services\ContattiSocieta;
+use App\Services\Istruttoria\DatoreDiLavoro;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Contracts\Support\Htmlable;
@@ -142,5 +143,7 @@ class EditPratica extends EditRecord
         $contatto->email = $state['cliente_email'] ?? null;
         $contatto->phone = $state['cliente_cellulare'] ?? null;
         $contatto->save();
+
+        app(DatoreDiLavoro::class)->eredita($client);
     }
 }

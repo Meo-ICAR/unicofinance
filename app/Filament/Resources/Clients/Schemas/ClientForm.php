@@ -10,6 +10,7 @@ use App\Models\Client;
 use App\Services\AmlScreeningService;
 use App\Services\ApiCallLogger;
 use App\Services\CodiceFiscaleDecoder;
+use App\Services\Istruttoria\DatoreDiLavoro;
 use App\Services\PartitaIva;
 use App\Support\ControlloRichiedente;
 use Closure;
@@ -131,10 +132,13 @@ class ClientForm
                                             ->visible(fn (Get $get): bool => filled($get('employment_typology')) && ! self::isRetired($get('employment_typology'))),
                                         Select::make('employer_id')
                                             ->label('Datore di lavoro')
+                                            ->helperText(fn (?Client $record): ?string => app(DatoreDiLavoro::class)->richiesto($record) ? 'Cessione o delega: indica il datore di lavoro o l\'ente. Eredita il tipo di amministrazione della pratica.' : null)
                                             ->relationship('employer', 'name', fn (Builder $query) => $query->where('is_person', false))
                                             ->searchable()
                                             ->preload()
-                                            ->visible(fn ($livewire): bool => self::shows(FinancingSection::ClienteDatoreLavoro, $livewire)),
+                                            ->createOptionForm(self::datoreDiLavoroForm())
+                                            ->createOptionUsing(fn (array $data, ?Client $record): int => (int) app(DatoreDiLavoro::class)->crea($record, $data)->getKey())
+                                            ->visible(fn (?Client $record, $livewire): bool => self::shows(FinancingSection::ClienteDatoreLavoro, $livewire) || app(DatoreDiLavoro::class)->richiesto($record)),
                                         TextInput::make('profession')->label('Professione'),
                                     ]),
                                 Section::make('Reddito e coordinate')
@@ -155,14 +159,6 @@ class ClientForm
                                             ->maxLength(34)
                                             ->dehydrateStateUsing(fn (?string $state): ?string => filled($state) ? strtoupper(str_replace(' ', '', $state)) : null),
                                     ]),
-                                Section::make('Benestare del datore')
-                                    ->collapsed()
-                                    ->visible(fn ($livewire): bool => self::shows(FinancingSection::ClienteDatoreLavoro, $livewire))
-                                    ->schema([
-                                        Textarea::make('richiesta_benestare')->label('Richiesta benestare'),
-                                        Textarea::make('ritiro_benestare')->label('Ritiro benestare'),
-                                        Textarea::make('notifica')->label('Notifica'),
-                                    ]),
                             ]),
                         Tab::make('Dati societari')
                             ->icon(Heroicon::OutlinedBuildingOffice)
@@ -176,6 +172,11 @@ class ClientForm
                                             ->relationship('legalRepresentative', 'name', fn (Builder $query) => $query->where('is_person', true))
                                             ->searchable()
                                             ->preload(),
+                                        Select::make('employment_typology')
+                                            ->label('Tipo amministrazione')
+                                            ->helperText('Per un datore di lavoro: ereditato dalla pratica di cessione o delega.')
+                                            ->options(collect(EmploymentRelationship::cases())->mapWithKeys(fn (EmploymentRelationship $case): array => [$case->getLabel() => $case->getLabel()])->all())
+                                            ->searchable(),
                                         TextInput::make('legal_form')->label('Forma giuridica')->maxLength(100),
                                         TextInput::make('ateco_code')->label('Codice Ateco')->maxLength(10),
                                         TextInput::make('cciaa_registration')->label('Iscrizione CCIAA')->maxLength(60),
@@ -183,6 +184,15 @@ class ClientForm
                                         TextInput::make('activity_status')->label('Stato attività')->maxLength(30),
                                         DatePicker::make('company_started_at')->label('Inizio attività')->native(false)->displayFormat('d/m/Y'),
                                         TextInput::make('iban')->label('IBAN')->maxLength(34),
+                                    ]),
+                                // Richiesta, ritiro e notifica del benestare: solo per chi è datore di lavoro di almeno un cliente.
+                                Section::make('Benestare del datore')
+                                    ->description('Come si chiede il benestare al datore, come si ritira e come si notifica.')
+                                    ->visible(fn (?Client $record): bool => $record?->exists === true && $record->employees()->exists())
+                                    ->schema([
+                                        Textarea::make('richiesta_benestare')->label('Richiesta benestare'),
+                                        Textarea::make('ritiro_benestare')->label('Ritiro benestare'),
+                                        Textarea::make('notifica')->label('Notifica'),
                                     ]),
                                 Section::make('Ultimo bilancio')
                                     ->columns(3)
@@ -268,6 +278,24 @@ class ClientForm
         return collect(EmploymentRelationship::cases())
             ->filter(fn (EmploymentRelationship $relationship): bool => $relationship->isRetiree())
             ->contains(fn (EmploymentRelationship $relationship): bool => $relationship->getLabel() === $typology);
+    }
+
+    /** @return array<int, TextInput> */
+    public static function datoreDiLavoroForm(): array
+    {
+        return [
+            TextInput::make('name')->label('Ragione sociale')->required()->maxLength(255),
+            TextInput::make('tax_code')
+                ->label('Partita IVA')
+                ->maxLength(16)
+                ->rule(fn (): Closure => function (string $attribute, mixed $value, Closure $fail): void {
+                    $errore = ControlloRichiedente::taxCodeError((string) $value, false);
+
+                    if ($errore !== null) {
+                        $fail($errore);
+                    }
+                }),
+        ];
     }
 
     /** Cessione, delega e prestito sono prodotti per persone fisiche. */

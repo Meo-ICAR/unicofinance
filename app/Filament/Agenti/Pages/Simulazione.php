@@ -5,6 +5,7 @@ namespace App\Filament\Agenti\Pages;
 use App\Enums\EmploymentRelationship;
 use App\Enums\KycStatus;
 use App\Enums\SimulationContractType;
+use App\Filament\Resources\Clients\Schemas\ClientForm;
 use App\Filament\Resources\Clients\Schemas\KycQuestionnaireForm;
 use App\Models\FinancingQuote;
 use App\Models\KycQuestionnaire;
@@ -861,16 +862,18 @@ class Simulazione extends Page
                 ->options(fn (): array => Client::query()->where('is_person', false)->orderBy('name')->pluck('name', 'id')->all())
                 ->searchable()
                 ->required()
-                ->createOptionForm([
-                    TextInput::make('name')->label('Ragione sociale')->required()->maxLength(255),
-                ])
+                ->createOptionForm(ClientForm::datoreDiLavoroForm())
                 ->createOptionUsing(function (array $data): int {
                     $quote = FinancingQuote::query()->find($this->quoteId);
+                    $tipo = self::relationshipFrom($quote?->employment_relationship)?->getLabel();
 
+                    // Il datore eredita il tipo di amministrazione del preventivo (statale, pubblico, privato SPA...).
                     return (int) Client::query()->create([
                         'name' => $data['name'],
+                        'tax_code' => filled($data['tax_code'] ?? null) ? strtoupper(trim((string) $data['tax_code'])) : null,
                         'is_person' => false,
                         'company_id' => $quote?->pratica?->company_id,
+                        'employment_typology' => $tipo,
                     ])->getKey();
                 }),
             'hiring_date' => DatePicker::make('hiring_date')->label('Data di assunzione')->native(false)->displayFormat('d/m/Y'),

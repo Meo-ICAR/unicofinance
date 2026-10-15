@@ -17,10 +17,12 @@ use App\Models\Pratica;
 use App\Services\Agenti\AgentImpersonationService;
 use App\Services\CodiceFiscaleDecoder;
 use App\Services\PortaleBanca;
+use App\Support\CompensoMediazione;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -198,6 +200,9 @@ class PraticaResource extends Resource
                         ->numeric()
                         ->integer()
                         ->visible(fn (Get $get): bool => ! $sulla_rata($get)),
+                    Placeholder::make('mediazione_dovuta')
+                        ->label('Mediazione richiesta al cliente')
+                        ->content(fn (?Pratica $record, Get $get): string => CompensoMediazione::formatta($record?->mediation_fee_amount, $record?->mediation_fee_percent, $get('amount') ?? $record?->amount)),
                     TextInput::make('codice_pratica')->label('Numero pratica')->maxLength(255),
                     TextInput::make('codice_pratica_banca')->label('Codice pratica banca')->helperText('Assegnato dalla banca sul suo portale')->maxLength(100),
                     DatePicker::make('data_inserimento_pratica')

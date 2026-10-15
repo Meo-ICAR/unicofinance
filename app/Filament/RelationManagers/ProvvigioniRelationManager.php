@@ -3,6 +3,7 @@
 namespace App\Filament\RelationManagers;
 
 use App\Models\Pratica;
+use App\Services\Provvigioni\PercentualeListino;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -26,6 +27,20 @@ class ProvvigioniRelationManager extends RelationManager
         return $ownerRecord instanceof Pratica && ! $ownerRecord->is_notowned;
     }
 
+    /** Listino del produttore per il prodotto della pratica, con le percentuali per voce. */
+    private function descrizioneListino(): ?string
+    {
+        $pratica = $this->getOwnerRecord();
+        $servizio = app(PercentualeListino::class);
+        $listino = $pratica->fornitori_id === null ? null : $servizio->listino($pratica->fornitori_id, $pratica->tipoprodotto_id);
+
+        if ($listino === null) {
+            return $pratica->fornitori_id === null ? null : 'Il produttore non ha un listino assegnato per questo prodotto.';
+        }
+
+        return "Listino del produttore: {$listino->name} — {$listino->riepilogoVoci()}";
+    }
+
     public function form(Schema $schema): Schema
     {
         return $schema->components([
@@ -38,6 +53,7 @@ class ProvvigioniRelationManager extends RelationManager
     public function table(Table $table): Table
     {
         return $table
+            ->description(fn (): ?string => $this->descrizioneListino())
             ->columns([
                 TextColumn::make('entrata_uscita')
                     ->label('Entrata/Uscita')

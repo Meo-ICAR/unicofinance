@@ -7,11 +7,13 @@ use App\Models\Client;
 use App\Models\Pratica;
 use App\Services\Istruttoria\RichiedentePratica;
 use App\Services\PortaleBanca;
+use App\Support\CompensoMediazione;
 use App\Support\ControlloRichiedente;
 use Closure;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -107,8 +109,11 @@ class PraticaForm
                                         Hidden::make('denominazione_banca'),
                                         // Cessione e delega si calcolano sulla rata; gli altri prodotti su importo richiesto e durata.
                                         TextInput::make('rata')->label('Rata')->numeric()->prefix('€')->visible(fn (Get $get): bool => self::sullaRata($get)),
-                                        TextInput::make('amount')->label('Importo richiesto')->numeric()->prefix('€')->visible(fn (Get $get): bool => ! self::sullaRata($get)),
+                                        TextInput::make('amount')->label('Importo richiesto')->numeric()->prefix('€')->live(onBlur: true)->visible(fn (Get $get): bool => ! self::sullaRata($get)),
                                         TextInput::make('nrate')->label('Durata (mesi)')->numeric()->integer()->visible(fn (Get $get): bool => ! self::sullaRata($get)),
+                                        Placeholder::make('mediazione_dovuta')
+                                            ->label('Mediazione richiesta al cliente')
+                                            ->content(fn (Get $get): string => CompensoMediazione::formatta($get('mediation_fee_amount'), $get('mediation_fee_percent'), $get('amount'))),
                                         TextInput::make('codice_pratica')->label('Numero pratica'),
                                         TextInput::make('codice_pratica_banca')->label('Codice pratica banca')->helperText('Assegnato dalla banca sul suo portale')->maxLength(100),
                                         DatePicker::make('data_inserimento_pratica')->label('Data richiesta'),
@@ -166,8 +171,8 @@ class PraticaForm
                                 Section::make('Mediazione e costi')
                                     ->columns(3)
                                     ->schema([
-                                        TextInput::make('mediation_fee_percent')->label('Mediazione %')->numeric()->suffix('%'),
-                                        TextInput::make('mediation_fee_amount')->label('Mediazione €')->numeric()->prefix('€'),
+                                        TextInput::make('mediation_fee_percent')->label('Mediazione %')->numeric()->suffix('%')->live(onBlur: true),
+                                        TextInput::make('mediation_fee_amount')->label('Mediazione €')->numeric()->prefix('€')->live(onBlur: true),
                                         TextInput::make('istruttoria_costs')->label('Costi istruttoria')->numeric()->prefix('€'),
                                         Textarea::make('mediation_fee_terms')->label('Condizioni di mediazione')->columnSpanFull(),
                                     ]),

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\VociProvvigionali;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -16,7 +17,10 @@ use Unico\Core\Models\TipoProdotto;
 class ListinoProvvigionale extends Model
 {
     /** Database dell'app: le relazioni dal core altrimenti erediterebbero la connessione core. */
-    protected $connection = 'mysql';
+    public function getConnectionName(): ?string
+    {
+        return config('database.default');
+    }
 
     protected $table = 'listini_provvigionali';
 
@@ -43,6 +47,33 @@ class ListinoProvvigionale extends Model
     public static function assegnazioniTable(): string
     {
         return (new static)->getConnection()->getDatabaseName().'.fornitori_listini_provvigionali';
+    }
+
+    public function voci(): HasMany
+    {
+        return $this->hasMany(ListinoProvvigionaleVoce::class, 'listino_provvigionale_id');
+    }
+
+    /** Percentuali per voce, nell'ordine del prodotto, es. «Standard 60% · Special 40%». */
+    public function riepilogoVoci(): string
+    {
+        $voci = $this->voci->keyBy('voce');
+        $ordine = array_keys(VociProvvigionali::per($this->tipoprodotto?->name) ?: VociProvvigionali::tutte());
+
+        return $voci->sortBy(fn ($voce) => array_search($voce->voce, $ordine, true))
+            ->map(fn (ListinoProvvigionaleVoce $voce): string => $voce->etichetta().' '.rtrim(rtrim(number_format((float) $voce->percentuale, 2, ',', ''), '0'), ',').'%')
+            ->implode(' · ');
+    }
+
+    /** `value` segue la prima voce del prodotto, per gli elenchi che mostrano una sola percentuale. */
+    public function allineaPercentualePrincipale(): void
+    {
+        $ordine = array_keys(VociProvvigionali::per($this->tipoprodotto?->name) ?: VociProvvigionali::tutte());
+        $voci = $this->voci()->get()->sortBy(fn ($voce) => array_search($voce->voce, $ordine, true));
+
+        if ($voci->isNotEmpty() && (float) $voci->first()->percentuale !== (float) $this->value) {
+            $this->forceFill(['value' => $voci->first()->percentuale])->save();
+        }
     }
 
     public function assegnazioni(): HasMany

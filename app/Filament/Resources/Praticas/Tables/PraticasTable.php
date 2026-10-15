@@ -6,6 +6,7 @@ use App\Filament\Resources\Praticas\PraticaResource;
 use App\Models\Pratica;
 use App\Services\CambioStatoPratica;
 use App\Services\Istruttoria\CompletezzaDocumentale;
+use App\Support\CompensoMediazione;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
@@ -55,6 +56,11 @@ class PraticasTable
                         return $presenti >= $totale ? 'success' : 'warning';
                     })
                     ->tooltip('Documenti obbligatori presenti sul totale richiesto dal prodotto'),
+                TextColumn::make('mediazione')
+                    ->label('Mediazione')
+                    ->state(fn (Pratica $record): string => CompensoMediazione::formatta($record->mediation_fee_amount, $record->mediation_fee_percent, $record->amount))
+                    ->tooltip('Importo di mediazione chiesto al cliente')
+                    ->toggleable(),
                 TextColumn::make('tipoprodotto.name')
                     ->label('Tipo prodotto')
                     ->sortable(),

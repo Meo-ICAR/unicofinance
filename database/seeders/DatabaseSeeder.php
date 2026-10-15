@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
             ChecklistPerfezionamentoSeeder::class,
             FascicoloCqMappingSeeder::class,
             ListiniProvvigionaliSeeder::class,
+            ListiniReteSeeder::class,
         ]);
     }
 }

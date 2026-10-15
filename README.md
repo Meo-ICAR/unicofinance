@@ -34,6 +34,7 @@ Gestionale per **mediatori creditizi**: raccolta della documentazione, istruttor
 **Dashboard.**
 - *Admin (istruttori):* Da prendere in carico (pratiche senza `employee_id`, con presa in carico), Pratiche in corso, Documenti da seguire, Documenti in scadenza, In attesa della banca, Documenti in firma. I filtri sono preimpostati sull'istruttore collegato all'utente (`employees.user_id`); «Da prendere in carico» mostra di default solo le pratiche inserite negli ultimi 30 giorni.
 - *Agenti:* Preventivi da perfezionare (si riprendono nella Simulazione con `?preventivo=ID`, oppure si eliminano anche in blocco insieme alla pratica in stato PREVENTIVO), Le mie pratiche in corso, Documenti da consegnare.
+- *Agenti, Scadenziario:* i documenti delle pratiche su cui l'agente matura provvigioni, sue o dei suoi collaboratori (escluse declinate e sospese). Di default solo quelli alla firma (tipo da firmare e non ancora firmato); filtri per pratiche dirette o dei collaboratori e per scaduti o in scadenza.
 - **Una pratica presa in carico da un istruttore (`employee_id`) non è più modificabile dall'agente**: sparisce l'azione «Perfeziona» e la pagina di modifica risponde 403.
 
 ## Funzioni principali
@@ -69,6 +70,9 @@ Gestionale per **mediatori creditizi**: raccolta della documentazione, istruttor
   - **Soci e titolari effettivi** in `client_relations`, con ruolo (legale rappresentante, amministratore, socio, titolare effettivo, referente, garante) e quota. Il PEP si verifica sul cliente collegato.
   - La scheda Verifiche (AML, KYC, consensi) vale anche per le società, senza il flag PEP.
   - **Contatti** (`ContattiSocieta`): le comunicazioni vanno al referente, se manca al legale rappresentante, se manca alla società. La firma OTP spetta sempre al legale rappresentante: se non ha il cellulare, la pratica mostra un avviso.
+
+### Listini provvigionali della rete
+I listini (`listini_provvigionali`) hanno una percentuale per **voce di compenso** (`listini_provvigionali_voci`): standard e special per cessione e delega; banca, mediazione e polizza per il mutuo; banca per il prestito; consulenza per l'aziendale; premio e brokeraggio per le polizze. `ListiniReteSeeder` li ricava dalla presentazione «Struttura Rete distributiva»: livelli Consulente del credito, Special e Premium (pratiche dirette) e, come coordinatore, le over provvigionali del Premium con coordinamento e del Supervisore. Il Supervisore sulle pratiche dirette ha la tabella del Premium. I listini che non sono nella presentazione (sede, lead, rete, TFS) restano con il valore di prova.
 
 ### Istituti e produttori
 - **Istituto:**

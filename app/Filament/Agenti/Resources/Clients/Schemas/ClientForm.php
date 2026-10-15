@@ -3,8 +3,11 @@
 namespace App\Filament\Agenti\Resources\Clients\Schemas;
 
 use App\Filament\Agenti\Resources\Pratiche\Schemas\ClienteApiActions;
+use App\Filament\Resources\Clients\Schemas\ClientForm as AdminClientForm;
 use App\Filament\Resources\Clients\Schemas\KycQuestionnaireForm;
+use App\Models\Client;
 use App\Services\CodiceFiscaleDecoder;
+use App\Services\Istruttoria\DatoreDiLavoro;
 use Closure;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
@@ -60,6 +63,15 @@ class ClientForm
             Select::make('sex')->label('Sesso')->options(['M' => 'M', 'F' => 'F']),
             TextInput::make('citizenship')->label('Cittadinanza')->maxLength(60),
             TextInput::make('salary')->label('Reddito')->numeric()->prefix('€'),
+            // Cessione e delega: il datore di lavoro eredita il tipo di amministrazione della pratica.
+            Select::make('employer_id')
+                ->label('Datore di lavoro')
+                ->options(fn (): array => Client::query()->where('is_person', false)->orderBy('name')->limit(200)->pluck('name', 'id')->all())
+                ->getSearchResultsUsing(fn (string $search): array => Client::query()->where('is_person', false)->where('name', 'like', "%{$search}%")->limit(50)->pluck('name', 'id')->all())
+                ->searchable()
+                ->createOptionForm(AdminClientForm::datoreDiLavoroForm())
+                ->createOptionUsing(fn (array $data, ?Client $record): int => (int) app(DatoreDiLavoro::class)->crea($record, $data)->getKey())
+                ->visible(fn (?Client $record): bool => app(DatoreDiLavoro::class)->richiesto($record)),
             Section::make('Valutazione rischio (AML)')
                 ->key('valutazioneAml')
                 ->columns(3)

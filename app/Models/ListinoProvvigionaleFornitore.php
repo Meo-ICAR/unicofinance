@@ -8,8 +8,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /** Assegnazione di un listino a un produttore (tabella pivot). */
 class ListinoProvvigionaleFornitore extends Model
 {
-    /** Database dell'app: le relazioni dal core altrimenti erediterebbero la connessione core. */
-    protected $connection = 'mysql';
+    /** Database dell'app (non quello del core da cui parte una relazione). */
+    public function getConnectionName(): ?string
+    {
+        return config('database.default');
+    }
 
     protected $table = 'fornitori_listini_provvigionali';
 
