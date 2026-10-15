@@ -178,6 +178,42 @@
 
         @if ($fase === 'firma')
             {{ $this->moduliForm }}
+
+            <x-filament::section heading="Invio in istruttoria" class="mt-6">
+                @if ($this->moduliFirmati())
+                    <p class="text-sm">
+                        Moduli firmati. Si crea il plico con i documenti e la modulistica firmata e si avvisa l'istruttoria.
+                    </p>
+                    <div class="mt-4">
+                        <x-filament::button type="button" color="success" wire:click="inviaInIstruttoria" icon="heroicon-o-paper-airplane" wire:loading.attr="disabled">
+                            Crea il plico e invia in istruttoria
+                        </x-filament::button>
+                    </div>
+                @else
+                    <p class="text-sm text-gray-600 dark:text-gray-300">
+                        Disponibile quando tutti i moduli sono firmati dal cliente.
+                    </p>
+                @endif
+            </x-filament::section>
+        @endif
+
+        @if ($fase === 'istruttoria' && $esitoInvio)
+            <x-filament::section heading="Pratica in istruttoria" class="mt-6">
+                <ul class="list-disc space-y-1 pl-5 text-sm">
+                    <li>Stato: <strong>{{ $statoPratica }}</strong></li>
+                    <li>Plico creato: <strong>{{ $esitoInvio['plico'] }}</strong></li>
+                    @if ($esitoInvio['inviata'])
+                        <li>Avviso inviato all'istruttoria ({{ implode(', ', $esitoInvio['destinatari']) }}).</li>
+                    @elseif ($esitoInvio['simulazione'])
+                        <li>Dimostrazione: nessuna email inviata (indirizzo di prova non configurato).</li>
+                    @else
+                        <li>Nessun destinatario configurato per l'avviso all'istruttoria.</li>
+                    @endif
+                </ul>
+                <p class="mt-3 text-sm text-gray-600 dark:text-gray-300">
+                    La pratica compare ora tra quelle da prendere in carico: da qui la gestisce l'istruttoria.
+                </p>
+            </x-filament::section>
         @endif
     @endif
 </x-filament-panels::page>

@@ -11,6 +11,7 @@ use App\Models\FinancingQuote;
 use App\Models\KycQuestionnaire;
 use App\Models\User;
 use App\Services\CodiceFiscaleDecoder;
+use App\Services\Istruttoria\InvioInIstruttoria;
 use App\Services\Preventivazione\PracticeFinalizer;
 use App\Services\Preventivazione\QuotationService;
 use App\Services\Preventivazione\QuoteUnavailable;
@@ -46,6 +47,7 @@ use Throwable;
 use Unico\Core\Documents\IntakeResult;
 use Unico\Core\Documents\PracticeDocumentIntake;
 use Unico\Core\Documents\PracticeDocumentRequestMailer;
+use Unico\Core\Documents\PracticeSignaturePackage;
 use Unico\Core\Documents\PracticeTaskDocuments;
 use Unico\Core\Filament\Schemas\PracticeDocumentsUpload;
 use Unico\Core\Filament\Schemas\PracticeSignaturePackageForm;
@@ -103,7 +105,7 @@ class Simulazione extends Page
 
     public ?string $errorePreventivo = null;
 
-    /** preventivo | informativa | contatti | perfezionare | cliente | firma */
+    /** preventivo | informativa | contatti | perfezionare | cliente | firma | istruttoria */
     public ?string $fase = null;
 
     public ?int $quoteId = null;
@@ -113,6 +115,13 @@ class Simulazione extends Page
     public ?string $codicePratica = null;
 
     public ?string $statoPratica = null;
+
+    /**
+     * Esito dell'invio in istruttoria: nome del plico, destinatari dell'avviso e se l'email è partita.
+     *
+     * @var array{plico: string, destinatari: list<string>, inviata: bool, simulazione: bool}|null
+     */
+    public ?array $esitoInvio = null;
 
     /**
      * Informativa privacy da scaricare e far firmare al cliente prima di ogni dato personale.
@@ -1104,6 +1113,45 @@ class Simulazione extends Page
         $this->statoPratica = 'FASCICOLO COMPLETO';
         $this->fase = 'firma';
         $this->moduliForm->fill(['banca' => $pratica->clienti_id]);
+    }
+
+    /** Tutta la modulistica è firmata (o non ha un modulo da stampare qui): la pratica può andare in istruttoria. */
+    public function moduliFirmati(): bool
+    {
+        $pratica = FinancingQuote::query()->find($this->quoteId)?->pratica;
+
+        if ($pratica === null) {
+            return false;
+        }
+
+        $stati = app(PracticeSignaturePackage::class)->status($pratica, $this->tipiModulistica());
+
+        return $stati !== [] && collect($stati)->every(fn (array $stato): bool => in_array($stato['state'], ['firmato', 'senza_modulo'], true));
+    }
+
+    /** Plico del fascicolo, passaggio allo stato «INVIO IN ISTRUTTORIA» e email all'istruttoria. */
+    public function inviaInIstruttoria(InvioInIstruttoria $invio): void
+    {
+        $pratica = FinancingQuote::query()->find($this->quoteId)?->pratica;
+
+        if ($this->fase !== 'firma' || $pratica === null || ! $this->moduliFirmati()) {
+            Notification::make()->title('Firma i moduli prima di inviare in istruttoria')->warning()->send();
+
+            return;
+        }
+
+        try {
+            $esito = $invio->invia($pratica, 'agenti');
+        } catch (Throwable $e) {
+            Notification::make()->title('Invio in istruttoria non riuscito')->body($e->getMessage())->danger()->send();
+
+            return;
+        }
+
+        $this->esitoInvio = ['plico' => $esito['plico']->name, 'destinatari' => $esito['destinatari'], 'inviata' => $esito['inviata'], 'simulazione' => $esito['simulazione']];
+        $this->statoPratica = InvioInIstruttoria::STATO;
+        $this->fase = 'istruttoria';
+        Notification::make()->title('Pratica inviata in istruttoria')->body('Plico creato'.($esito['inviata'] ? ' e avviso inviato all\'istruttoria.' : '.'))->success()->send();
     }
 
     /**

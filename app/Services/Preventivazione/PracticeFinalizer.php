@@ -93,7 +93,7 @@ class PracticeFinalizer
         return $pratica;
     }
 
-    private function status(string $productName, string $code): PraticaStato
+    public function status(string $productName, string $code): PraticaStato
     {
         return PraticaStato::query()->firstOrCreate(
             ['codice' => $code, 'tipo_finanziamento' => $productName],

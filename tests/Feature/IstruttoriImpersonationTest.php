@@ -1,0 +1,72 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Filament\Resources\Istruttori\Pages\ListIstruttori;
+use App\Models\User;
+use App\Services\Istruttoria\IstruttoreImpersonationService;
+use Filament\Actions\Testing\TestAction;
+use Filament\Facades\Filament;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
+use Tests\TestCase;
+use Unico\Core\Models\Employee;
+
+class IstruttoriImpersonationTest extends TestCase
+{
+    use RefreshDatabase;
+
+    /**
+     * @var array<int, string>
+     */
+    protected array $connectionsToTransact = [null, 'core'];
+
+    private function istruttore(string $nome, bool $conUtente = true, string $tipo = 'istruttore'): Employee
+    {
+        $utente = $conUtente ? User::factory()->create(['role' => 'employee']) : null;
+
+        return Employee::query()->create(['name' => $nome, 'employee_types' => $tipo, 'user_id' => $utente?->id, 'is_active' => true]);
+    }
+
+    public function test_an_administrator_lists_the_instructors_and_enters_as_one_of_them(): void
+    {
+        Filament::setCurrentPanel('admin');
+        $admin = User::factory()->create(['role' => 'super_admin']);
+        $this->actingAs($admin);
+        $istruttore = $this->istruttore('Istruttore Uno');
+        $senzaUtente = $this->istruttore('Istruttore Due', false);
+        $altro = $this->istruttore('Commerciale Tre', true, 'commerciale');
+
+        Livewire::test(ListIstruttori::class)
+            ->assertCanSeeTableRecords([$istruttore, $senzaUtente])
+            ->assertCanNotSeeTableRecords([$altro])
+            ->assertActionVisible(TestAction::make('impersonateIstruttore')->table($istruttore))
+            ->assertActionHidden(TestAction::make('impersonateIstruttore')->table($senzaUtente))
+            ->callAction(TestAction::make('impersonateIstruttore')->table($istruttore));
+
+        $this->assertSame($istruttore->user_id, auth()->id());
+        $this->assertTrue(app(IstruttoreImpersonationService::class)->isImpersonating());
+        $this->assertSame('Istruttore Uno', app(IstruttoreImpersonationService::class)->nome());
+
+        // La dashboard mostra il banner e «Da prendere in carico» filtra sul dipendente impersonificato.
+        $this->get('/admin')->assertOk()->assertSee('Stai visualizzando il pannello come istruttore')->assertSee('Istruttore Uno');
+
+        $this->post(route('istruttori.impersonation.leave'))->assertRedirect();
+
+        $this->assertSame($admin->id, auth()->id());
+        $this->assertFalse(app(IstruttoreImpersonationService::class)->isImpersonating());
+    }
+
+    public function test_only_administrators_can_impersonate_and_not_themselves(): void
+    {
+        $istruttore = $this->istruttore('Istruttore Uno');
+        $servizio = app(IstruttoreImpersonationService::class);
+
+        $this->assertFalse($servizio->canImpersonate(User::factory()->create(['role' => 'employee']), $istruttore));
+        $this->assertFalse($servizio->canImpersonate(null, $istruttore));
+        $this->assertFalse($servizio->canImpersonate(User::query()->find($istruttore->user_id), $istruttore));
+        $this->assertTrue($servizio->canImpersonate(User::factory()->create(['role' => 'admin']), $istruttore));
+
+        $this->post(route('istruttori.impersonation.leave'))->assertForbidden();
+    }
+}
