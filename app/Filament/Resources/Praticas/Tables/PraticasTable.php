@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Praticas\Tables;
 use App\Filament\Resources\Praticas\PraticaResource;
 use App\Models\Pratica;
 use App\Services\CambioStatoPratica;
+use App\Services\Istruttoria\CompletezzaDocumentale;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
@@ -36,6 +37,24 @@ class PraticasTable
                     ->label('Codice banca')
                     ->searchable()
                     ->placeholder('—'),
+                TextColumn::make('documentazione')
+                    ->label('Documenti')
+                    ->state(function (Pratica $record): string {
+                        $completezza = app(CompletezzaDocumentale::class)->per($record);
+
+                        return $completezza['totale'] === 0 ? '—' : $completezza['presenti'].'/'.$completezza['totale'];
+                    })
+                    ->badge()
+                    ->color(function (string $state): string {
+                        if ($state === '—') {
+                            return 'gray';
+                        }
+
+                        [$presenti, $totale] = array_map('intval', explode('/', $state));
+
+                        return $presenti >= $totale ? 'success' : 'warning';
+                    })
+                    ->tooltip('Documenti obbligatori presenti sul totale richiesto dal prodotto'),
                 TextColumn::make('tipoprodotto.name')
                     ->label('Tipo prodotto')
                     ->sortable(),
@@ -138,8 +157,21 @@ class PraticasTable
             ->fillForm(fn (Pratica $record): array => ['stato' => $record->pratica_stato_id])
             ->schema(fn (Pratica $record): array => self::campiCambioStato($record))
             ->action(function (Pratica $record, array $data): void {
-                app(CambioStatoPratica::class)->cambia($record, (int) $data['stato'], $data['motivazione'], 'admin');
+                $servizio = app(CambioStatoPratica::class);
+                $mancanti = $servizio->documentiMancanti($record, (int) $data['stato']);
+
+                if ($mancanti?->isNotEmpty() && $servizio->documentazioneBloccante()) {
+                    Notification::make()->title('Documentazione incompleta')->body('Mancano: '.$servizio->messaggioMancanti($mancanti))->danger()->send();
+
+                    return;
+                }
+
+                $servizio->cambia($record, (int) $data['stato'], $data['motivazione'], 'admin');
                 Notification::make()->title('Stato aggiornato')->success()->send();
+
+                if ($mancanti?->isNotEmpty()) {
+                    Notification::make()->title('Documentazione incompleta')->body('Mancano: '.$servizio->messaggioMancanti($mancanti))->warning()->send();
+                }
             });
     }
 
@@ -151,8 +183,30 @@ class PraticasTable
             ->modalHeading('Cambia stato delle pratiche selezionate')
             ->schema(fn (): array => self::campiCambioStato())
             ->action(function (Collection $records, array $data): void {
-                $records->each(fn (Pratica $pratica) => app(CambioStatoPratica::class)->cambia($pratica, (int) $data['stato'], $data['motivazione'], 'admin'));
-                Notification::make()->title($records->count().' pratiche aggiornate')->success()->send();
+                $servizio = app(CambioStatoPratica::class);
+                $incomplete = 0;
+                $aggiornate = 0;
+
+                foreach ($records as $pratica) {
+                    $mancanti = $servizio->documentiMancanti($pratica, (int) $data['stato']);
+
+                    if ($mancanti?->isNotEmpty()) {
+                        $incomplete++;
+
+                        if ($servizio->documentazioneBloccante()) {
+                            continue;
+                        }
+                    }
+
+                    $servizio->cambia($pratica, (int) $data['stato'], $data['motivazione'], 'admin');
+                    $aggiornate++;
+                }
+
+                Notification::make()->title($aggiornate.' pratiche aggiornate')->success()->send();
+
+                if ($incomplete > 0) {
+                    Notification::make()->title($incomplete.' pratiche con documentazione incompleta')->body($servizio->documentazioneBloccante() ? 'Non sono state aggiornate.' : 'Aggiornate comunque: controlla i documenti mancanti.')->warning()->send();
+                }
             })
             ->deselectRecordsAfterCompletion();
     }

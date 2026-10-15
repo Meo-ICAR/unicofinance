@@ -11,6 +11,10 @@ Gestionale per **mediatori creditizi**: raccolta della documentazione, istruttor
 
 **La documentazione è il fulcro.** In ogni risorsa che ha documenti, la scheda Documenti è la prima. Un test (`DocumentazionePrimaTest`) controlla che resti così.
 
+- **Esito dell'istruttoria.** Dalla scheda Documenti di una pratica, su un documento o su una selezione, si assegna l'esito: OK, Respinto, Anomalo, N/A o Integrativo (richiesto in più dalla banca). Per respinto, anomalo e integrativo la nota è obbligatoria; restano registrati chi ha deciso e quando. Anomalo e integrativo continuano a essere sollecitati.
+- **Completezza.** L'elenco pratiche mostra la colonna «Documenti» (obbligatori presenti sul totale), calcolata da `CompletezzaDocumentale`: check list del prodotto, per il gruppo di tipologia lavorativa del richiedente, più il fascicolo da firmare, filtrati per banca. Un requisito è soddisfatto da un documento caricato, OK, provvisorio o N/A.
+- **Stati che richiedono la documentazione completa** (`config/istruttoria.php`: FASCICOLO COMPLETO, INVIO IN ISTRUTTORIA, Caricata Banca). Per ora il cambio di stato **non è bloccante**: la pratica passa e compare un avviso con i documenti che mancano, così si può recuperare lo storico. Con `ISTRUTTORIA_DOCUMENTAZIONE_BLOCCANTE=true` il cambio viene rifiutato.
+
 ## Architettura
 
 - **Laravel 13 + Filament 5.** Si usano solo form, tabelle e azioni Filament, senza componenti Livewire scritti a mano.

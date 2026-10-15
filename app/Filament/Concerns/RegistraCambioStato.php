@@ -5,6 +5,7 @@ namespace App\Filament\Concerns;
 use App\Services\CambioStatoPratica;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Textarea;
+use Filament\Notifications\Notification;
 use Illuminate\Contracts\Support\Htmlable;
 
 /**
@@ -27,10 +28,29 @@ trait RegistraCambioStato
     {
         $this->statoPrecedenteId = $this->getRecord()->pratica_stato_id;
 
+        if ($this->statoCambiato() && $this->documentazioneFermaIlCambio()) {
+            $this->halt();
+        }
+
         if ($this->statoCambiato() && blank($this->motivoCambioStato)) {
             $this->mountAction('motivoCambioStato');
             $this->halt();
         }
+    }
+
+    /** Con la documentazione bloccante attiva, uno stato che la richiede non si raggiunge se mancano documenti obbligatori. */
+    private function documentazioneFermaIlCambio(): bool
+    {
+        $servizio = app(CambioStatoPratica::class);
+        $mancanti = $servizio->documentiMancanti($this->getRecord(), $this->data['pratica_stato_id'] ?? null);
+
+        if ($mancanti?->isNotEmpty() && $servizio->documentazioneBloccante()) {
+            Notification::make()->title('Documentazione incompleta')->body('Mancano: '.$servizio->messaggioMancanti($mancanti))->danger()->send();
+
+            return true;
+        }
+
+        return false;
     }
 
     private function statoCambiato(): bool
@@ -42,7 +62,13 @@ trait RegistraCambioStato
     protected function registraCambioStato(): void
     {
         $pratica = $this->getRecord();
-        $date = app(CambioStatoPratica::class)->registra($pratica, $this->statoPrecedenteId, $pratica->pratica_stato_id, $this->motivoCambioStato, $this->origineCambioStato());
+        $servizio = app(CambioStatoPratica::class);
+
+        if ((string) $this->statoPrecedenteId !== (string) $pratica->pratica_stato_id && ($mancanti = $servizio->documentiMancanti($pratica, $pratica->pratica_stato_id))?->isNotEmpty()) {
+            Notification::make()->title('Documentazione incompleta')->body('Mancano: '.$servizio->messaggioMancanti($mancanti))->warning()->send();
+        }
+
+        $date = $servizio->registra($pratica, $this->statoPrecedenteId, $pratica->pratica_stato_id, $this->motivoCambioStato, $this->origineCambioStato());
 
         if ($date !== []) {
             $this->refreshFormData($date);

@@ -534,7 +534,7 @@ XML;
 
         $names = array_column($page->get('documentiRichiesti'), 'name');
         $this->assertContains('Visura camerale', $names);
-        $this->assertContains('Bilancio 2024 depositato', $names);
+        $this->assertContains('Bilancio anno precedente depositato', $names);
         $this->assertContains('Centrale Rischi ultimi 36 mesi', $names);
         $this->assertNotContains('Contratto di finanziamento', $names);
         $this->assertNotContains('Races VERS. 06_2025 - Fascicolo completo Corporate compilabile', $names);
