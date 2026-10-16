@@ -35,11 +35,11 @@ class ClientForm
     public static function components(Closure $isPerson, bool $withScreening = true): array
     {
         return [
-            Grid::make(['default' => 1, 'lg' => 2])
+            Grid::make(['default' => 1, 'md' => 2])
                 ->columnSpanFull()
                 ->schema([
                     Section::make('Anagrafica')
-                        ->columns(2)
+                        ->columns(['default' => 1, 'md' => 2])
                         ->schema([
                             TextInput::make('name')->label('Cognome / ragione sociale')->required()->maxLength(255),
                             TextInput::make('first_name')->label('Nome')->maxLength(255),
@@ -67,7 +67,7 @@ class ClientForm
                             Toggle::make('is_person')->label('Persona fisica')->live(),
                         ]),
                     Section::make('Dati anagrafici')
-                        ->columns(2)
+                        ->columns(['default' => 1, 'md' => 2])
                         ->schema([
                             DatePicker::make('birth_date')->label('Data di nascita')->native(false)->displayFormat('d/m/Y'),
                             TextInput::make('birth_place')->label('Luogo di nascita')->maxLength(100),
@@ -76,7 +76,7 @@ class ClientForm
                         ]),
                 ]),
             Section::make('Lavoro e reddito')
-                ->columns(2)
+                ->columns(['default' => 1, 'md' => 2, 'xl' => 3])
                 ->columnSpanFull()
                 ->schema([
                     TextInput::make('salary')->label('Reddito')->numeric()->prefix('€'),
@@ -92,7 +92,7 @@ class ClientForm
                 ]),
             Section::make('Valutazione rischio (AML)')
                 ->key('valutazioneAml')
-                ->columns(4)
+                ->columns(['default' => 1, 'md' => 2, 'xl' => 4])
                 ->columnSpanFull()
                 ->headerActions([
                     ClienteApiActions::verificaPep(),
@@ -116,7 +116,7 @@ class ClientForm
                 ]),
             Section::make('KYC (adeguata verifica)')
                 ->relationship('questionarioKyc')
-                ->columns(3)
+                ->columns(['default' => 1, 'md' => 2, 'xl' => 3])
                 ->columnSpanFull()
                 ->schema([
                     KycQuestionnaireForm::financingPurpose($isPerson),

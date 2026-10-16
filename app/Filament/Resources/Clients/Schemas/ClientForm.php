@@ -42,7 +42,7 @@ class ClientForm
         return $schema
             ->components([
                 Section::make()
-                    ->columns(4)
+                    ->columns(['default' => 1, 'md' => 2, 'xl' => 4])
                     ->schema([
                         TextInput::make('name')
                             ->label(fn (Get $get): string => $get('is_person') ? 'Cognome' : 'Ragione sociale')
@@ -91,11 +91,11 @@ class ClientForm
                         Tab::make('Anagrafica')
                             ->icon(Heroicon::OutlinedUser)
                             ->schema([
-                                Grid::make(['default' => 1, 'lg' => 2])
+                                Grid::make(['default' => 1, 'md' => 2])
                                     ->columnSpanFull()
                                     ->schema([
                                         Section::make('Contatti')
-                                            ->columns(2)
+                                            ->columns(['default' => 1, 'md' => 2])
                                             ->schema([
                                                 TextInput::make('email')->label('Email')->email(),
                                                 TextInput::make('phone')->label('Telefono')->tel(),
@@ -103,7 +103,7 @@ class ClientForm
                                                 TextInput::make('website')->label('Sito web')->maxLength(50)->visible(fn (Get $get): bool => ! $get('is_person')),
                                             ]),
                                         Section::make('Dati anagrafici')
-                                            ->columns(2)
+                                            ->columns(['default' => 1, 'md' => 2])
                                             ->visible(fn (Get $get, $livewire): bool => (bool) $get('is_person') && self::shows(FinancingSection::ClienteDatiNascita, $livewire))
                                             ->schema([
                                                 DatePicker::make('birth_date')->label('Data di nascita')->native(false)->displayFormat('d/m/Y'),
@@ -117,11 +117,11 @@ class ClientForm
                             ->icon(Heroicon::OutlinedBriefcase)
                             ->visible(fn (Get $get): bool => (bool) $get('is_person'))
                             ->schema([
-                                Grid::make(['default' => 1, 'lg' => 2])
+                                Grid::make(['default' => 1, 'md' => 2])
                                     ->columnSpanFull()
                                     ->schema([
                                         Section::make('Rapporto di lavoro')
-                                            ->columns(2)
+                                            ->columns(['default' => 1, 'md' => 2])
                                             ->schema([
                                                 Select::make('employment_typology')
                                                     ->label('Tipologia')
@@ -150,7 +150,7 @@ class ClientForm
                                                 TextInput::make('profession')->label('Professione'),
                                             ]),
                                         Section::make('Reddito e coordinate')
-                                            ->columns(2)
+                                            ->columns(['default' => 1, 'md' => 2, 'xl' => 3])
                                             ->schema([
                                                 TextInput::make('salary')
                                                     ->label('Reddito netto mensile')
@@ -174,7 +174,7 @@ class ClientForm
                             ->visible(fn (Get $get, ?Client $record, $livewire): bool => ! $get('is_person') && (self::shows(FinancingSection::ClienteDatiSocietari, $livewire) || self::soloDatore($record)))
                             ->schema([
                                 Section::make('Società')
-                                    ->columns(4)
+                                    ->columns(['default' => 1, 'md' => 2, 'xl' => 4])
                                     ->schema([
                                         Select::make('legal_representative_id')
                                             ->label('Legale rappresentante')
@@ -195,7 +195,7 @@ class ClientForm
                                         DatePicker::make('company_started_at')->label('Inizio attività')->native(false)->displayFormat('d/m/Y')->hidden(fn (?Client $record): bool => self::soloDatore($record)),
                                         TextInput::make('iban')->label('IBAN')->maxLength(34)->hidden(fn (?Client $record): bool => self::soloDatore($record)),
                                     ]),
-                                Grid::make(['default' => 1, 'lg' => 2])
+                                Grid::make(['default' => 1, 'md' => 2])
                                     ->columnSpanFull()
                                     ->schema([
                                         // Richiesta, ritiro e notifica del benestare: solo per chi è datore di lavoro di almeno un cliente.
@@ -209,7 +209,7 @@ class ClientForm
                                             ]),
                                         Section::make('Ultimo bilancio')
                                             ->hidden(fn (?Client $record): bool => self::soloDatore($record))
-                                            ->columns(3)
+                                            ->columns(['default' => 1, 'md' => 2, 'xl' => 3])
                                             ->schema([
                                                 TextInput::make('balance_year')->label('Anno')->numeric(),
                                                 TextInput::make('share_capital')->label('Capitale sociale')->numeric()->prefix('€'),
@@ -224,7 +224,7 @@ class ClientForm
                             ->hidden(fn (?Client $record): bool => self::soloDatore($record))
                             ->schema([
                                 Section::make('Valutazione rischio')
-                                    ->columns(4)
+                                    ->columns(['default' => 1, 'md' => 2, 'xl' => 4])
                                     ->headerActions([
                                         Action::make('kyc')
                                             ->label('KYC')
@@ -254,7 +254,7 @@ class ClientForm
                                 Section::make('KYC (adeguata verifica)')
                                     ->extraAttributes(['id' => 'kyc-adeguata-verifica'])
                                     ->relationship('questionarioKyc')
-                                    ->columns(3)
+                                    ->columns(['default' => 1, 'md' => 2, 'xl' => 3])
                                     ->schema([
                                         KycQuestionnaireForm::financingPurpose($isPerson),
                                         KycQuestionnaireForm::riskLevel(),
@@ -263,7 +263,7 @@ class ClientForm
                                         KycQuestionnaireForm::personSection($isPerson),
                                     ]),
                                 Section::make('Consensi privacy')
-                                    ->columns(4)
+                                    ->columns(['default' => 1, 'md' => 2, 'xl' => 4, '2xl' => 6])
                                     ->schema([
                                         DateTimePicker::make('general_consent_at')->label('Consenso base'),
                                         DateTimePicker::make('privacy_policy_read_at')->label('Informativa letta'),

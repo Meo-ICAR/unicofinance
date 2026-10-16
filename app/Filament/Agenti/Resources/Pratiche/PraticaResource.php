@@ -107,7 +107,7 @@ class PraticaResource extends Resource
         return $schema->components([
             Section::make('Richiedente')
                 ->icon('heroicon-o-user')
-                ->columns(4)
+                ->columns(['default' => 1, 'md' => 2, 'xl' => 4])
                 ->columnSpanFull()
                 ->schema([
                     TextInput::make('cognome_cliente')->label('Cognome')->maxLength(191),
@@ -164,7 +164,7 @@ class PraticaResource extends Resource
                 ]),
             Section::make('Prodotto richiesto')
                 ->icon('heroicon-o-banknotes')
-                ->columns(4)
+                ->columns(['default' => 1, 'md' => 2, 'xl' => 4, '2xl' => 6])
                 ->columnSpanFull()
                 ->schema([
                     Toggle::make('is_notowned')->label('Impegno di terzi')->inline(false),
@@ -228,7 +228,7 @@ class PraticaResource extends Resource
                     Tab::make('Dettagli')
                         ->icon('heroicon-o-clipboard-document-list')
                         ->schema([
-                            Grid::make(['default' => 1, 'xl' => 3])
+                            Grid::make(['default' => 1, 'lg' => 3])
                                 ->columnSpanFull()
                                 ->schema([
                                     Section::make('Istruttoria')
@@ -243,8 +243,8 @@ class PraticaResource extends Resource
                                             TextInput::make('denominazione_agente')->label('Agente')->maxLength(191),
                                         ]),
                                     Section::make('Avanzamento')
-                                        ->columns(['default' => 1, 'md' => 2, '2xl' => 3])
-                                        ->columnSpan(['xl' => 2])
+                                        ->columns(['default' => 1, 'md' => 2, 'xl' => 3])
+                                        ->columnSpan(['lg' => 2])
                                         ->schema([
                                             DatePicker::make('presa_in_carico_at')->label('Data presa in carico')->native(false)->displayFormat('d/m/Y'),
                                             DatePicker::make('lavorazione_at')->label('Data lavorazione')->native(false)->displayFormat('d/m/Y'),
@@ -255,7 +255,7 @@ class PraticaResource extends Resource
                                         ]),
                                 ]),
                             Section::make('Importi')
-                                ->columns(2)
+                                ->columns(['default' => 1, 'md' => 2])
                                 ->columnSpanFull()
                                 ->schema([
                                     TextInput::make('net')->label('Importo netto')->numeric()->prefix('€'),

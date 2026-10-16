@@ -46,7 +46,7 @@ class PraticaForm
                             ->icon(Heroicon::OutlinedUser)
                             ->schema([
                                 Section::make('Richiedente')
-                                    ->columns(4)
+                                    ->columns(['default' => 1, 'md' => 2, 'xl' => 4])
                                     ->schema([
                                         Toggle::make('richiedente_persona_fisica')
                                             ->label('Persona fisica')
@@ -83,7 +83,7 @@ class PraticaForm
                                             ]),
                                     ]),
                                 Section::make('Prodotto richiesto')
-                                    ->columns(4)
+                                    ->columns(['default' => 1, 'md' => 2, 'xl' => 4, '2xl' => 6])
                                     ->schema([
                                         Toggle::make('is_notowned')->label('Impegno di terzi')->inline(false),
                                         Select::make('tipoprodotto_id')
@@ -123,7 +123,7 @@ class PraticaForm
                         Tab::make('Dati di lavorazione')
                             ->icon(Heroicon::OutlinedClipboardDocumentCheck)
                             ->schema([
-                                Grid::make(['default' => 1, 'xl' => 3])
+                                Grid::make(['default' => 1, 'lg' => 3])
                                     ->columnSpanFull()
                                     ->schema([
                                         Section::make('Istruttoria')
@@ -148,8 +148,8 @@ class PraticaForm
                                                 TextInput::make('assicurazione')->label('Assicurazione'),
                                             ]),
                                         Section::make('Avanzamento')
-                                            ->columns(['default' => 1, 'md' => 2, '2xl' => 3])
-                                            ->columnSpan(['xl' => 2])
+                                            ->columns(['default' => 1, 'md' => 2, 'xl' => 3])
+                                            ->columnSpan(['lg' => 2])
                                             ->schema([
                                                 DatePicker::make('presa_in_carico_at')->label('Data presa in carico'),
                                                 DatePicker::make('lavorazione_at')->label('Data lavorazione'),
@@ -170,17 +170,17 @@ class PraticaForm
                         Tab::make('Dati finanziari')
                             ->icon(Heroicon::OutlinedBanknotes)
                             ->schema([
-                                Grid::make(['default' => 1, 'xl' => 2])
+                                Grid::make(['default' => 1, 'md' => 2])
                                     ->columnSpanFull()
                                     ->schema([
                                         Section::make('Importi')
-                                            ->columns(2)
+                                            ->columns(['default' => 1, 'md' => 2])
                                             ->schema([
                                                 TextInput::make('net')->label('Importo netto')->numeric()->prefix('€'),
                                                 TextInput::make('erogato')->label('Erogato')->numeric()->prefix('€'),
                                             ]),
                                         Section::make('Mediazione e costi')
-                                            ->columns(2)
+                                            ->columns(['default' => 1, 'md' => 2])
                                             ->schema([
                                                 TextInput::make('mediation_fee_percent')->label('Mediazione %')->numeric()->suffix('%')->live(onBlur: true),
                                                 TextInput::make('mediation_fee_amount')->label('Mediazione €')->numeric()->prefix('€')->live(onBlur: true),
