@@ -86,6 +86,15 @@ class ClienteSchedaTabsTest extends TestCase
             ->assertNotified();
     }
 
+    public function test_a_new_natural_person_gets_residence_and_domicile_addresses(): void
+    {
+        $persona = Client::query()->create(['name' => 'Viola', 'tax_code' => 'VLILGI80A01H501U', 'is_person' => true]);
+        $societa = Client::query()->create(['name' => 'Viola Srl', 'tax_code' => '12485671007', 'is_person' => false]);
+
+        $this->assertSame(['Residenza', 'Domicilio'], $persona->addresses()->with('addressType')->orderBy('id')->get()->map(fn ($indirizzo) => $indirizzo->addressType->name)->all());
+        $this->assertSame(0, $societa->addresses()->count());
+    }
+
     public function test_the_latest_practice_is_found_even_without_an_insertion_date(): void
     {
         $persona = Client::query()->create(['name' => 'Gialli', 'tax_code' => 'GLLLGI80A01H501U', 'is_person' => true]);
@@ -143,7 +152,8 @@ class ClienteSchedaTabsTest extends TestCase
             ->assertSuccessful()
             ->assertSee('Stampa modulo KYC')
             ->callAction(TestAction::make('stampaModuloKyc')->schemaComponent('kyc'))
-            ->assertHasNoActionErrors();
+            ->assertHasNoActionErrors()
+            ->assertNotified('Documento d\'identità mancante');
 
         $tipo = PdfModule::query()->active()->where('name', 'like', 'QAV Persona fisica%')->firstOrFail()->documentType;
         $documento = Document::query()->where('documentable_type', 'client')->where('documentable_id', (string) $persona->getKey())->where('document_type_id', $tipo->getKey())->firstOrFail();

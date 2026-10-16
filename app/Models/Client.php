@@ -13,6 +13,8 @@ class Client extends CoreClient
 {
     protected static function booted(): void
     {
+        parent::booted();
+
         static::saved(function (self $client): void {
             if ($client->wasChanged('employer_id') || ($client->wasRecentlyCreated && $client->employer_id !== null)) {
                 $client->allineaRelazioneDatore();

@@ -42,6 +42,7 @@ use Unico\Core\Models\Document;
 use Unico\Core\Models\PdfModule;
 use Unico\Core\Pdf\ModulePrinter;
 use Unico\Core\Pdf\PdfFormException;
+use Unico\Core\Pdf\PracticeModuleData;
 
 class ClientForm
 {
@@ -362,6 +363,10 @@ class ClientForm
                 }
 
                 self::archiviaModulo($record, $modulo, $contenuto);
+
+                if ($record->is_person && app(PracticeModuleData::class)->identityDocument($record->loadMissing('documents.documentType')) === null) {
+                    Notification::make()->title('Documento d\'identità mancante')->body('Il modulo KYC è stato stampato senza tipo, numero e scadenza del documento: caricalo tra i documenti del cliente.')->warning()->persistent()->send();
+                }
 
                 return response()->streamDownload(fn () => print ($contenuto), 'kyc-'.Str::slug((string) $record->name).'.pdf', ['Content-Type' => 'application/pdf']);
             });
