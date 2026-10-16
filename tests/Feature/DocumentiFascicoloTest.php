@@ -12,9 +12,11 @@ use Livewire\Livewire;
 use Tests\TestCase;
 use Unico\Core\Enums\DocumentStatus;
 use Unico\Core\Filament\RelationManagers\DocumentsRelationManager;
+use Unico\Core\Models\Client;
 use Unico\Core\Models\Document;
 use Unico\Core\Models\DocumentRequirement;
 use Unico\Core\Models\DocumentType;
+use Unico\Core\Models\PraticaClient;
 use Unico\Core\Models\Task;
 use Unico\Core\Models\TipoProdotto;
 
@@ -96,5 +98,26 @@ class DocumentiFascicoloTest extends TestCase
 
         $this->assertSame(6, Document::query()->where('documentable_type', 'pratica')->where('documentable_id', (string) $pratica->getKey())->count());
         $this->assertSame(DocumentStatus::PENDING, Document::query()->where('name', 'Doc mancante')->firstOrFail()->status);
+    }
+
+    public function test_genera_plico_crea_anche_i_documenti_dei_client_della_pratica(): void
+    {
+        [$pratica] = $this->pratica();
+        $task = Task::query()->where('name', 'Check list fascicolo')->firstOrFail();
+        $identita = DocumentType::query()->create(['name' => 'Identità fascicolo', 'code' => 'FSC-ID', 'client_scope' => 'persona_fisica']);
+        DocumentRequirement::query()->create(['task_id' => $task->getKey(), 'document_type_id' => $identita->getKey(), 'documentable' => 'client', 'client_roles' => ['richiedente', 'coobbligato'], 'is_required' => true]);
+        $richiedente = Client::query()->create(['name' => 'Rossi', 'is_person' => true]);
+        $coobbligato = Client::query()->create(['name' => 'Verdi', 'is_person' => true]);
+        $garante = Client::query()->create(['name' => 'Neri', 'is_person' => true]);
+        PraticaClient::query()->create(['pratica_id' => $pratica->getKey(), 'client_id' => $richiedente->getKey(), 'role' => 'richiedente']);
+        PraticaClient::query()->create(['pratica_id' => $pratica->getKey(), 'client_id' => $coobbligato->getKey(), 'role' => 'coobbligato']);
+        PraticaClient::query()->create(['pratica_id' => $pratica->getKey(), 'client_id' => $garante->getKey(), 'role' => 'garante']);
+
+        Livewire::test(DocumentsRelationManager::class, ['ownerRecord' => $pratica, 'pageClass' => EditPratica::class])
+            ->callAction(TestAction::make('generaPlico')->table(), [])
+            ->assertNotified();
+
+        $perClient = Document::query()->where('documentable_type', 'client')->where('document_type_id', $identita->getKey())->pluck('documentable_id')->sort()->values()->all();
+        $this->assertSame(collect([$richiedente, $coobbligato])->map(fn (Client $client): string => (string) $client->getKey())->sort()->values()->all(), $perClient);
     }
 }
