@@ -6,6 +6,7 @@ use App\Filament\Resources\Istituti\Pages\EditIstituto;
 use App\Filament\Resources\Istituti\Pages\ListIstituti;
 use App\Filament\Resources\Istituti\RelationManagers\DocumentiIstitutoRelationManager;
 use App\Filament\Resources\Istituti\RelationManagers\ProduttoriBloccatiRelationManager;
+use App\Filament\Resources\Istituti\RelationManagers\ProvvigioniAttiveRelationManager;
 use App\Filament\Resources\Istituti\Tables\IstitutiTable;
 use App\Models\User;
 use BackedEnum;
@@ -88,6 +89,7 @@ class IstitutoResource extends Resource
         return [
             DocumentsRelationManager::class,
             DocumentiIstitutoRelationManager::class,
+            ProvvigioniAttiveRelationManager::class,
             ProduttoriBloccatiRelationManager::class,
         ];
     }
