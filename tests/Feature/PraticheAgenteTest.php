@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\ApiProvider;
+use App\Filament\Agenti\Resources\Clients\Pages\EditClient;
 use App\Filament\Agenti\Resources\Pratiche\Pages\EditPratica;
 use App\Filament\Agenti\Resources\Pratiche\Pages\ListPratiche;
 use App\Filament\Agenti\Resources\Pratiche\PraticaResource;
@@ -103,7 +104,7 @@ class PraticheAgenteTest extends TestCase
             ->assertFormFieldExists('clienti_id')
             ->assertFormFieldExists('codice_pratica')
             ->assertFormFieldExists('data_inserimento_pratica')
-            ->assertSee('Address')
+            ->assertSee('Indirizzi')
             ->assertSee('Pratiche')
             ->assertFormSet(['cognome_cliente' => 'Rossi'])
             ->assertFormFieldExists('cliente_email')
@@ -162,7 +163,7 @@ class PraticheAgenteTest extends TestCase
         $this->assertSame('IT60X0542811101000000123456', $client->iban);
         $this->assertSame(
             'low',
-            KycQuestionnaire::query()->where('client_id', $client->getKey())->value('risk_level'),
+            KycQuestionnaire::query()->where('client_id', $client->getKey())->value('risk_level')?->value,
         );
     }
 
@@ -242,7 +243,9 @@ class PraticheAgenteTest extends TestCase
                 'cliente_cellulare' => '3330001111',
             ])
             ->callAction(TestAction::make('cerved')->schemaComponent('codice_fiscale', 'form'))
-            ->assertNotified('Cerved: ROSSI MARIO')
+            ->assertNotified('Cerved: ROSSI MARIO');
+
+        Livewire::test(EditClient::class, ['record' => $person->getKey()])
             ->callAction(TestAction::make('verificaPep')->schemaComponent('valutazioneAml', 'form'))
             ->assertNotified('Verifica PEP: 1 possibili corrispondenze');
 

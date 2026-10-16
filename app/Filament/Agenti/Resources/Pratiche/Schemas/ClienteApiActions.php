@@ -13,6 +13,7 @@ use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
+use Illuminate\Database\Eloquent\Model;
 use Livewire\Component;
 use Unico\Core\Models\PraticaClient;
 
@@ -120,7 +121,7 @@ class ClienteApiActions
         return Action::make('verificaPep')
             ->label('Verifica PEP')
             ->icon('heroicon-m-shield-exclamation')
-            ->mountUsing(function (Action $action, Get $get, ?Pratica $record): void {
+            ->mountUsing(function (Action $action, Get $get, ?Model $record): void {
                 $client = self::savedClient($action, $record);
                 if ($client === null) {
                     return;
@@ -138,7 +139,7 @@ class ClienteApiActions
             ->modalHeading('Verificare le liste PEP?')
             ->modalDescription('Il nominativo del cliente viene inviato al servizio sanctions.io. Confermi?')
             ->modalSubmitActionLabel('Verifica')
-            ->action(function (Get $get, ?Pratica $record): void {
+            ->action(function (Get $get, ?Model $record): void {
                 $isPerson = (bool) $get('is_person');
                 $name = trim(($isPerson ? ($get('first_name').' ') : '').$get('name'));
 
@@ -153,7 +154,7 @@ class ClienteApiActions
                         $name,
                         $isPerson,
                         $isPerson ? $get('birth_date') : null,
-                        $record?->richiedente,
+                        self::clientOf($record),
                     );
                 } catch (\Throwable $e) {
                     Notification::make()->title('Verifica PEP')->body($e->getMessage())->danger()->send();
@@ -246,9 +247,15 @@ class ClienteApiActions
             });
     }
 
-    private static function savedClient(Action $action, ?Pratica $record): ?Client
+    /** Il cliente della scheda: il record stesso se è un cliente, altrimenti il richiedente della pratica. */
+    private static function clientOf(?Model $record): ?Client
     {
-        $client = $record?->richiedente;
+        return $record instanceof Client ? $record : $record?->richiedente;
+    }
+
+    private static function savedClient(Action $action, ?Model $record): ?Client
+    {
+        $client = self::clientOf($record);
 
         if ($client === null) {
             Notification::make()
