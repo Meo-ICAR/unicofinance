@@ -16,6 +16,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
+use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
@@ -34,47 +35,65 @@ class ClientForm
     public static function components(Closure $isPerson, bool $withScreening = true): array
     {
         return [
-            TextInput::make('name')->label('Cognome / ragione sociale')->required()->maxLength(255),
-            TextInput::make('first_name')->label('Nome')->maxLength(255),
-            TextInput::make('tax_code')
-                ->label('Codice fiscale')
-                ->maxLength(16)
-                ->live(onBlur: true)
-                ->afterStateUpdated(function (?string $state, Get $get, Set $set): void {
-                    if (! $get('is_person') || strlen(trim((string) $state)) !== 16) {
-                        return;
-                    }
+            Grid::make(['default' => 1, 'lg' => 2])
+                ->columnSpanFull()
+                ->schema([
+                    Section::make('Anagrafica')
+                        ->columns(2)
+                        ->schema([
+                            TextInput::make('name')->label('Cognome / ragione sociale')->required()->maxLength(255),
+                            TextInput::make('first_name')->label('Nome')->maxLength(255),
+                            TextInput::make('tax_code')
+                                ->label('Codice fiscale')
+                                ->maxLength(16)
+                                ->live(onBlur: true)
+                                ->afterStateUpdated(function (?string $state, Get $get, Set $set): void {
+                                    if (! $get('is_person') || strlen(trim((string) $state)) !== 16) {
+                                        return;
+                                    }
 
-                    $decoded = app(CodiceFiscaleDecoder::class)->decodeVerified($state);
+                                    $decoded = app(CodiceFiscaleDecoder::class)->decodeVerified($state);
 
-                    if ($decoded === null) {
-                        Notification::make()->title('Codice fiscale non valido')->body('Il carattere di controllo non è corretto: dati anagrafici non compilati.')->warning()->send();
+                                    if ($decoded === null) {
+                                        Notification::make()->title('Codice fiscale non valido')->body('Il carattere di controllo non è corretto: dati anagrafici non compilati.')->warning()->send();
 
-                        return;
-                    }
+                                        return;
+                                    }
 
-                    $set('birth_date', $decoded['birth_date']->format('Y-m-d'));
-                    $set('sex', $decoded['sex']);
-                    $set('birth_place', $decoded['birth_place']);
-                }),
-            Toggle::make('is_person')->label('Persona fisica')->live(),
-            DatePicker::make('birth_date')->label('Data di nascita')->native(false)->displayFormat('d/m/Y'),
-            TextInput::make('birth_place')->label('Luogo di nascita')->maxLength(100),
-            Select::make('sex')->label('Sesso')->options(['M' => 'M', 'F' => 'F']),
-            TextInput::make('citizenship')->label('Cittadinanza')->maxLength(60),
-            TextInput::make('salary')->label('Reddito')->numeric()->prefix('€'),
-            // Cessione e delega: il datore di lavoro eredita il tipo di amministrazione della pratica.
-            Select::make('employer_id')
-                ->label('Datore di lavoro')
-                ->options(fn (): array => Client::query()->where('is_person', false)->orderBy('name')->limit(200)->pluck('name', 'id')->all())
-                ->getSearchResultsUsing(fn (string $search): array => Client::query()->where('is_person', false)->where('name', 'like', "%{$search}%")->limit(50)->pluck('name', 'id')->all())
-                ->searchable()
-                ->createOptionForm(AdminClientForm::datoreDiLavoroForm())
-                ->createOptionUsing(fn (array $data, ?Client $record): int => (int) app(DatoreDiLavoro::class)->crea($record, $data)->getKey())
-                ->visible(fn (?Client $record): bool => app(DatoreDiLavoro::class)->richiesto($record)),
+                                    $set('birth_date', $decoded['birth_date']->format('Y-m-d'));
+                                    $set('sex', $decoded['sex']);
+                                    $set('birth_place', $decoded['birth_place']);
+                                }),
+                            Toggle::make('is_person')->label('Persona fisica')->live(),
+                        ]),
+                    Section::make('Dati anagrafici')
+                        ->columns(2)
+                        ->schema([
+                            DatePicker::make('birth_date')->label('Data di nascita')->native(false)->displayFormat('d/m/Y'),
+                            TextInput::make('birth_place')->label('Luogo di nascita')->maxLength(100),
+                            Select::make('sex')->label('Sesso')->options(['M' => 'M', 'F' => 'F']),
+                            TextInput::make('citizenship')->label('Cittadinanza')->maxLength(60),
+                        ]),
+                ]),
+            Section::make('Lavoro e reddito')
+                ->columns(2)
+                ->columnSpanFull()
+                ->schema([
+                    TextInput::make('salary')->label('Reddito')->numeric()->prefix('€'),
+                    // Cessione e delega: il datore di lavoro eredita il tipo di amministrazione della pratica.
+                    Select::make('employer_id')
+                        ->label('Datore di lavoro')
+                        ->options(fn (): array => Client::query()->where('is_person', false)->orderBy('name')->limit(200)->pluck('name', 'id')->all())
+                        ->getSearchResultsUsing(fn (string $search): array => Client::query()->where('is_person', false)->where('name', 'like', "%{$search}%")->limit(50)->pluck('name', 'id')->all())
+                        ->searchable()
+                        ->createOptionForm(AdminClientForm::datoreDiLavoroForm())
+                        ->createOptionUsing(fn (array $data, ?Client $record): int => (int) app(DatoreDiLavoro::class)->crea($record, $data)->getKey())
+                        ->visible(fn (?Client $record): bool => app(DatoreDiLavoro::class)->richiesto($record)),
+                ]),
             Section::make('Valutazione rischio (AML)')
                 ->key('valutazioneAml')
-                ->columns(3)
+                ->columns(4)
+                ->columnSpanFull()
                 ->headerActions([
                     ClienteApiActions::verificaPep(),
                 ])
@@ -97,7 +116,8 @@ class ClientForm
                 ]),
             Section::make('KYC (adeguata verifica)')
                 ->relationship('questionarioKyc')
-                ->columns(2)
+                ->columns(3)
+                ->columnSpanFull()
                 ->schema([
                     KycQuestionnaireForm::financingPurpose($isPerson),
                     KycQuestionnaireForm::riskLevel(),

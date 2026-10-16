@@ -138,4 +138,22 @@ class PraticaFormLayoutTest extends TestCase
         $this->assertContains($own->getKey(), $ids);
         $this->assertNotContains($foreign->getKey(), $ids);
     }
+
+    public function test_the_workflow_dates_are_saved_from_the_agent_form(): void
+    {
+        [$fornitore] = $this->agent();
+        $pratica = Pratica::query()->create(['codice_pratica' => 'ZZDATA-'.Str::upper(Str::random(4)), 'fornitori_id' => $fornitore->getKey(), 'upload_at' => now()]);
+
+        Livewire::test(EditPratica::class, ['record' => $pratica->getKey()])
+            ->assertSee('Data presa in carico')
+            ->assertSee('Data invio istruttoria')
+            ->fillForm(['cliente_cellulare' => '3331234567', 'cliente_email' => 'test@example.com', 'presa_in_carico_at' => '2026-03-02', 'lavorazione_at' => '2026-03-03', 'sended_at' => '2026-03-10'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $pratica->refresh();
+        $this->assertSame('2026-03-02', $pratica->presa_in_carico_at->toDateString());
+        $this->assertSame('2026-03-03', $pratica->lavorazione_at->toDateString());
+        $this->assertSame('2026-03-10', $pratica->sended_at->toDateString());
+    }
 }

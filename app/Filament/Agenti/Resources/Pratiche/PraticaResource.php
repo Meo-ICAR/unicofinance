@@ -28,6 +28,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
@@ -162,7 +163,7 @@ class PraticaResource extends Resource
                 ]),
             Section::make('Prodotto richiesto')
                 ->icon('heroicon-o-banknotes')
-                ->columns(3)
+                ->columns(4)
                 ->columnSpanFull()
                 ->schema([
                     Toggle::make('is_notowned')->label('Impegno di terzi')->inline(false),
@@ -226,21 +227,40 @@ class PraticaResource extends Resource
                     Tab::make('Dettagli')
                         ->icon('heroicon-o-clipboard-document-list')
                         ->schema([
-                            Select::make('pratica_stato_id')
-                                ->label('Stato')
-                                ->relationship('praticaStato', 'codice')
-                                ->searchable()
-                                ->preload(),
-                            TextInput::make('denominazione_prodotto')->label('Prodotto')->maxLength(191),
-                            TextInput::make('net')->label('Importo netto')->numeric()->prefix('€'),
-                            TextInput::make('erogato')->label('Erogato')->numeric()->prefix('€'),
-                            TextInput::make('denominazione_agente')->label('Agente')->maxLength(191),
-                            DatePicker::make('sended_at')->label('Invio a banca')->native(false)->displayFormat('d/m/Y'),
-                            DatePicker::make('approved_at')->label('Approvazione')->native(false)->displayFormat('d/m/Y'),
-                            DatePicker::make('erogated_at')->label('Erogazione')->native(false)->displayFormat('d/m/Y'),
-                            DatePicker::make('rejected_at')->label('Rifiuto')->native(false)->displayFormat('d/m/Y'),
-                        ])
-                        ->columns(2),
+                            Grid::make(['default' => 1, 'xl' => 3])
+                                ->columnSpanFull()
+                                ->schema([
+                                    Section::make('Istruttoria')
+                                        ->columns(1)
+                                        ->schema([
+                                            Select::make('pratica_stato_id')
+                                                ->label('Stato')
+                                                ->relationship('praticaStato', 'codice')
+                                                ->searchable()
+                                                ->preload(),
+                                            TextInput::make('denominazione_prodotto')->label('Prodotto')->maxLength(191),
+                                            TextInput::make('denominazione_agente')->label('Agente')->maxLength(191),
+                                        ]),
+                                    Section::make('Avanzamento')
+                                        ->columns(['default' => 1, 'md' => 2, '2xl' => 3])
+                                        ->columnSpan(['xl' => 2])
+                                        ->schema([
+                                            DatePicker::make('presa_in_carico_at')->label('Data presa in carico')->native(false)->displayFormat('d/m/Y'),
+                                            DatePicker::make('lavorazione_at')->label('Data lavorazione')->native(false)->displayFormat('d/m/Y'),
+                                            DatePicker::make('sended_at')->label('Data invio istruttoria')->native(false)->displayFormat('d/m/Y'),
+                                            DatePicker::make('approved_at')->label('Approvazione')->native(false)->displayFormat('d/m/Y'),
+                                            DatePicker::make('erogated_at')->label('Erogazione')->native(false)->displayFormat('d/m/Y'),
+                                            DatePicker::make('rejected_at')->label('Rifiuto')->native(false)->displayFormat('d/m/Y'),
+                                        ]),
+                                ]),
+                            Section::make('Importi')
+                                ->columns(2)
+                                ->columnSpanFull()
+                                ->schema([
+                                    TextInput::make('net')->label('Importo netto')->numeric()->prefix('€'),
+                                    TextInput::make('erogato')->label('Erogato')->numeric()->prefix('€'),
+                                ]),
+                        ]),
                 ]),
         ]);
     }
