@@ -146,7 +146,7 @@ class ClientForm
                                                     ->preload()
                                                     ->createOptionForm(self::datoreDiLavoroForm())
                                                     ->createOptionUsing(fn (array $data, ?Client $record): int => (int) app(DatoreDiLavoro::class)->crea($record, $data)->getKey())
-                                                    ->visible(fn (?Client $record, $livewire): bool => self::shows(FinancingSection::ClienteDatoreLavoro, $livewire) || app(DatoreDiLavoro::class)->richiesto($record)),
+                                                    ->visible(fn (?Client $record): bool => app(DatoreDiLavoro::class)->richiesto($record)),
                                                 TextInput::make('profession')->label('Professione'),
                                             ]),
                                         Section::make('Reddito e coordinate')
@@ -171,7 +171,7 @@ class ClientForm
                             ]),
                         Tab::make('Dati societari')
                             ->icon(Heroicon::OutlinedBuildingOffice)
-                            ->visible(fn (Get $get, $livewire): bool => ! $get('is_person') && self::shows(FinancingSection::ClienteDatiSocietari, $livewire))
+                            ->visible(fn (Get $get, ?Client $record, $livewire): bool => ! $get('is_person') && (self::shows(FinancingSection::ClienteDatiSocietari, $livewire) || self::soloDatore($record)))
                             ->schema([
                                 Section::make('Società')
                                     ->columns(4)
@@ -180,19 +180,20 @@ class ClientForm
                                             ->label('Legale rappresentante')
                                             ->relationship('legalRepresentative', 'name', fn (Builder $query) => $query->where('is_person', true))
                                             ->searchable()
-                                            ->preload(),
+                                            ->preload()
+                                            ->hidden(fn (?Client $record): bool => self::soloDatore($record)),
                                         Select::make('employment_typology')
                                             ->label('Tipo amministrazione')
                                             ->helperText('Per un datore di lavoro: ereditato dalla pratica di cessione o delega.')
                                             ->options(collect(EmploymentRelationship::cases())->mapWithKeys(fn (EmploymentRelationship $case): array => [$case->getLabel() => $case->getLabel()])->all())
                                             ->searchable(),
-                                        TextInput::make('legal_form')->label('Forma giuridica')->maxLength(100),
-                                        TextInput::make('ateco_code')->label('Codice Ateco')->maxLength(10),
-                                        TextInput::make('cciaa_registration')->label('Iscrizione CCIAA')->maxLength(60),
-                                        TextInput::make('sdi_code')->label('Codice SDI')->maxLength(10),
-                                        TextInput::make('activity_status')->label('Stato attività')->maxLength(30),
-                                        DatePicker::make('company_started_at')->label('Inizio attività')->native(false)->displayFormat('d/m/Y'),
-                                        TextInput::make('iban')->label('IBAN')->maxLength(34),
+                                        TextInput::make('legal_form')->label('Forma giuridica')->maxLength(100)->hidden(fn (?Client $record): bool => self::soloDatore($record)),
+                                        TextInput::make('ateco_code')->label('Codice Ateco')->maxLength(10)->hidden(fn (?Client $record): bool => self::soloDatore($record)),
+                                        TextInput::make('cciaa_registration')->label('Iscrizione CCIAA')->maxLength(60)->hidden(fn (?Client $record): bool => self::soloDatore($record)),
+                                        TextInput::make('sdi_code')->label('Codice SDI')->maxLength(10)->hidden(fn (?Client $record): bool => self::soloDatore($record)),
+                                        TextInput::make('activity_status')->label('Stato attività')->maxLength(30)->hidden(fn (?Client $record): bool => self::soloDatore($record)),
+                                        DatePicker::make('company_started_at')->label('Inizio attività')->native(false)->displayFormat('d/m/Y')->hidden(fn (?Client $record): bool => self::soloDatore($record)),
+                                        TextInput::make('iban')->label('IBAN')->maxLength(34)->hidden(fn (?Client $record): bool => self::soloDatore($record)),
                                     ]),
                                 Grid::make(['default' => 1, 'lg' => 2])
                                     ->columnSpanFull()
@@ -200,13 +201,14 @@ class ClientForm
                                         // Richiesta, ritiro e notifica del benestare: solo per chi è datore di lavoro di almeno un cliente.
                                         Section::make('Benestare del datore')
                                             ->description('Come si chiede il benestare al datore, come si ritira e come si notifica.')
-                                            ->visible(fn (?Client $record): bool => $record?->exists === true && $record->employees()->exists())
+                                            ->visible(fn (?Client $record): bool => $record?->exists === true && $record->isDatoreDiLavoro())
                                             ->schema([
                                                 Textarea::make('richiesta_benestare')->label('Richiesta benestare'),
                                                 Textarea::make('ritiro_benestare')->label('Ritiro benestare'),
                                                 Textarea::make('notifica')->label('Notifica'),
                                             ]),
                                         Section::make('Ultimo bilancio')
+                                            ->hidden(fn (?Client $record): bool => self::soloDatore($record))
                                             ->columns(3)
                                             ->schema([
                                                 TextInput::make('balance_year')->label('Anno')->numeric(),
@@ -219,6 +221,7 @@ class ClientForm
                             ]),
                         Tab::make('Verifiche')
                             ->icon(Heroicon::OutlinedShieldCheck)
+                            ->hidden(fn (?Client $record): bool => self::soloDatore($record))
                             ->schema([
                                 Section::make('Valutazione rischio')
                                     ->columns(4)
@@ -284,6 +287,12 @@ class ClientForm
     private static function shows(FinancingSection $section, mixed $livewire): bool
     {
         return ! $livewire instanceof EditClient || $livewire->showsFinancingSection($section);
+    }
+
+    /** Datore di lavoro (ha clienti con ruolo dipendente): dei dati societari servono la tipologia e il benestare, non la scheda aziendale né le verifiche. */
+    private static function soloDatore(?Client $record): bool
+    {
+        return $record?->isDatoreDiLavoro() === true;
     }
 
     private static function isRetired(mixed $typology): bool

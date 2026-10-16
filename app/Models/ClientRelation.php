@@ -8,6 +8,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /** Soci, amministratori e titolari effettivi di una persona giuridica. La tabella è di unicofinance, i clienti sono nel core. */
 class ClientRelation extends Model
 {
+    /** Ruolo del cliente verso il suo datore di lavoro (la relazione parte dal datore). */
+    public const RUOLO_DIPENDENTE = 'dipendente';
+
     protected $table = 'client_relations';
 
     protected $guarded = ['id'];

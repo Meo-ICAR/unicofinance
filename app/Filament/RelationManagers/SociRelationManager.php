@@ -41,6 +41,7 @@ class SociRelationManager extends RelationManager
         'titolare_effettivo' => 'Titolare effettivo',
         'referente' => 'Referente',
         'garante' => 'Garante',
+        'dipendente' => 'Dipendente',
         'altro' => 'Altro',
     ];
 
