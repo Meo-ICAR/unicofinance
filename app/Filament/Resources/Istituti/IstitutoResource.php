@@ -4,14 +4,13 @@ namespace App\Filament\Resources\Istituti;
 
 use App\Filament\Resources\Istituti\Pages\EditIstituto;
 use App\Filament\Resources\Istituti\Pages\ListIstituti;
-use App\Filament\Resources\Istituti\Pages\ViewIstituto;
 use App\Filament\Resources\Istituti\RelationManagers\DocumentiIstitutoRelationManager;
 use App\Filament\Resources\Istituti\RelationManagers\ProduttoriBloccatiRelationManager;
-use App\Filament\Resources\Istituti\Schemas\IstitutoInfolist;
 use App\Filament\Resources\Istituti\Tables\IstitutiTable;
 use App\Models\User;
 use BackedEnum;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -65,6 +64,11 @@ class IstitutoResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
+            TextInput::make('name')->label('Istituto')->disabled()->dehydrated(false),
+            TextInput::make('abi')->label('ABI')->disabled()->dehydrated(false),
+            TextInput::make('piva')->label('P. IVA')->disabled()->dehydrated(false),
+            TextInput::make('email')->label('Email')->disabled()->dehydrated(false),
+            Toggle::make('is_active')->label('Attivo')->disabled()->dehydrated(false),
             TextInput::make('website')->label('Sito')->url()->maxLength(255),
             TextInput::make('portal_url')
                 ->label('Portale per l\'immissione delle pratiche')
@@ -72,11 +76,6 @@ class IstitutoResource extends Resource
                 ->url()
                 ->maxLength(255),
         ]);
-    }
-
-    public static function infolist(Schema $schema): Schema
-    {
-        return IstitutoInfolist::configure($schema);
     }
 
     public static function table(Table $table): Table
@@ -97,7 +96,6 @@ class IstitutoResource extends Resource
     {
         return [
             'index' => ListIstituti::route('/'),
-            'view' => ViewIstituto::route('/{record}'),
             'edit' => EditIstituto::route('/{record}/edit'),
         ];
     }

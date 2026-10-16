@@ -2,8 +2,11 @@
 
 namespace Tests\Feature;
 
-use App\Filament\Resources\Istituti\Pages\ViewIstituto;
+use App\Filament\Resources\Clients\ClientResource;
+use App\Filament\Resources\Istituti\IstitutoResource;
+use App\Filament\Resources\Istituti\Pages\EditIstituto;
 use App\Filament\Resources\Istituti\RelationManagers\DocumentiIstitutoRelationManager;
+use App\Filament\Resources\ListinoProvvigionales\ListinoProvvigionaleResource;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -32,7 +35,7 @@ class IstitutoDocumentiTest extends TestCase
         $banca = Cliente::query()->create(['name' => 'Banca Test']);
         $altra = Cliente::query()->create(['name' => 'Altra Banca']);
 
-        Livewire::test(DocumentiIstitutoRelationManager::class, ['ownerRecord' => $banca, 'pageClass' => ViewIstituto::class])
+        Livewire::test(DocumentiIstitutoRelationManager::class, ['ownerRecord' => $banca, 'pageClass' => EditIstituto::class])
             ->callTableAction('create', data: ['name' => 'Modulo mutuo Banca Test', 'prodotti' => ['Mutuo'], 'fase' => BankDocumentRequirements::CHECKLIST, 'is_signed' => false])
             ->assertHasNoTableActionErrors();
 
@@ -56,6 +59,20 @@ class IstitutoDocumentiTest extends TestCase
         $this->actingAs(User::factory()->create(['role' => 'super_admin']));
         $banca = Cliente::query()->create(['name' => 'Banca Vista']);
 
-        Livewire::test(ViewIstituto::class, ['record' => $banca->getKey()])->assertSee('Documenti richiesti');
+        Livewire::test(EditIstituto::class, ['record' => $banca->getKey()])->assertSee('Documenti richiesti');
+    }
+
+    public function test_the_read_only_view_pages_are_gone_and_the_institute_edit_shows_its_registry(): void
+    {
+        Filament::setCurrentPanel('admin');
+        $this->actingAs(User::factory()->create(['role' => 'super_admin']));
+        $banca = Cliente::query()->create(['name' => 'Banca Anagrafica', 'abi' => '03069', 'piva' => '00000000001']);
+
+        foreach ([ClientResource::class, ListinoProvvigionaleResource::class, IstitutoResource::class] as $resource) {
+            $this->assertArrayNotHasKey('view', $resource::getPages());
+        }
+
+        Livewire::test(EditIstituto::class, ['record' => $banca->getKey()])
+            ->assertFormSet(['name' => 'Banca Anagrafica', 'abi' => '03069', 'piva' => '00000000001']);
     }
 }

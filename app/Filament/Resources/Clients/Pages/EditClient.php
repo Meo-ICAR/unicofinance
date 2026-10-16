@@ -8,7 +8,6 @@ use App\Filament\Resources\Clients\ClientResource;
 use App\Models\Client;
 use App\Services\Istruttoria\DatoreDiLavoro;
 use Filament\Actions\DeleteAction;
-use Filament\Actions\ViewAction;
 use Filament\Resources\Pages\EditRecord;
 
 class EditClient extends EditRecord
@@ -51,7 +50,6 @@ class EditClient extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            ViewAction::make(),
             DeleteAction::make(),
         ];
     }

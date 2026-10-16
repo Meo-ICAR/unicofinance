@@ -5,11 +5,9 @@ namespace App\Filament\Resources\ListinoProvvigionales;
 use App\Filament\Resources\ListinoProvvigionales\Pages\CreateListinoProvvigionale;
 use App\Filament\Resources\ListinoProvvigionales\Pages\EditListinoProvvigionale;
 use App\Filament\Resources\ListinoProvvigionales\Pages\ListListinoProvvigionales;
-use App\Filament\Resources\ListinoProvvigionales\Pages\ViewListinoProvvigionale;
 use App\Filament\Resources\ListinoProvvigionales\RelationManagers\FornitoriRelationManager;
 use App\Filament\Resources\ListinoProvvigionales\RelationManagers\VociRelationManager;
 use App\Filament\Resources\ListinoProvvigionales\Schemas\ListinoProvvigionaleForm;
-use App\Filament\Resources\ListinoProvvigionales\Schemas\ListinoProvvigionaleInfolist;
 use App\Filament\Resources\ListinoProvvigionales\Tables\ListinoProvvigionalesTable;
 use App\Models\ListinoProvvigionale;
 use App\Models\User;
@@ -49,11 +47,6 @@ class ListinoProvvigionaleResource extends Resource
         return ListinoProvvigionaleForm::configure($schema);
     }
 
-    public static function infolist(Schema $schema): Schema
-    {
-        return ListinoProvvigionaleInfolist::configure($schema);
-    }
-
     public static function table(Table $table): Table
     {
         return ListinoProvvigionalesTable::configure($table);
@@ -72,7 +65,6 @@ class ListinoProvvigionaleResource extends Resource
         return [
             'index' => ListListinoProvvigionales::route('/'),
             'create' => CreateListinoProvvigionale::route('/create'),
-            'view' => ViewListinoProvvigionale::route('/{record}'),
             'edit' => EditListinoProvvigionale::route('/{record}/edit'),
         ];
     }
