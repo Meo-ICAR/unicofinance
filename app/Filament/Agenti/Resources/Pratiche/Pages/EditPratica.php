@@ -2,6 +2,7 @@
 
 namespace App\Filament\Agenti\Resources\Pratiche\Pages;
 
+use App\Filament\Agenti\Actions\RinunciaClienteAction;
 use App\Filament\Agenti\Resources\Pratiche\PraticaResource;
 use App\Filament\Concerns\RegistraCambioStato;
 use App\Models\Client;
@@ -69,6 +70,13 @@ class EditPratica extends EditRecord
                 ->persistent()
                 ->send();
         }
+    }
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            RinunciaClienteAction::make()->record($this->getRecord()),
+        ];
     }
 
     protected function origineCambioStato(): string

@@ -70,12 +70,29 @@ class PraticasTable
                     ->sortable()
                     ->tooltip('Clicca per cambiare lo stato')
                     ->action(self::cambiaStato()),
+                TextColumn::make('stati_da_visionare')
+                    ->label('Cambi stato')
+                    ->state(fn (Pratica $record): ?string => $record->praticaStatusHistory()->daVisionare()->exists() ? 'Da visionare' : null)
+                    ->badge()
+                    ->color('warning')
+                    ->icon(Heroicon::OutlinedExclamationTriangle)
+                    ->placeholder('—')
+                    ->tooltip('Cambio di stato non fatto dall\'istruttore (es. rinuncia del produttore), di cui non ha ancora preso visione'),
                 TextColumn::make('cognome_cliente')
                     ->label('Cognome cliente')
                     ->searchable()
                     ->sortable(),
             ])
             ->filters([
+                TernaryFilter::make('stati_da_visionare')
+                    ->label('Cambi stato da visionare')
+                    ->placeholder('Tutte')
+                    ->trueLabel('Con cambi stato da visionare')
+                    ->falseLabel('Senza')
+                    ->queries(
+                        true: fn (Builder $query) => $query->conStatiDaVisionare(),
+                        false: fn (Builder $query) => $query->whereNot(fn (Builder $q) => $q->conStatiDaVisionare()),
+                    ),
                 SelectFilter::make('denominazione_banca')
                     ->label('Banca')
                     ->options(fn (): array => Pratica::query()

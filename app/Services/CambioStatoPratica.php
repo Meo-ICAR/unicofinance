@@ -45,6 +45,42 @@ class CambioStatoPratica
         return $mancanti->take(5)->map(fn (DocumentRequirement $requisito): string => (string) $requisito->documentType?->name)->implode(', ').($mancanti->count() > 5 ? ' e altri '.($mancanti->count() - 5) : '');
     }
 
+    /** Motivazione scritta nello storico quando il produttore dichiara la rinuncia del cliente. */
+    public const MOTIVO_RINUNCIA_PRODUTTORE = 'Rinuncia cliente da produttore';
+
+    /** Lo stato «RINUNCIA CLIENTE» del tipo di finanziamento della pratica (altrimenti il primo con quel codice). */
+    public function statoRinuncia(Pratica $pratica): ?PraticaStato
+    {
+        $stati = PraticaStato::query()->where('codice', 'RINUNCIA CLIENTE')->orderBy('id')->get();
+        $prodotto = $pratica->tipoprodotto?->name;
+
+        return $stati->first(fn (PraticaStato $stato): bool => $prodotto !== null && strcasecmp((string) $stato->tipo_finanziamento, $prodotto) === 0) ?? $stati->first();
+    }
+
+    /**
+     * Il produttore dichiara la rinuncia del cliente: la pratica passa a «RINUNCIA CLIENTE» e lo storico riporta la motivazione.
+     *
+     * @return bool falso se non esiste lo stato o la pratica è già in rinuncia
+     */
+    public function rinunciaCliente(Pratica $pratica, ?string $nota = null): bool
+    {
+        $stato = $this->statoRinuncia($pratica);
+
+        if ($stato === null || (string) $pratica->pratica_stato_id === (string) $stato->getKey()) {
+            return false;
+        }
+
+        $this->cambia($pratica, $stato->getKey(), trim(self::MOTIVO_RINUNCIA_PRODUTTORE.($nota ? ': '.$nota : '')), 'agenti');
+
+        return true;
+    }
+
+    /** L'istruttore prende visione dei cambi di stato non fatti da lui. */
+    public function presaVisione(Pratica $pratica): int
+    {
+        return $pratica->praticaStatusHistory()->daVisionare()->update(['seen_at' => now(), 'seen_by' => auth()->id()]);
+    }
+
     /** Porta la pratica nel nuovo stato e lo registra. */
     public function cambia(Pratica $pratica, int|string|null $nuovo, ?string $motivo, string $origine): void
     {

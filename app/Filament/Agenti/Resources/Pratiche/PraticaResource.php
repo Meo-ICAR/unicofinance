@@ -2,6 +2,7 @@
 
 namespace App\Filament\Agenti\Resources\Pratiche;
 
+use App\Filament\Agenti\Actions\RinunciaClienteAction;
 use App\Filament\Agenti\Resources\Clients\Schemas\ClientForm;
 use App\Filament\Agenti\Resources\Pratiche\Pages\EditPratica;
 use App\Filament\Agenti\Resources\Pratiche\Pages\ListPratiche;
@@ -288,6 +289,7 @@ class PraticaResource extends Resource
             ->recordUrl(fn (Pratica $record): ?string => static::canEdit($record) ? static::getUrl('edit', ['record' => $record]) : null)
             ->recordActions([
                 EditAction::make()->label('Perfeziona')->visible(fn (Pratica $record): bool => static::canEdit($record)),
+                RinunciaClienteAction::make(),
             ]);
     }
 
