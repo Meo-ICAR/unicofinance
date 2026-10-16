@@ -36,6 +36,9 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 use RuntimeException;
 use Unico\Core\Clients\OpenApiCreditScoreService;
+use Unico\Core\Documents\Listeners\AnalyzeUploadedDocument;
+use Unico\Core\Enums\DocumentStatus;
+use Unico\Core\Models\Document;
 use Unico\Core\Models\PdfModule;
 use Unico\Core\Pdf\ModulePrinter;
 use Unico\Core\Pdf\PdfFormException;
@@ -358,8 +361,34 @@ class ClientForm
                     return null;
                 }
 
+                self::archiviaModulo($record, $modulo, $contenuto);
+
                 return response()->streamDownload(fn () => print ($contenuto), 'kyc-'.Str::slug((string) $record->name).'.pdf', ['Content-Type' => 'application/pdf']);
             });
+    }
+
+    /** Il modulo stampato resta tra i documenti del cliente, al posto della stampa precedente dello stesso modulo. */
+    private static function archiviaModulo(Client $cliente, PdfModule $modulo, string $contenuto): void
+    {
+        $tipo = $modulo->documentType;
+
+        if ($tipo === null) {
+            return;
+        }
+
+        $documento = Document::query()->firstOrCreate(
+            ['documentable_type' => 'client', 'documentable_id' => (string) $cliente->getKey(), 'document_type_id' => $tipo->getKey()],
+            ['company_id' => $cliente->company_id, 'name' => $tipo->name, 'status' => DocumentStatus::PENDING],
+        );
+
+        AnalyzeUploadedDocument::suspendedWhile(function () use ($documento, $contenuto, $tipo): void {
+            $documento->clearMediaCollection(Document::COLLECTION);
+            $documento->addMediaFromString($contenuto)
+                ->usingFileName((Str::slug((string) $tipo->name) ?: 'modulo').'.pdf')
+                ->toMediaCollection(Document::COLLECTION);
+        });
+
+        $documento->forceFill(['status' => DocumentStatus::UPLOADED, 'is_printable' => true])->saveQuietly();
     }
 
     /** Il cliente della scheda: nelle sezioni legate a una relazione (es. il KYC) `$record` è il record della relazione. */

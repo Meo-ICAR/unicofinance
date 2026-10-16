@@ -11,6 +11,9 @@ use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
+use Unico\Core\Enums\DocumentStatus;
+use Unico\Core\Models\Document;
+use Unico\Core\Models\PdfModule;
 use Unico\Core\Models\Pratica;
 use Unico\Core\Models\TipoProdotto;
 
@@ -141,5 +144,10 @@ class ClienteSchedaTabsTest extends TestCase
             ->assertSee('Stampa modulo KYC')
             ->callAction(TestAction::make('stampaModuloKyc')->schemaComponent('kyc'))
             ->assertHasNoActionErrors();
+
+        $tipo = PdfModule::query()->active()->where('name', 'like', 'QAV Persona fisica%')->firstOrFail()->documentType;
+        $documento = Document::query()->where('documentable_type', 'client')->where('documentable_id', (string) $persona->getKey())->where('document_type_id', $tipo->getKey())->firstOrFail();
+        $this->assertNotNull($documento->currentMedia());
+        $this->assertSame(DocumentStatus::UPLOADED, $documento->status);
     }
 }
