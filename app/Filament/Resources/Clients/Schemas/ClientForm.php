@@ -22,6 +22,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
+use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
@@ -90,74 +91,82 @@ class ClientForm
                         Tab::make('Anagrafica')
                             ->icon(Heroicon::OutlinedUser)
                             ->schema([
-                                Section::make('Contatti')
-                                    ->columns(2)
+                                Grid::make(['default' => 1, 'lg' => 2])
+                                    ->columnSpanFull()
                                     ->schema([
-                                        TextInput::make('email')->label('Email')->email(),
-                                        TextInput::make('phone')->label('Telefono')->tel(),
-                                        TextInput::make('pec')->label('PEC')->email()->visible(fn (Get $get): bool => ! $get('is_person')),
-                                        TextInput::make('website')->label('Sito web')->maxLength(50)->visible(fn (Get $get): bool => ! $get('is_person')),
-                                    ]),
-                                Section::make('Dati anagrafici')
-                                    ->columns(4)
-                                    ->visible(fn (Get $get, $livewire): bool => (bool) $get('is_person') && self::shows(FinancingSection::ClienteDatiNascita, $livewire))
-                                    ->schema([
-                                        DatePicker::make('birth_date')->label('Data di nascita')->native(false)->displayFormat('d/m/Y'),
-                                        TextInput::make('birth_place')->label('Luogo di nascita')->maxLength(100),
-                                        Select::make('sex')->label('Sesso')->options(['M' => 'M', 'F' => 'F']),
-                                        TextInput::make('citizenship')->label('Cittadinanza')->maxLength(60),
+                                        Section::make('Contatti')
+                                            ->columns(2)
+                                            ->schema([
+                                                TextInput::make('email')->label('Email')->email(),
+                                                TextInput::make('phone')->label('Telefono')->tel(),
+                                                TextInput::make('pec')->label('PEC')->email()->visible(fn (Get $get): bool => ! $get('is_person')),
+                                                TextInput::make('website')->label('Sito web')->maxLength(50)->visible(fn (Get $get): bool => ! $get('is_person')),
+                                            ]),
+                                        Section::make('Dati anagrafici')
+                                            ->columns(2)
+                                            ->visible(fn (Get $get, $livewire): bool => (bool) $get('is_person') && self::shows(FinancingSection::ClienteDatiNascita, $livewire))
+                                            ->schema([
+                                                DatePicker::make('birth_date')->label('Data di nascita')->native(false)->displayFormat('d/m/Y'),
+                                                TextInput::make('birth_place')->label('Luogo di nascita')->maxLength(100),
+                                                Select::make('sex')->label('Sesso')->options(['M' => 'M', 'F' => 'F']),
+                                                TextInput::make('citizenship')->label('Cittadinanza')->maxLength(60),
+                                            ]),
                                     ]),
                             ]),
                         Tab::make('Lavoro e reddito')
                             ->icon(Heroicon::OutlinedBriefcase)
                             ->visible(fn (Get $get): bool => (bool) $get('is_person'))
                             ->schema([
-                                Section::make('Rapporto di lavoro')
-                                    ->columns(2)
+                                Grid::make(['default' => 1, 'lg' => 2])
+                                    ->columnSpanFull()
                                     ->schema([
-                                        Select::make('employment_typology')
-                                            ->label('Tipologia')
-                                            ->options(collect(EmploymentRelationship::cases())->mapWithKeys(fn (EmploymentRelationship $case): array => [$case->getLabel() => $case->getLabel()])->all())
-                                            ->searchable()
-                                            ->live()
-                                            ->afterStateUpdated(function (?string $state, Set $set): void {
-                                                if (self::isRetired($state)) {
-                                                    $set('hiring_date', null);
-                                                }
-                                            }),
-                                        DatePicker::make('hiring_date')
-                                            ->label('Data di assunzione')
-                                            ->native(false)
-                                            ->displayFormat('d/m/Y')
-                                            ->visible(fn (Get $get): bool => filled($get('employment_typology')) && ! self::isRetired($get('employment_typology'))),
-                                        Select::make('employer_id')
-                                            ->label('Datore di lavoro')
-                                            ->helperText(fn (?Client $record): ?string => app(DatoreDiLavoro::class)->richiesto($record) ? 'Cessione o delega: indica il datore di lavoro o l\'ente. Eredita il tipo di amministrazione della pratica.' : null)
-                                            ->relationship('employer', 'name', fn (Builder $query) => $query->where('is_person', false))
-                                            ->searchable()
-                                            ->preload()
-                                            ->createOptionForm(self::datoreDiLavoroForm())
-                                            ->createOptionUsing(fn (array $data, ?Client $record): int => (int) app(DatoreDiLavoro::class)->crea($record, $data)->getKey())
-                                            ->visible(fn (?Client $record, $livewire): bool => self::shows(FinancingSection::ClienteDatoreLavoro, $livewire) || app(DatoreDiLavoro::class)->richiesto($record)),
-                                        TextInput::make('profession')->label('Professione'),
-                                    ]),
-                                Section::make('Reddito e coordinate')
-                                    ->columns(3)
-                                    ->schema([
-                                        TextInput::make('salary')
-                                            ->label('Reddito netto mensile')
-                                            ->numeric()
-                                            ->prefix('€')
-                                            ->visible(fn ($livewire): bool => self::shows(FinancingSection::ClienteReddito, $livewire)),
-                                        TextInput::make('salary_quote')
-                                            ->label('Quota cedibile')
-                                            ->numeric()
-                                            ->prefix('€')
-                                            ->visible(fn ($livewire): bool => self::shows(FinancingSection::ClienteQuotaCedibile, $livewire)),
-                                        TextInput::make('iban')
-                                            ->label('IBAN')
-                                            ->maxLength(34)
-                                            ->dehydrateStateUsing(fn (?string $state): ?string => filled($state) ? strtoupper(str_replace(' ', '', $state)) : null),
+                                        Section::make('Rapporto di lavoro')
+                                            ->columns(2)
+                                            ->schema([
+                                                Select::make('employment_typology')
+                                                    ->label('Tipologia')
+                                                    ->options(collect(EmploymentRelationship::cases())->mapWithKeys(fn (EmploymentRelationship $case): array => [$case->getLabel() => $case->getLabel()])->all())
+                                                    ->searchable()
+                                                    ->live()
+                                                    ->afterStateUpdated(function (?string $state, Set $set): void {
+                                                        if (self::isRetired($state)) {
+                                                            $set('hiring_date', null);
+                                                        }
+                                                    }),
+                                                DatePicker::make('hiring_date')
+                                                    ->label('Data di assunzione')
+                                                    ->native(false)
+                                                    ->displayFormat('d/m/Y')
+                                                    ->visible(fn (Get $get): bool => filled($get('employment_typology')) && ! self::isRetired($get('employment_typology'))),
+                                                Select::make('employer_id')
+                                                    ->label('Datore di lavoro')
+                                                    ->helperText(fn (?Client $record): ?string => app(DatoreDiLavoro::class)->richiesto($record) ? 'Cessione o delega: indica il datore di lavoro o l\'ente. Eredita il tipo di amministrazione della pratica.' : null)
+                                                    ->relationship('employer', 'name', fn (Builder $query) => $query->where('is_person', false))
+                                                    ->searchable()
+                                                    ->preload()
+                                                    ->createOptionForm(self::datoreDiLavoroForm())
+                                                    ->createOptionUsing(fn (array $data, ?Client $record): int => (int) app(DatoreDiLavoro::class)->crea($record, $data)->getKey())
+                                                    ->visible(fn (?Client $record, $livewire): bool => self::shows(FinancingSection::ClienteDatoreLavoro, $livewire) || app(DatoreDiLavoro::class)->richiesto($record)),
+                                                TextInput::make('profession')->label('Professione'),
+                                            ]),
+                                        Section::make('Reddito e coordinate')
+                                            ->columns(2)
+                                            ->schema([
+                                                TextInput::make('salary')
+                                                    ->label('Reddito netto mensile')
+                                                    ->numeric()
+                                                    ->prefix('€')
+                                                    ->visible(fn ($livewire): bool => self::shows(FinancingSection::ClienteReddito, $livewire)),
+                                                TextInput::make('salary_quote')
+                                                    ->label('Quota cedibile')
+                                                    ->numeric()
+                                                    ->prefix('€')
+                                                    ->visible(fn ($livewire): bool => self::shows(FinancingSection::ClienteQuotaCedibile, $livewire)),
+                                                TextInput::make('iban')
+                                                    ->label('IBAN')
+                                                    ->maxLength(34)
+                                                    ->dehydrateStateUsing(fn (?string $state): ?string => filled($state) ? strtoupper(str_replace(' ', '', $state)) : null),
+                                            ]),
                                     ]),
                             ]),
                         Tab::make('Dati societari')
@@ -165,7 +174,7 @@ class ClientForm
                             ->visible(fn (Get $get, $livewire): bool => ! $get('is_person') && self::shows(FinancingSection::ClienteDatiSocietari, $livewire))
                             ->schema([
                                 Section::make('Società')
-                                    ->columns(3)
+                                    ->columns(4)
                                     ->schema([
                                         Select::make('legal_representative_id')
                                             ->label('Legale rappresentante')
@@ -185,30 +194,34 @@ class ClientForm
                                         DatePicker::make('company_started_at')->label('Inizio attività')->native(false)->displayFormat('d/m/Y'),
                                         TextInput::make('iban')->label('IBAN')->maxLength(34),
                                     ]),
-                                // Richiesta, ritiro e notifica del benestare: solo per chi è datore di lavoro di almeno un cliente.
-                                Section::make('Benestare del datore')
-                                    ->description('Come si chiede il benestare al datore, come si ritira e come si notifica.')
-                                    ->visible(fn (?Client $record): bool => $record?->exists === true && $record->employees()->exists())
+                                Grid::make(['default' => 1, 'lg' => 2])
+                                    ->columnSpanFull()
                                     ->schema([
-                                        Textarea::make('richiesta_benestare')->label('Richiesta benestare'),
-                                        Textarea::make('ritiro_benestare')->label('Ritiro benestare'),
-                                        Textarea::make('notifica')->label('Notifica'),
-                                    ]),
-                                Section::make('Ultimo bilancio')
-                                    ->columns(3)
-                                    ->schema([
-                                        TextInput::make('balance_year')->label('Anno')->numeric(),
-                                        TextInput::make('share_capital')->label('Capitale sociale')->numeric()->prefix('€'),
-                                        TextInput::make('turnover')->label('Fatturato')->numeric()->prefix('€'),
-                                        TextInput::make('net_worth')->label('Patrimonio netto')->numeric()->prefix('€'),
-                                        TextInput::make('employees')->label('Dipendenti')->numeric(),
+                                        // Richiesta, ritiro e notifica del benestare: solo per chi è datore di lavoro di almeno un cliente.
+                                        Section::make('Benestare del datore')
+                                            ->description('Come si chiede il benestare al datore, come si ritira e come si notifica.')
+                                            ->visible(fn (?Client $record): bool => $record?->exists === true && $record->employees()->exists())
+                                            ->schema([
+                                                Textarea::make('richiesta_benestare')->label('Richiesta benestare'),
+                                                Textarea::make('ritiro_benestare')->label('Ritiro benestare'),
+                                                Textarea::make('notifica')->label('Notifica'),
+                                            ]),
+                                        Section::make('Ultimo bilancio')
+                                            ->columns(3)
+                                            ->schema([
+                                                TextInput::make('balance_year')->label('Anno')->numeric(),
+                                                TextInput::make('share_capital')->label('Capitale sociale')->numeric()->prefix('€'),
+                                                TextInput::make('turnover')->label('Fatturato')->numeric()->prefix('€'),
+                                                TextInput::make('net_worth')->label('Patrimonio netto')->numeric()->prefix('€'),
+                                                TextInput::make('employees')->label('Dipendenti')->numeric(),
+                                            ]),
                                     ]),
                             ]),
                         Tab::make('Verifiche')
                             ->icon(Heroicon::OutlinedShieldCheck)
                             ->schema([
                                 Section::make('Valutazione rischio')
-                                    ->columns(3)
+                                    ->columns(4)
                                     ->headerActions([
                                         Action::make('kyc')
                                             ->label('KYC')
@@ -238,7 +251,7 @@ class ClientForm
                                 Section::make('KYC (adeguata verifica)')
                                     ->extraAttributes(['id' => 'kyc-adeguata-verifica'])
                                     ->relationship('questionarioKyc')
-                                    ->columns(2)
+                                    ->columns(3)
                                     ->schema([
                                         KycQuestionnaireForm::financingPurpose($isPerson),
                                         KycQuestionnaireForm::riskLevel(),
@@ -247,7 +260,7 @@ class ClientForm
                                         KycQuestionnaireForm::personSection($isPerson),
                                     ]),
                                 Section::make('Consensi privacy')
-                                    ->columns(3)
+                                    ->columns(4)
                                     ->schema([
                                         DateTimePicker::make('general_consent_at')->label('Consenso base'),
                                         DateTimePicker::make('privacy_policy_read_at')->label('Informativa letta'),

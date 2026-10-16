@@ -18,7 +18,7 @@ class CambioOfferta
 {
     /** Campi che dipendono dalla banca o dall'avanzamento e non seguono la copia. */
     private const CAMPI_AZZERATI = [
-        'sended_at', 'approved_at', 'erogated_at', 'rejected_at', 'erogato',
+        'presa_in_carico_at', 'lavorazione_at', 'sended_at', 'approved_at', 'erogated_at', 'rejected_at', 'erogato',
         'abi', 'abi_name', 'offer_valid_until', 'withdrawal_terms',
     ];
 

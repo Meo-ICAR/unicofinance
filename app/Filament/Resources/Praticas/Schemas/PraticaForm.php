@@ -19,6 +19,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
+use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
@@ -82,7 +83,7 @@ class PraticaForm
                                             ]),
                                     ]),
                                 Section::make('Prodotto richiesto')
-                                    ->columns(3)
+                                    ->columns(4)
                                     ->schema([
                                         Toggle::make('is_notowned')->label('Impegno di terzi')->inline(false),
                                         Select::make('tipoprodotto_id')
@@ -122,34 +123,41 @@ class PraticaForm
                         Tab::make('Dati di lavorazione')
                             ->icon(Heroicon::OutlinedClipboardDocumentCheck)
                             ->schema([
-                                Section::make('Istruttoria')
-                                    ->columns(2)
+                                Grid::make(['default' => 1, 'xl' => 3])
+                                    ->columnSpanFull()
                                     ->schema([
-                                        Select::make('pratica_stato_id')
-                                            ->label('Stato pratica')
-                                            ->relationship('praticaStato', 'name')
-                                            ->searchable()
-                                            ->preload(),
-                                        Select::make('employee_id')
-                                            ->label('Istruttore')
-                                            ->relationship('employee', 'name')
-                                            ->searchable()
-                                            ->preload(),
-                                        Select::make('fornitori_id')
-                                            ->label('Agente')
-                                            ->relationship('fornitori', 'name')
-                                            ->searchable()
-                                            ->preload(),
-                                        TextInput::make('denominazione_prodotto')->label('Prodotto'),
-                                        TextInput::make('assicurazione')->label('Assicurazione'),
-                                    ]),
-                                Section::make('Avanzamento')
-                                    ->columns(4)
-                                    ->schema([
-                                        DatePicker::make('sended_at')->label('Invio a banca'),
-                                        DatePicker::make('approved_at')->label('Approvazione'),
-                                        DatePicker::make('erogated_at')->label('Erogazione'),
-                                        DatePicker::make('rejected_at')->label('Rifiuto'),
+                                        Section::make('Istruttoria')
+                                            ->columns(1)
+                                            ->schema([
+                                                Select::make('pratica_stato_id')
+                                                    ->label('Stato pratica')
+                                                    ->relationship('praticaStato', 'name')
+                                                    ->searchable()
+                                                    ->preload(),
+                                                Select::make('employee_id')
+                                                    ->label('Istruttore')
+                                                    ->relationship('employee', 'name')
+                                                    ->searchable()
+                                                    ->preload(),
+                                                Select::make('fornitori_id')
+                                                    ->label('Agente')
+                                                    ->relationship('fornitori', 'name')
+                                                    ->searchable()
+                                                    ->preload(),
+                                                TextInput::make('denominazione_prodotto')->label('Prodotto'),
+                                                TextInput::make('assicurazione')->label('Assicurazione'),
+                                            ]),
+                                        Section::make('Avanzamento')
+                                            ->columns(['default' => 1, 'md' => 2, '2xl' => 3])
+                                            ->columnSpan(['xl' => 2])
+                                            ->schema([
+                                                DatePicker::make('presa_in_carico_at')->label('Data presa in carico'),
+                                                DatePicker::make('lavorazione_at')->label('Data lavorazione'),
+                                                DatePicker::make('sended_at')->label('Data invio istruttoria'),
+                                                DatePicker::make('approved_at')->label('Approvazione'),
+                                                DatePicker::make('erogated_at')->label('Erogazione'),
+                                                DatePicker::make('rejected_at')->label('Rifiuto'),
+                                            ]),
                                     ]),
                                 Section::make('Offerta')
                                     ->hidden()
@@ -162,19 +170,23 @@ class PraticaForm
                         Tab::make('Dati finanziari')
                             ->icon(Heroicon::OutlinedBanknotes)
                             ->schema([
-                                Section::make('Importi')
-                                    ->columns(3)
+                                Grid::make(['default' => 1, 'xl' => 2])
+                                    ->columnSpanFull()
                                     ->schema([
-                                        TextInput::make('net')->label('Importo netto')->numeric()->prefix('€'),
-                                        TextInput::make('erogato')->label('Erogato')->numeric()->prefix('€'),
-                                    ]),
-                                Section::make('Mediazione e costi')
-                                    ->columns(3)
-                                    ->schema([
-                                        TextInput::make('mediation_fee_percent')->label('Mediazione %')->numeric()->suffix('%')->live(onBlur: true),
-                                        TextInput::make('mediation_fee_amount')->label('Mediazione €')->numeric()->prefix('€')->live(onBlur: true),
-                                        TextInput::make('istruttoria_costs')->label('Costi istruttoria')->numeric()->prefix('€'),
-                                        Textarea::make('mediation_fee_terms')->label('Condizioni di mediazione')->columnSpanFull(),
+                                        Section::make('Importi')
+                                            ->columns(2)
+                                            ->schema([
+                                                TextInput::make('net')->label('Importo netto')->numeric()->prefix('€'),
+                                                TextInput::make('erogato')->label('Erogato')->numeric()->prefix('€'),
+                                            ]),
+                                        Section::make('Mediazione e costi')
+                                            ->columns(2)
+                                            ->schema([
+                                                TextInput::make('mediation_fee_percent')->label('Mediazione %')->numeric()->suffix('%')->live(onBlur: true),
+                                                TextInput::make('mediation_fee_amount')->label('Mediazione €')->numeric()->prefix('€')->live(onBlur: true),
+                                                TextInput::make('istruttoria_costs')->label('Costi istruttoria')->numeric()->prefix('€'),
+                                                Textarea::make('mediation_fee_terms')->label('Condizioni di mediazione')->columnSpanFull(),
+                                            ]),
                                     ]),
                             ]),
                     ]),
