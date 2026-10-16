@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
             FascicoloCqMappingSeeder::class,
             ListiniProvvigionaliSeeder::class,
             ListiniReteSeeder::class,
+            ProvvigioniAttiveSeeder::class,
         ]);
     }
 }
