@@ -19,7 +19,6 @@ use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Placeholder;
-use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -39,7 +38,6 @@ use RuntimeException;
 use Unico\Core\Clients\OpenApiCreditScoreService;
 use Unico\Core\Documents\Listeners\AnalyzeUploadedDocument;
 use Unico\Core\Enums\DocumentStatus;
-use Unico\Core\Models\AddressType;
 use Unico\Core\Models\Document;
 use Unico\Core\Models\PdfModule;
 use Unico\Core\Pdf\ModulePrinter;
@@ -136,32 +134,6 @@ class ClientForm
                                                 TextInput::make('emitted_by')->label('Rilasciato da')->placeholder('es. Comune di Napoli')->maxLength(255),
                                                 DatePicker::make('emitted_at')->label('Data di rilascio')->native(false)->displayFormat('d/m/Y'),
                                                 DatePicker::make('expires_at')->label('Scadenza')->native(false)->displayFormat('d/m/Y')->afterOrEqual('emitted_at'),
-                                            ]),
-                                        Section::make('Indirizzi')
-                                            ->description('Residenza e domicilio.')
-                                            ->columnSpanFull()
-                                            ->visible(fn (Get $get, $livewire): bool => (bool) $get('is_person') && self::clienteDellaScheda($livewire)?->exists === true)
-                                            ->schema([
-                                                Repeater::make('addresses')
-                                                    ->label('Indirizzi')
-                                                    ->hiddenLabel()
-                                                    ->relationship('addresses')
-                                                    ->afterStateHydrated(function (Repeater $component, $state): void {
-                                                        if (blank($state)) {
-                                                            $component->state(AddressType::query()->whereIn('name', ['Residenza', 'Domicilio'])->orderBy('id')->get()->map(fn (AddressType $tipo): array => ['address_type_id' => $tipo->getKey()])->all());
-                                                        }
-                                                    })
-                                                    ->columns(['default' => 1, 'md' => 6])
-                                                    ->schema([
-                                                        Select::make('address_type_id')->label('Tipo')->options(fn (): array => AddressType::query()->orderBy('id')->pluck('name', 'id')->all())->columnSpan(['md' => 2]),
-                                                        TextInput::make('street')->label('Via / Piazza')->maxLength(255)->columnSpan(['md' => 3]),
-                                                        TextInput::make('numero')->label('Civico')->maxLength(20)->columnSpan(['md' => 1]),
-                                                        TextInput::make('city')->label('Comune')->maxLength(100)->columnSpan(['md' => 3]),
-                                                        TextInput::make('province')->label('Prov.')->maxLength(2)->columnSpan(['md' => 1]),
-                                                        TextInput::make('zip_code')->label('CAP')->maxLength(10)->columnSpan(['md' => 2]),
-                                                    ])
-                                                    ->addActionLabel('Aggiungi indirizzo')
-                                                    ->defaultItems(0),
                                             ]),
                                     ]),
                             ]),

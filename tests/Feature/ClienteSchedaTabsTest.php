@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Filament\RelationManagers\AddressesRelationManager;
 use App\Filament\Resources\Clients\Pages\EditClient;
 use App\Filament\Resources\Clients\Pages\ListClients;
 use App\Models\Client;
@@ -13,7 +14,6 @@ use Livewire\Livewire;
 use Tests\TestCase;
 use Unico\Core\Enums\DocumentStatus;
 use Unico\Core\Filament\RelationManagers\DocumentsRelationManager;
-use Unico\Core\Models\AddressType;
 use Unico\Core\Models\Document;
 use Unico\Core\Models\DocumentType;
 use Unico\Core\Models\PdfModule;
@@ -132,22 +132,18 @@ class ClienteSchedaTabsTest extends TestCase
         $this->assertNotNull($richiesta->provider_document_ref);
     }
 
-    public function test_the_identity_document_and_addresses_are_edited_in_the_registry_tab(): void
+    public function test_the_identity_document_is_edited_in_the_registry_tab(): void
     {
         $this->admin();
         $persona = Client::query()->create(['name' => 'Meo', 'first_name' => 'Piergiuseppe', 'tax_code' => 'MEOPGS64D04F839I', 'is_person' => true]);
         $identita = DocumentType::query()->where('code', 'CARTA_IDENTITA')->firstOrFail();
-        $residenza = $persona->addresses()->whereHas('addressType', fn ($query) => $query->where('name', 'Residenza'))->firstOrFail();
 
         $pagina = Livewire::test(EditClient::class, ['record' => $persona->getKey()]);
-        $pagina->assertSee('Documento d\'identità')->assertSee('Indirizzi');
+        $pagina->assertSee('Documento d\'identità');
 
         // Senza compilare il documento non se ne crea uno vuoto.
         $pagina->call('save')->assertHasNoFormErrors();
         $this->assertNull($persona->refresh()->documentoIdentita);
-
-        $dati = $pagina->get('data');
-        $chiaveResidenza = collect($dati['addresses'])->search(fn (array $riga): bool => (int) $riga['address_type_id'] === (int) $residenza->address_type_id);
 
         $pagina
             ->fillForm([
@@ -156,8 +152,6 @@ class ClienteSchedaTabsTest extends TestCase
                 'documentoIdentita.emitted_by' => 'Comune di Napoli',
                 'documentoIdentita.emitted_at' => '2024-03-01',
                 'documentoIdentita.expires_at' => '2034-03-01',
-                "addresses.{$chiaveResidenza}.street" => 'Via Roma',
-                "addresses.{$chiaveResidenza}.city" => 'Napoli',
             ])
             ->call('save')
             ->assertHasNoFormErrors();
@@ -166,20 +160,16 @@ class ClienteSchedaTabsTest extends TestCase
         $this->assertSame('CA12345XX', $documento->docnumber);
         $this->assertSame('Comune di Napoli', $documento->emitted_by);
         $this->assertSame($documento->getKey(), app(PracticeModuleData::class)->identityDocument($persona->load('documents.documentType'))?->getKey());
-        $this->assertSame('Via Roma', $residenza->refresh()->street);
-        $this->assertSame('Napoli', $residenza->city);
     }
 
-    public function test_a_client_without_addresses_shows_residence_and_domicile_to_fill_in(): void
+    public function test_the_addresses_tab_lists_residence_and_domicile_of_the_client(): void
     {
         $this->admin();
-        $persona = Client::query()->create(['name' => 'Antico', 'tax_code' => 'NTCLGI80A01H501U', 'is_person' => true]);
-        $persona->addresses()->delete();
+        $persona = Client::query()->create(['name' => 'Verdi', 'tax_code' => 'VRDLGI80A01H501U', 'is_person' => true]);
 
-        $pagina = Livewire::test(EditClient::class, ['record' => $persona->getKey()]);
-        $tipi = collect($pagina->get('data')['addresses'])->pluck('address_type_id')->map(fn ($id): int => (int) $id)->sort()->values()->all();
-
-        $this->assertSame(AddressType::query()->whereIn('name', ['Residenza', 'Domicilio'])->orderBy('id')->pluck('id')->map(fn ($id): int => (int) $id)->all(), $tipi);
+        Livewire::test(AddressesRelationManager::class, ['ownerRecord' => $persona, 'pageClass' => EditClient::class])
+            ->assertCanSeeTableRecords($persona->addresses)
+            ->assertCountTableRecords(2);
     }
 
     public function test_a_new_natural_person_gets_residence_and_domicile_addresses(): void
