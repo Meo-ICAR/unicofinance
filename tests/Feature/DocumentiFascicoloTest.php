@@ -20,6 +20,7 @@ use Unico\Core\Models\DocumentType;
 use Unico\Core\Models\PraticaClient;
 use Unico\Core\Models\Task;
 use Unico\Core\Models\TipoProdotto;
+use Unico\Core\Pdf\PracticeModuleData;
 
 class DocumentiFascicoloTest extends TestCase
 {
@@ -138,5 +139,22 @@ class DocumentiFascicoloTest extends TestCase
             ->assertNotified();
 
         $this->assertTrue(Document::query()->where('documentable_type', 'client')->where('documentable_id', (string) $cliente->getKey())->where('document_type_id', $privacy->getKey())->exists());
+    }
+
+    public function test_il_documento_d_identita_del_cliente_si_inserisce_con_numero_e_ente_di_rilascio(): void
+    {
+        Filament::setCurrentPanel('admin');
+        $this->actingAs(User::factory()->create(['role' => 'super_admin']));
+        $identita = DocumentType::query()->where('code', 'CARTA_IDENTITA')->firstOrFail();
+        $cliente = Client::query()->create(['name' => 'Bianchi', 'first_name' => 'Anna', 'is_person' => true]);
+
+        Livewire::test(DocumentsRelationManager::class, ['ownerRecord' => $cliente, 'pageClass' => EditClient::class])
+            ->callAction(TestAction::make('create')->table(), ['document_type_id' => $identita->getKey(), 'name' => 'Carta d\'identità', 'emitted_at' => '2024-03-01', 'is_monitored' => true, 'expires_at' => '2034-03-01', 'docnumber' => 'CA12345XX', 'emitted_by' => 'Comune di Napoli'])
+            ->assertHasNoFormErrors();
+
+        $documento = Document::query()->where('documentable_type', 'client')->where('documentable_id', (string) $cliente->getKey())->firstOrFail();
+        $this->assertSame('CA12345XX', $documento->docnumber);
+        $this->assertSame('Comune di Napoli', $documento->emitted_by);
+        $this->assertSame($documento->getKey(), app(PracticeModuleData::class)->identityDocument($cliente->load('documents.documentType'))?->getKey());
     }
 }
