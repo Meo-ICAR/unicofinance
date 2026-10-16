@@ -19,6 +19,7 @@ use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -38,6 +39,7 @@ use RuntimeException;
 use Unico\Core\Clients\OpenApiCreditScoreService;
 use Unico\Core\Documents\Listeners\AnalyzeUploadedDocument;
 use Unico\Core\Enums\DocumentStatus;
+use Unico\Core\Models\AddressType;
 use Unico\Core\Models\Document;
 use Unico\Core\Models\PdfModule;
 use Unico\Core\Pdf\ModulePrinter;
@@ -121,6 +123,44 @@ class ClientForm
                                                 TextInput::make('birth_place')->label('Luogo di nascita')->maxLength(100),
                                                 Select::make('sex')->label('Sesso')->options(['M' => 'M', 'F' => 'F']),
                                                 TextInput::make('citizenship')->label('Cittadinanza')->maxLength(60),
+                                            ]),
+                                        Section::make('Documento d\'identità')
+                                            ->description('Lo riporta il modulo KYC. Il file del documento si carica nella scheda Documenti.')
+                                            ->columns(['default' => 1, 'md' => 2])
+                                            ->visible(fn (Get $get, $livewire): bool => (bool) $get('is_person') && self::clienteDellaScheda($livewire)?->exists === true)
+                                            ->relationship('documentoIdentita')
+                                            ->saveRelationshipsUsing(fn (Client $record, array $state) => self::salvaDocumentoIdentita($record, $state))
+                                            ->schema([
+                                                Select::make('document_type_id')->label('Tipo')->options(fn (): array => Client::tipiDocumentoIdentita()->all())->searchable(),
+                                                TextInput::make('docnumber')->label('Numero')->maxLength(60),
+                                                TextInput::make('emitted_by')->label('Rilasciato da')->placeholder('es. Comune di Napoli')->maxLength(255),
+                                                DatePicker::make('emitted_at')->label('Data di rilascio')->native(false)->displayFormat('d/m/Y'),
+                                                DatePicker::make('expires_at')->label('Scadenza')->native(false)->displayFormat('d/m/Y')->afterOrEqual('emitted_at'),
+                                            ]),
+                                        Section::make('Indirizzi')
+                                            ->description('Residenza e domicilio.')
+                                            ->columnSpanFull()
+                                            ->visible(fn (Get $get, $livewire): bool => (bool) $get('is_person') && self::clienteDellaScheda($livewire)?->exists === true)
+                                            ->schema([
+                                                Repeater::make('addresses')
+                                                    ->hiddenLabel()
+                                                    ->relationship('addresses')
+                                                    ->afterStateHydrated(function (Repeater $component, $state): void {
+                                                        if (blank($state)) {
+                                                            $component->state(AddressType::query()->whereIn('name', ['Residenza', 'Domicilio'])->orderBy('id')->get()->map(fn (AddressType $tipo): array => ['address_type_id' => $tipo->getKey()])->all());
+                                                        }
+                                                    })
+                                                    ->columns(['default' => 1, 'md' => 6])
+                                                    ->schema([
+                                                        Select::make('address_type_id')->label('Tipo')->options(fn (): array => AddressType::query()->orderBy('id')->pluck('name', 'id')->all())->columnSpan(['md' => 2]),
+                                                        TextInput::make('street')->label('Via / Piazza')->maxLength(255)->columnSpan(['md' => 3]),
+                                                        TextInput::make('numero')->label('Civico')->maxLength(20)->columnSpan(['md' => 1]),
+                                                        TextInput::make('city')->label('Comune')->maxLength(100)->columnSpan(['md' => 3]),
+                                                        TextInput::make('province')->label('Prov.')->maxLength(2)->columnSpan(['md' => 1]),
+                                                        TextInput::make('zip_code')->label('CAP')->maxLength(10)->columnSpan(['md' => 2]),
+                                                    ])
+                                                    ->addActionLabel('Aggiungi indirizzo')
+                                                    ->defaultItems(0),
                                             ]),
                                     ]),
                             ]),
@@ -370,6 +410,30 @@ class ClientForm
 
                 return response()->streamDownload(fn () => print ($contenuto), 'kyc-'.Str::slug((string) $record->name).'.pdf', ['Content-Type' => 'application/pdf']);
             });
+    }
+
+    /**
+     * Salva il documento d'identità dalla scheda: si crea solo se è indicato almeno il tipo, e si aggiorna quello esistente.
+     *
+     * @param  array<string, mixed>  $dati
+     */
+    private static function salvaDocumentoIdentita(Client $cliente, array $dati): void
+    {
+        $dati = array_intersect_key($dati, array_flip(['document_type_id', 'docnumber', 'emitted_by', 'emitted_at', 'expires_at']));
+        $documento = $cliente->documentoIdentita()->first();
+
+        if ($documento === null && blank($dati['document_type_id'] ?? null)) {
+            return;
+        }
+
+        if ($documento === null) {
+            $dati += ['name' => Client::tipiDocumentoIdentita()->get($dati['document_type_id']), 'company_id' => $cliente->company_id, 'status' => DocumentStatus::PENDING->value];
+            $cliente->documentoIdentita()->create($dati);
+
+            return;
+        }
+
+        $documento->fill($dati)->save();
     }
 
     /** Il modulo stampato resta tra i documenti del cliente, al posto della stampa precedente dello stesso modulo. */
