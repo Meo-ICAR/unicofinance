@@ -72,6 +72,28 @@ class ImportMediafacileTest extends TestCase
         $this->assertSame(1, Cliente::query()->where('name', 'BANCA IMPORT')->count());
     }
 
+    public function test_the_rejection_date_is_never_in_the_future_and_is_today_when_a_rejected_practice_has_none(): void
+    {
+        TipoProdotto::query()->firstOrCreate(['name' => 'Cessione'], ['tipo_prodotto' => 'Cessione']);
+        $intestazioni = ['ID Pratica', 'Denominazione Agente', 'Denominazione Banca', 'Tipo Prodotto', 'Stato Pratica', 'Data Annullamento', 'Pratica_terzi'];
+        $base = ['Denominazione Agente' => 'AGENTE IMPORT', 'Denominazione Banca' => 'BANCA IMPORT', 'Tipo Prodotto' => 'Cessione', 'Pratica_terzi' => 'NO'];
+        $righe = [
+            $base + ['ID Pratica' => 'QT91001', 'Stato Pratica' => 'PRATICA RESPINTA', 'Data Annullamento' => now()->addDays(10)->format('d/m/Y')],
+            $base + ['ID Pratica' => 'QT91002', 'Stato Pratica' => 'PRATICA RESPINTA', 'Data Annullamento' => ''],
+            $base + ['ID Pratica' => 'QT91003', 'Stato Pratica' => 'Inserita', 'Data Annullamento' => ''],
+            $base + ['ID Pratica' => 'QT91004', 'Stato Pratica' => 'DECLINATA', 'Data Annullamento' => '03/08/2026'],
+        ];
+        Http::fake(['mediafacile.test/*' => Http::response($this->tsv($intestazioni, $righe))]);
+
+        $this->artisan('pratiche:import-api', ['--start-date' => now()->subDays(30)->toDateString(), '--end-date' => now()->toDateString(), '--no-close' => true])->assertSuccessful();
+
+        $rifiutata = fn (string $codice) => Pratica::query()->where('codice_pratica', $codice)->firstOrFail()->rejected_at?->toDateString();
+        $this->assertSame(today()->toDateString(), $rifiutata('QT91001'), 'data futura → oggi');
+        $this->assertSame(today()->toDateString(), $rifiutata('QT91002'), 'respinta senza data → oggi');
+        $this->assertNull($rifiutata('QT91003'), 'pratica viva senza data resta senza');
+        $this->assertSame('2026-08-03', $rifiutata('QT91004'), 'data passata invariata');
+    }
+
     public function test_a_second_import_updates_the_practice_and_records_the_state_change(): void
     {
         TipoProdotto::query()->firstOrCreate(['name' => 'Cessione'], ['tipo_prodotto' => 'Cessione']);

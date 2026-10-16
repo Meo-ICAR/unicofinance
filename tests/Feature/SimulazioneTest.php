@@ -356,14 +356,16 @@ XML;
         $results = $package->send($pratica->fresh(), $moduli, auth()->user());
         $byName = collect($results)->keyBy('name');
         $this->assertTrue($byName['QAV Persona fisica']['ok'], $byName['QAV Persona fisica']['message']);
-        $this->assertSame('inviato per la firma con OTP', $byName['QAV Persona fisica']['message']);
+        $this->assertSame('inviato per la firma con OTP, insieme agli altri moduli (un solo codice)', $byName['QAV Persona fisica']['message']);
         $this->assertFalse($byName['Informativa Privacy Compass']['ok']);
         $this->assertStringContainsString('modulo PDF non disponibile', $byName['Informativa Privacy Compass']['message']);
         $this->assertTrue($byName['Races VERS. 03_2026 - Fascicolo completo retail Prestiti Personali compilabile']['ok'], $byName['Races VERS. 03_2026 - Fascicolo completo retail Prestiti Personali compilabile']['message']);
 
         $after = $package->status($pratica->fresh(), $moduli);
         $this->assertSame('inviato', $after[$moduli->firstWhere('name', 'QAV Persona fisica')->id]['state']);
-        $this->assertGreaterThanOrEqual(2, SignatureRequest::query()->whereIn('document_id', Document::query()->where('documentable_id', (string) $pratica->getKey())->pluck('id'))->count());
+        $richieste = SignatureRequest::query()->whereIn('document_id', Document::query()->where('documentable_type', 'pratica')->where('documentable_id', (string) $pratica->getKey())->pluck('id'))->get();
+        $this->assertGreaterThanOrEqual(2, $richieste->count());
+        $this->assertCount(1, $richieste->pluck('provider_ref')->unique(), 'un solo plico presso il provider: un solo OTP');
 
         $this->assertNotContains('salary_quote', FinancingClientFields::forContract(SimulationContractType::Prestito));
         $this->assertNotContains('employer_id', FinancingClientFields::forContract(SimulationContractType::Prestito));

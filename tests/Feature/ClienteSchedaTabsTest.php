@@ -107,6 +107,28 @@ class ClienteSchedaTabsTest extends TestCase
         $this->assertNotNull($documento->fresh()->latestSignatureRequest());
     }
 
+    public function test_the_documents_tab_sends_the_documents_to_sign_as_one_bundle(): void
+    {
+        $this->admin();
+        $persona = Client::query()->create(['name' => 'Rossi', 'first_name' => 'Mario', 'tax_code' => 'RSSMRA80A01H501U', 'is_person' => true, 'email' => 'mario.rossi@example.com', 'phone' => '3330001111']);
+        Pratica::query()->create(['codice_pratica' => 'KYC-PLICO-1', 'codice_fiscale' => $persona->tax_code, 'tipoprodotto_id' => TipoProdotto::query()->where('name', 'Cessione')->value('id'), 'data_inserimento_pratica' => now(), 'upload_at' => now()]);
+
+        Livewire::test(EditClient::class, ['record' => $persona->getKey()])
+            ->callAction(TestAction::make('stampaModuloKyc')->schemaComponent('kyc'));
+
+        $tipo = PdfModule::query()->active()->where('name', 'like', 'QAV Persona fisica%')->firstOrFail()->documentType;
+        $documento = Document::query()->where('documentable_type', 'client')->where('documentable_id', (string) $persona->getKey())->where('document_type_id', $tipo->getKey())->firstOrFail();
+
+        Livewire::test(DocumentsRelationManager::class, ['ownerRecord' => $persona, 'pageClass' => EditClient::class])
+            ->callAction(TestAction::make('inviaPlicoOtp')->table(), ['documenti' => [$documento->getKey()]])
+            ->assertNotified();
+
+        $richiesta = $documento->fresh()->latestSignatureRequest();
+        $this->assertNotNull($richiesta);
+        $this->assertNotNull($richiesta->provider_ref);
+        $this->assertNotNull($richiesta->provider_document_ref);
+    }
+
     public function test_a_new_natural_person_gets_residence_and_domicile_addresses(): void
     {
         $persona = Client::query()->create(['name' => 'Viola', 'tax_code' => 'VLILGI80A01H501U', 'is_person' => true]);

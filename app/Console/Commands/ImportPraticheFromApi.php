@@ -216,7 +216,7 @@ class ImportPraticheFromApi extends Command
             'sended_at' => $this->data($riga['Data_invio_istruttoria'] ?? null),
             'approved_at' => $this->data($riga['Data_delibera_banca'] ?? null),
             'erogated_at' => $this->data($riga['Data_erogazione'] ?? null),
-            'rejected_at' => $this->data($riga['Data Annullamento'] ?? null),
+            'rejected_at' => $this->dataRifiuto($this->data($riga['Data Annullamento'] ?? null), (string) ($riga['Stato Pratica'] ?? '')),
             'amount' => $this->decimale($riga['Montante'] ?? null),
             'net' => $this->decimale($riga['Importo_Erogazione'] ?? null),
             'is_notowned' => ($riga['Pratica_terzi'] ?? '') === 'SI',
@@ -298,6 +298,18 @@ class ImportPraticheFromApi extends Command
             'source' => 'mediafacile',
             'notes' => 'Importazione da Mediafacile',
         ]);
+    }
+
+    /**
+     * La data di rifiuto non può essere futura (si usa oggi); se manca ma lo stato dice che la pratica è respinta o annullata, è oggi.
+     */
+    private function dataRifiuto(?Carbon $data, string $stato): ?Carbon
+    {
+        if ($data !== null) {
+            return $data->isFuture() && ! $data->isToday() ? today() : $data;
+        }
+
+        return preg_match('/annull|respint|declinat|rifiutat|stornat/i', $stato) === 1 ? today() : null;
     }
 
     private function data(?string $valore): ?Carbon
