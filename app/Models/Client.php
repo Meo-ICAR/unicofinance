@@ -5,13 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
-use Illuminate\Database\Eloquent\Relations\MorphOne;
-use Illuminate\Support\Collection;
 use Unico\Core\Models\Address;
 use Unico\Core\Models\Client as CoreClient;
-use Unico\Core\Models\Document;
-use Unico\Core\Models\DocumentType;
-use Unico\Core\Pdf\PracticeModuleData;
 
 /** Richiedente della pratica: anagrafica core, con indirizzi, KYC e AML. */
 class Client extends CoreClient
@@ -55,25 +50,6 @@ class Client extends CoreClient
     public function addresses(): MorphMany
     {
         return $this->morphMany(Address::class, 'addressable');
-    }
-
-    /** Documento d'identità del cliente: l'ultimo per data di rilascio, quello che il KYC riporta. */
-    public function documentoIdentita(): MorphOne
-    {
-        return $this->morphOne(Document::class, 'documentable')
-            ->whereIn('document_type_id', static::tipiDocumentoIdentita()->keys())
-            ->orderByDesc('emitted_at')
-            ->orderByDesc('id');
-    }
-
-    /** @return Collection<int, string> tipi documento validi come identità (id => nome) */
-    public static function tipiDocumentoIdentita(): Collection
-    {
-        return DocumentType::query()
-            ->whereIn('code', PracticeModuleData::IDENTITY_TYPE_CODES)
-            ->orWhereIn('name', PracticeModuleData::IDENTITY_TYPE_NAMES)
-            ->orderBy('name')
-            ->pluck('name', 'id');
     }
 
     public function kycQuestionnaires(): HasMany

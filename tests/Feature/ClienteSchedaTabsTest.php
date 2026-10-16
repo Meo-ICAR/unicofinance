@@ -132,34 +132,27 @@ class ClienteSchedaTabsTest extends TestCase
         $this->assertNotNull($richiesta->provider_document_ref);
     }
 
-    public function test_the_identity_document_is_edited_in_the_registry_tab(): void
+    public function test_only_identity_documents_take_number_and_issuer_and_the_latest_one_is_used(): void
     {
         $this->admin();
         $persona = Client::query()->create(['name' => 'Meo', 'first_name' => 'Piergiuseppe', 'tax_code' => 'MEOPGS64D04F839I', 'is_person' => true]);
-        $identita = DocumentType::query()->where('code', 'CARTA_IDENTITA')->firstOrFail();
+        $identita = DocumentType::query()->where('is_identity', true)->where('code', 'CARTA_IDENTITA')->firstOrFail();
+        $altro = DocumentType::query()->where('is_identity', false)->where('code', 'PROCEDURA_KYC')->first() ?? DocumentType::query()->where('is_identity', false)->firstOrFail();
+        $gestore = fn () => Livewire::test(DocumentsRelationManager::class, ['ownerRecord' => $persona, 'pageClass' => EditClient::class]);
 
-        $pagina = Livewire::test(EditClient::class, ['record' => $persona->getKey()]);
-        $pagina->assertSee('Documento d\'identità');
+        // Il numero è obbligatorio per i documenti d'identità.
+        $gestore()->callAction(TestAction::make('create')->table(), ['document_type_id' => $identita->getKey(), 'name' => 'Carta', 'emitted_at' => '2020-01-10'])->assertHasFormErrors(['docnumber' => 'required']);
 
-        // Senza compilare il documento non se ne crea uno vuoto.
-        $pagina->call('save')->assertHasNoFormErrors();
-        $this->assertNull($persona->refresh()->documentoIdentita);
+        $vecchio = DocumentType::query()->where('code', 'DOCUMENTO_IDENTIFICATIVO')->firstOrFail();
+        $gestore()->callAction(TestAction::make('create')->table(), ['document_type_id' => $vecchio->getKey(), 'name' => 'Documento vecchio', 'docnumber' => 'OLD111', 'emitted_by' => 'Comune di Roma', 'emitted_at' => '2015-01-10', 'is_monitored' => false])->assertHasNoFormErrors();
+        $gestore()->callAction(TestAction::make('create')->table(), ['document_type_id' => $identita->getKey(), 'name' => 'Carta nuova', 'docnumber' => 'CA12345XX', 'emitted_by' => 'Comune di Napoli', 'emitted_at' => '2024-03-01', 'is_monitored' => false])->assertHasNoFormErrors();
 
-        $pagina
-            ->fillForm([
-                'documentoIdentita.document_type_id' => $identita->getKey(),
-                'documentoIdentita.docnumber' => 'CA12345XX',
-                'documentoIdentita.emitted_by' => 'Comune di Napoli',
-                'documentoIdentita.emitted_at' => '2024-03-01',
-                'documentoIdentita.expires_at' => '2034-03-01',
-            ])
-            ->call('save')
-            ->assertHasNoFormErrors();
-
-        $documento = $persona->refresh()->documentoIdentita;
+        $documento = app(PracticeModuleData::class)->identityDocument($persona->load('documents.documentType'));
         $this->assertSame('CA12345XX', $documento->docnumber);
         $this->assertSame('Comune di Napoli', $documento->emitted_by);
-        $this->assertSame($documento->getKey(), app(PracticeModuleData::class)->identityDocument($persona->load('documents.documentType'))?->getKey());
+
+        // Per gli altri tipi i campi non esistono nemmeno.
+        $gestore()->mountAction(TestAction::make('create')->table())->fillForm(['document_type_id' => $altro->getKey()])->assertFormFieldHidden('docnumber')->assertFormFieldHidden('emitted_by');
     }
 
     public function test_the_addresses_tab_lists_residence_and_domicile_of_the_client(): void

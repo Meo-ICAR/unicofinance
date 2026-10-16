@@ -122,19 +122,6 @@ class ClientForm
                                                 Select::make('sex')->label('Sesso')->options(['M' => 'M', 'F' => 'F']),
                                                 TextInput::make('citizenship')->label('Cittadinanza')->maxLength(60),
                                             ]),
-                                        Section::make('Documento d\'identità')
-                                            ->description('Lo riporta il modulo KYC. Il file del documento si carica nella scheda Documenti.')
-                                            ->columns(['default' => 1, 'md' => 2])
-                                            ->visible(fn (Get $get, $livewire): bool => (bool) $get('is_person') && self::clienteDellaScheda($livewire)?->exists === true)
-                                            ->relationship('documentoIdentita')
-                                            ->saveRelationshipsUsing(fn (Client $record, array $state) => self::salvaDocumentoIdentita($record, $state))
-                                            ->schema([
-                                                Select::make('document_type_id')->label('Tipo')->options(fn (): array => Client::tipiDocumentoIdentita()->all())->searchable(),
-                                                TextInput::make('docnumber')->label('Numero')->maxLength(60),
-                                                TextInput::make('emitted_by')->label('Rilasciato da')->placeholder('es. Comune di Napoli')->maxLength(255),
-                                                DatePicker::make('emitted_at')->label('Data di rilascio')->native(false)->displayFormat('d/m/Y'),
-                                                DatePicker::make('expires_at')->label('Scadenza')->native(false)->displayFormat('d/m/Y')->afterOrEqual('emitted_at'),
-                                            ]),
                                     ]),
                             ]),
                         Tab::make('Lavoro e reddito')
@@ -383,30 +370,6 @@ class ClientForm
 
                 return response()->streamDownload(fn () => print ($contenuto), 'kyc-'.Str::slug((string) $record->name).'.pdf', ['Content-Type' => 'application/pdf']);
             });
-    }
-
-    /**
-     * Salva il documento d'identità dalla scheda: si crea solo se è indicato almeno il tipo, e si aggiorna quello esistente.
-     *
-     * @param  array<string, mixed>  $dati
-     */
-    private static function salvaDocumentoIdentita(Client $cliente, array $dati): void
-    {
-        $dati = array_intersect_key($dati, array_flip(['document_type_id', 'docnumber', 'emitted_by', 'emitted_at', 'expires_at']));
-        $documento = $cliente->documentoIdentita()->first();
-
-        if ($documento === null && blank($dati['document_type_id'] ?? null)) {
-            return;
-        }
-
-        if ($documento === null) {
-            $dati += ['name' => Client::tipiDocumentoIdentita()->get($dati['document_type_id']), 'company_id' => $cliente->company_id, 'status' => DocumentStatus::PENDING->value];
-            $cliente->documentoIdentita()->create($dati);
-
-            return;
-        }
-
-        $documento->fill($dati)->save();
     }
 
     /** Il modulo stampato resta tra i documenti del cliente, al posto della stampa precedente dello stesso modulo. */
