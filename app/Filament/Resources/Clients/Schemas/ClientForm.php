@@ -143,6 +143,7 @@ class ClientForm
                                             ->visible(fn (Get $get, $livewire): bool => (bool) $get('is_person') && self::clienteDellaScheda($livewire)?->exists === true)
                                             ->schema([
                                                 Repeater::make('addresses')
+                                                    ->label('Indirizzi')
                                                     ->hiddenLabel()
                                                     ->relationship('addresses')
                                                     ->afterStateHydrated(function (Repeater $component, $state): void {
