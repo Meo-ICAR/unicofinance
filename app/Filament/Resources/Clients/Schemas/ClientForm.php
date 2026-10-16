@@ -245,8 +245,8 @@ class ClientForm
                                         KycQuestionnaireForm::personSection($isPerson),
                                         Placeholder::make('kyc_datore_di_lavoro')
                                             ->label('Datore di lavoro')
-                                            ->content(fn (?Client $record): string => $record?->employer?->name ?? 'Non indicato: si imposta in «Lavoro e reddito».')
-                                            ->visible(fn (?Client $record): bool => app(DatoreDiLavoro::class)->richiesto($record))
+                                            ->content(fn (mixed $livewire): string => self::clienteDellaScheda($livewire)?->employer?->name ?? 'Non indicato: si imposta in «Lavoro e reddito».')
+                                            ->visible(fn (mixed $livewire): bool => app(DatoreDiLavoro::class)->richiesto(self::clienteDellaScheda($livewire)))
                                             ->columnSpanFull(),
                                     ]),
                                 Section::make('Valutazione rischio')
@@ -336,8 +336,10 @@ class ClientForm
             ->label('Stampa modulo KYC')
             ->icon(Heroicon::OutlinedPrinter)
             ->color('gray')
-            ->visible(fn (?Client $record): bool => $record?->exists === true)
-            ->action(function (?Client $record) {
+            ->visible(fn (mixed $livewire): bool => self::clienteDellaScheda($livewire)?->exists === true)
+            ->action(function (mixed $livewire) {
+                $record = self::clienteDellaScheda($livewire);
+
                 $modulo = PdfModule::query()->active()->where('name', 'like', $record->is_person ? 'QAV Persona fisica%' : 'QAV Persona giuridica%')->first();
                 $pratica = $record->ultimaPratica;
 
@@ -358,6 +360,14 @@ class ClientForm
 
                 return response()->streamDownload(fn () => print ($contenuto), 'kyc-'.Str::slug((string) $record->name).'.pdf', ['Content-Type' => 'application/pdf']);
             });
+    }
+
+    /** Il cliente della scheda: nelle sezioni legate a una relazione (es. il KYC) `$record` è il record della relazione. */
+    private static function clienteDellaScheda(mixed $livewire): ?Client
+    {
+        $record = method_exists($livewire, 'getRecord') ? $livewire->getRecord() : null;
+
+        return $record instanceof Client ? $record : null;
     }
 
     /** Crea l'utente di accesso della persona fisica e lo collega alla scheda. */

@@ -116,4 +116,18 @@ class ClienteSchedaTabsTest extends TestCase
             ->assertSet('data.questionarioKyc.financing_nature', 'mutuo')
             ->assertDontSee('si imposta in');
     }
+
+    public function test_the_card_opens_when_the_client_already_has_a_kyc_questionnaire(): void
+    {
+        $this->admin();
+        $persona = Client::query()->create(['name' => 'Meo', 'tax_code' => 'MEOPGS64D04F839I', 'is_person' => true]);
+        $persona->kycQuestionnaires()->create(['financing_purpose' => 'personale_familiare', 'status' => 'draft']);
+        Pratica::query()->create(['codice_pratica' => 'KYC-3', 'codice_fiscale' => $persona->tax_code, 'tipoprodotto_id' => TipoProdotto::query()->where('name', 'Cessione')->value('id'), 'data_inserimento_pratica' => now(), 'upload_at' => now()]);
+
+        Livewire::test(EditClient::class, ['record' => $persona->getKey()])
+            ->assertSuccessful()
+            ->assertSee('Stampa modulo KYC')
+            ->callAction(TestAction::make('stampaModuloKyc')->schemaComponent('kyc'))
+            ->assertHasNoActionErrors();
+    }
 }

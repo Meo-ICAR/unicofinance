@@ -75,7 +75,7 @@ class DocumentiIstitutoRelationManager extends RelationManager
             ])
             ->headerActions([
                 CreateAction::make()
-                    ->mutateDataUsing(fn (array $data): array => $data + ['is_practice' => true, 'is_client' => true, 'is_person' => true, 'nature' => 'incoming'])
+                    ->mutateDataUsing(fn (array $data): array => $data + ['source' => 'cliente', 'client_scope' => 'persona_fisica'])
                     ->using(function (array $data, self $livewire): Model {
                         $type = $livewire->getOwnerRecord()->documentTypes()->create(collect($data)->except(['prodotti', 'fase'])->all());
                         app(BankDocumentRequirements::class)->sync($type, $data['prodotti'], $data['fase']);
