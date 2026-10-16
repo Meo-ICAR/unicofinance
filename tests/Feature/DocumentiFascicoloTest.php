@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Filament\Resources\Praticas\Pages\EditPratica;
 use App\Models\Pratica;
 use App\Models\User;
+use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -83,5 +84,17 @@ class DocumentiFascicoloTest extends TestCase
             ->filterTable('da_completare')
             ->assertCanSeeTableRecords([$documenti['anomalo']])
             ->assertCanNotSeeTableRecords([$documenti['verificato'], $documenti['caricato']]);
+    }
+
+    public function test_genera_plico_crea_i_documenti_mancanti_della_check_list_del_prodotto(): void
+    {
+        [$pratica, $documenti] = $this->pratica();
+
+        Livewire::test(DocumentsRelationManager::class, ['ownerRecord' => $pratica, 'pageClass' => EditPratica::class])
+            ->callAction(TestAction::make('generaPlico')->table(), [])
+            ->assertNotified('2 documenti richiesti creati');
+
+        $this->assertSame(6, Document::query()->where('documentable_type', 'pratica')->where('documentable_id', (string) $pratica->getKey())->count());
+        $this->assertSame(DocumentStatus::PENDING, Document::query()->where('name', 'Doc mancante')->firstOrFail()->status);
     }
 }
