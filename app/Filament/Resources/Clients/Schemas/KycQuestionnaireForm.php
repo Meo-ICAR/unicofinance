@@ -14,12 +14,14 @@ use App\Enums\KycPepStatus;
 use App\Enums\KycPersonPurpose;
 use App\Enums\KycRiskLevel;
 use App\Enums\KycWealthBand;
+use App\Models\Client;
 use Closure;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
+use Unico\Core\Models\Pratica;
 
 /**
  * Campi del questionario KYC condivisi dal pannello admin e dal portale agenti.
@@ -75,7 +77,21 @@ class KycQuestionnaireForm
                 Select::make('economic_activity')->label('Attività economica')->options(KycEconomicActivity::class)->required($required),
                 Select::make('activity_sector')->label('Settore di attività')->options(KycActivitySector::class)->required($required),
                 Select::make('activity_location')->label('Luogo di svolgimento')->options(KycActivityLocation::class)->required($required),
-                Select::make('financing_nature')->label('Natura del finanziamento')->options(KycFinancingNature::class)->required($required),
+                Select::make('financing_nature')
+                    ->label('Natura del finanziamento')
+                    ->options(KycFinancingNature::class)
+                    ->required($required)
+                    ->afterStateHydrated(function (Select $component, mixed $state, mixed $livewire): void {
+                        if (filled($state)) {
+                            return;
+                        }
+
+                        $nature = KycFinancingNature::fromProduct(self::prodottoUltimaPratica($livewire));
+
+                        if ($nature !== null) {
+                            $component->state($nature->value);
+                        }
+                    }),
                 Select::make('income_band')->label('Reddito annuo lordo')->options(KycIncomeBand::class)->required($required),
                 Select::make('wealth_band')->label('Patrimonio')->options(KycWealthBand::class)->required($required),
                 Toggle::make('acts_for_third_party')
@@ -96,5 +112,17 @@ class KycQuestionnaireForm
             Select::make('legal_nature')->label('Natura giuridica')->options(KycLegalNature::class)->required($required),
             Select::make('geographic_area')->label('Area geografica')->options(KycGeographicArea::class)->required($required),
         ];
+    }
+
+    /** Tipo prodotto dell'ultima pratica inserita dal cliente della scheda (o della pratica aperta). */
+    public static function prodottoUltimaPratica(mixed $livewire): ?string
+    {
+        $record = method_exists($livewire, 'getRecord') ? $livewire->getRecord() : null;
+
+        if ($record instanceof Pratica) {
+            return $record->tipoprodotto?->name;
+        }
+
+        return $record instanceof Client ? $record->ultimaPratica?->tipoprodotto?->name : null;
     }
 }

@@ -18,6 +18,7 @@ use Closure;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -117,24 +118,6 @@ class ClientForm
                                                 Select::make('sex')->label('Sesso')->options(['M' => 'M', 'F' => 'F']),
                                                 TextInput::make('citizenship')->label('Cittadinanza')->maxLength(60),
                                             ]),
-                                    ]),
-                                Section::make('Lead')
-                                    ->columnSpanFull()
-                                    ->columns(['default' => 1, 'md' => 2])
-                                    ->schema([
-                                        Toggle::make('is_lead')->label('Lead non ancora convertito')->inline(false),
-                                        DateTimePicker::make('acquired_at')->label('Data di acquisizione'),
-                                    ]),
-                                Section::make('Utente collegato')
-                                    ->columnSpanFull()
-                                    ->schema([
-                                        Select::make('user_id')
-                                            ->label('Utente di accesso')
-                                            ->relationship('user', 'name')
-                                            ->searchable()
-                                            ->preload()
-                                            ->placeholder('Nessun utente')
-                                            ->suffixAction(self::creaUtenteAction()),
                                     ]),
                             ]),
                         Tab::make('Lavoro e reddito')
@@ -260,6 +243,11 @@ class ClientForm
                                         KycQuestionnaireForm::pepStatus($isPerson),
                                         Textarea::make('notes')->label('Note')->columnSpanFull(),
                                         KycQuestionnaireForm::personSection($isPerson),
+                                        Placeholder::make('kyc_datore_di_lavoro')
+                                            ->label('Datore di lavoro')
+                                            ->content(fn (?Client $record): string => $record?->employer?->name ?? 'Non indicato: si imposta in «Lavoro e reddito».')
+                                            ->visible(fn (?Client $record): bool => app(DatoreDiLavoro::class)->richiesto($record))
+                                            ->columnSpanFull(),
                                     ]),
                                 Section::make('Valutazione rischio')
                                     ->columnSpanFull()
@@ -285,11 +273,11 @@ class ClientForm
                                         DateTimePicker::make('blacklist_at')->label('Data blacklist')->readOnly(),
                                     ]),
                             ]),
-                        Tab::make('Privacy')
-                            ->icon(Heroicon::OutlinedLockClosed)
-                            ->visible(fn (Get $get): bool => (bool) $get('is_person'))
+                        Tab::make('Info')
+                            ->icon(Heroicon::OutlinedInformationCircle)
                             ->schema([
                                 Section::make('Consensi privacy')
+                                    ->visible(fn (Get $get): bool => (bool) $get('is_person'))
                                     ->columnSpanFull()
                                     ->columns(['default' => 1, 'md' => 2, 'xl' => 4, '2xl' => 6])
                                     ->schema([
@@ -302,6 +290,24 @@ class ClientForm
                                         DateTimePicker::make('consent_group_at')->label('Comunicazione al gruppo'),
                                         DateTimePicker::make('consent_third_parties_at')->label('Comunicazione a terzi'),
                                         Toggle::make('privacy_consent')->label('Consenso privacy attivo'),
+                                    ]),
+                                Section::make('Lead')
+                                    ->columnSpanFull()
+                                    ->columns(['default' => 1, 'md' => 2])
+                                    ->schema([
+                                        Toggle::make('is_lead')->label('Lead non ancora convertito')->inline(false),
+                                        DateTimePicker::make('acquired_at')->label('Data di acquisizione'),
+                                    ]),
+                                Section::make('Utente collegato')
+                                    ->columnSpanFull()
+                                    ->schema([
+                                        Select::make('user_id')
+                                            ->label('Utente di accesso')
+                                            ->relationship('user', 'name')
+                                            ->searchable()
+                                            ->preload()
+                                            ->placeholder('Nessun utente')
+                                            ->suffixAction(self::creaUtenteAction()),
                                     ]),
                             ]),
                     ]),

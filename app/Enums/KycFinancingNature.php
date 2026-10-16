@@ -20,4 +20,16 @@ enum KycFinancingNature: string implements HasLabel
             self::TfsAdvance => 'Anticipo TFS/TFR',
         };
     }
+
+    /** La natura del finanziamento corrispondente al tipo prodotto di una pratica (Cessione, Delega, Prestito, Mutuo, TFS...). */
+    public static function fromProduct(?string $product): ?self
+    {
+        return match (mb_strtolower(trim((string) $product))) {
+            'cessione', 'delega' => self::SalaryAssignment,
+            'prestito', 'prestito inps' => self::PersonalLoan,
+            'mutuo', 'mutuo ristrutturazione', 'ipotecario' => self::Mortgage,
+            'tfs' => self::TfsAdvance,
+            default => null,
+        };
+    }
 }

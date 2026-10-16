@@ -8,14 +8,14 @@ use App\Models\FinancingQuote;
 use App\Models\Pratica;
 
 /**
- * Datore di lavoro (o ente) del cliente nelle pratiche di cessione e delega. Il datore è un cliente persona giuridica
+ * Datore di lavoro (o ente) del cliente nelle pratiche di cessione, delega e prestito. Il datore è un cliente persona giuridica
  * e, quando viene inserito, eredita il tipo di amministrazione della pratica (statale, pubblico, privato SPA...).
  */
 class DatoreDiLavoro
 {
-    private const PRODOTTI = ['Cessione', 'Delega'];
+    private const PRODOTTI = ['Cessione', 'Delega', 'Prestito'];
 
-    /** Il cliente ha una pratica di cessione o delega: il datore di lavoro è richiesto. */
+    /** Il cliente ha una pratica di cessione, delega o prestito: il datore di lavoro è richiesto. */
     public function richiesto(?Client $cliente): bool
     {
         return $cliente?->exists === true && $this->praticaDiCessione($cliente) !== null;
