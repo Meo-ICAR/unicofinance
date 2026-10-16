@@ -6,7 +6,11 @@ use App\Documents\Api\LoggedCompanyDataFetcher;
 use App\Models\BlacklistClienteFornitore;
 use App\Models\ListinoProvvigionale;
 use App\Pdf\KycModuleDataProvider;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
+use SocialiteProviders\Google\GoogleExtendSocialite;
+use SocialiteProviders\Manager\SocialiteWasCalled;
+use SocialiteProviders\Microsoft\MicrosoftExtendSocialite;
 use Unico\Core\Models\Branch;
 use Unico\Core\Models\Cliente;
 use Unico\Core\Models\Document;
@@ -55,5 +59,8 @@ class AppServiceProvider extends ServiceProvider
         if (config('database.unico_core_migrate')) {
             $this->loadMigrationsFrom(UnicoCoreServiceProvider::migrationsPath());
         }
+
+        Event::listen(SocialiteWasCalled::class, [MicrosoftExtendSocialite::class, 'handle']);
+        Event::listen(SocialiteWasCalled::class, [GoogleExtendSocialite::class, 'handle']);
     }
 }

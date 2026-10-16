@@ -2,6 +2,9 @@
 
 namespace App\Providers\Filament;
 
+use App\Models\SocialiteUser;
+use DutchCodingCompany\FilamentSocialite\FilamentSocialitePlugin;
+use DutchCodingCompany\FilamentSocialite\Provider;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -13,12 +16,14 @@ use Filament\Support\Colors\Color;
 use Filament\Support\Enums\Width;
 use Filament\View\PanelsRenderHook;
 use Filament\Widgets\AccountWidget;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Laravel\Socialite\Contracts\User as SocialiteUserContract;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -61,6 +66,27 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
-            ]);
+            ])
+            ->plugin(
+                FilamentSocialitePlugin::make()
+                    ->socialiteUserModelClass(SocialiteUser::class)
+                    // Collega un account già presente (stessa email). Non crea utenti:
+                    // il ruolo, e quindi l'accesso al pannello, si assegna a parte.
+                    ->registration(fn (string $provider, SocialiteUserContract $oauthUser, ?Authenticatable $user): bool => $user !== null)
+                    ->providers([
+                        Provider::make('microsoft')
+                            ->label('Microsoft')
+                            ->icon('fab-microsoft')
+                            ->color(Color::hex('#0078D4'))
+                            ->outlined(false)
+                            ->stateless(false),
+                        Provider::make('google')
+                            ->label('Google')
+                            ->icon('fab-google')
+                            ->color(Color::hex('#4285F4'))
+                            ->outlined(false)
+                            ->stateless(false),
+                    ])
+            );
     }
 }
