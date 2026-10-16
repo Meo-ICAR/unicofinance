@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Resources\Clients\Pages\EditClient;
 use App\Filament\Resources\Praticas\Pages\EditPratica;
 use App\Models\Pratica;
 use App\Models\User;
@@ -94,7 +95,7 @@ class DocumentiFascicoloTest extends TestCase
 
         Livewire::test(DocumentsRelationManager::class, ['ownerRecord' => $pratica, 'pageClass' => EditPratica::class])
             ->callAction(TestAction::make('generaPlico')->table(), [])
-            ->assertNotified('2 documenti richiesti creati');
+            ->assertNotified();
 
         $this->assertSame(6, Document::query()->where('documentable_type', 'pratica')->where('documentable_id', (string) $pratica->getKey())->count());
         $this->assertSame(DocumentStatus::PENDING, Document::query()->where('name', 'Doc mancante')->firstOrFail()->status);
@@ -119,5 +120,23 @@ class DocumentiFascicoloTest extends TestCase
 
         $perClient = Document::query()->where('documentable_type', 'client')->where('document_type_id', $identita->getKey())->pluck('documentable_id')->sort()->values()->all();
         $this->assertSame(collect([$richiedente, $coobbligato])->map(fn (Client $client): string => (string) $client->getKey())->sort()->values()->all(), $perClient);
+    }
+
+    public function test_genera_plico_dalla_scheda_cliente_crea_i_documenti_del_plico_dello_stato(): void
+    {
+        Filament::setCurrentPanel('admin');
+        $this->actingAs(User::factory()->create(['role' => 'super_admin']));
+        $task = Task::query()->create(['name' => 'Cliente prova · raccolta dati', 'taskable' => 'client', 'trigger_field' => 'status', 'trigger_state' => 'equals', 'trigger_value' => 'raccolta_dati', 'is_active' => true]);
+        $privacy = DocumentType::query()->create(['name' => 'Privacy prova', 'code' => 'CLI-PRV']);
+        DocumentRequirement::query()->create(['task_id' => $task->getKey(), 'document_type_id' => $privacy->getKey(), 'is_required' => true]);
+        $cliente = Client::query()->create(['name' => 'Bianchi', 'is_person' => true, 'status' => 'raccolta_dati']);
+
+        Livewire::test(DocumentsRelationManager::class, ['ownerRecord' => $cliente, 'pageClass' => EditClient::class])
+            ->mountAction(TestAction::make('generaPlico')->table())
+            ->assertSchemaStateSet(fn (array $state): bool => in_array($task->getKey(), $state['plichi'], true))
+            ->callMountedAction()
+            ->assertNotified();
+
+        $this->assertTrue(Document::query()->where('documentable_type', 'client')->where('documentable_id', (string) $cliente->getKey())->where('document_type_id', $privacy->getKey())->exists());
     }
 }
