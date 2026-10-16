@@ -10,6 +10,7 @@ use App\Models\Client;
 use App\Services\AmlScreeningService;
 use App\Services\ApiCallLogger;
 use App\Services\CodiceFiscaleDecoder;
+use App\Services\CreaUtenteCliente;
 use App\Services\Istruttoria\DatoreDiLavoro;
 use App\Services\PartitaIva;
 use App\Support\ControlloRichiedente;
@@ -31,7 +32,12 @@ use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Str;
+use RuntimeException;
 use Unico\Core\Clients\OpenApiCreditScoreService;
+use Unico\Core\Models\PdfModule;
+use Unico\Core\Pdf\ModulePrinter;
+use Unico\Core\Pdf\PdfFormException;
 
 class ClientForm
 {
@@ -112,61 +118,77 @@ class ClientForm
                                                 TextInput::make('citizenship')->label('Cittadinanza')->maxLength(60),
                                             ]),
                                     ]),
+                                Section::make('Lead')
+                                    ->columnSpanFull()
+                                    ->columns(['default' => 1, 'md' => 2])
+                                    ->schema([
+                                        Toggle::make('is_lead')->label('Lead non ancora convertito')->inline(false),
+                                        DateTimePicker::make('acquired_at')->label('Data di acquisizione'),
+                                    ]),
+                                Section::make('Utente collegato')
+                                    ->columnSpanFull()
+                                    ->schema([
+                                        Select::make('user_id')
+                                            ->label('Utente di accesso')
+                                            ->relationship('user', 'name')
+                                            ->searchable()
+                                            ->preload()
+                                            ->placeholder('Nessun utente')
+                                            ->suffixAction(self::creaUtenteAction()),
+                                    ]),
                             ]),
                         Tab::make('Lavoro e reddito')
                             ->icon(Heroicon::OutlinedBriefcase)
                             ->visible(fn (Get $get): bool => (bool) $get('is_person'))
                             ->schema([
-                                Grid::make(['default' => 1, 'md' => 2])
+                                Section::make('Rapporto di lavoro')
                                     ->columnSpanFull()
+                                    ->columns(['default' => 1, 'md' => 2, 'xl' => 4])
                                     ->schema([
-                                        Section::make('Rapporto di lavoro')
-                                            ->columns(['default' => 1, 'md' => 2])
-                                            ->schema([
-                                                Select::make('employment_typology')
-                                                    ->label('Tipologia')
-                                                    ->options(collect(EmploymentRelationship::cases())->mapWithKeys(fn (EmploymentRelationship $case): array => [$case->getLabel() => $case->getLabel()])->all())
-                                                    ->searchable()
-                                                    ->live()
-                                                    ->afterStateUpdated(function (?string $state, Set $set): void {
-                                                        if (self::isRetired($state)) {
-                                                            $set('hiring_date', null);
-                                                        }
-                                                    }),
-                                                DatePicker::make('hiring_date')
-                                                    ->label('Data di assunzione')
-                                                    ->native(false)
-                                                    ->displayFormat('d/m/Y')
-                                                    ->visible(fn (Get $get): bool => filled($get('employment_typology')) && ! self::isRetired($get('employment_typology'))),
-                                                Select::make('employer_id')
-                                                    ->label('Datore di lavoro')
-                                                    ->helperText(fn (?Client $record): ?string => app(DatoreDiLavoro::class)->richiesto($record) ? 'Cessione o delega: indica il datore di lavoro o l\'ente. Eredita il tipo di amministrazione della pratica.' : null)
-                                                    ->relationship('employer', 'name', fn (Builder $query) => $query->where('is_person', false))
-                                                    ->searchable()
-                                                    ->preload()
-                                                    ->createOptionForm(self::datoreDiLavoroForm())
-                                                    ->createOptionUsing(fn (array $data, ?Client $record): int => (int) app(DatoreDiLavoro::class)->crea($record, $data)->getKey())
-                                                    ->visible(fn (?Client $record): bool => app(DatoreDiLavoro::class)->richiesto($record)),
-                                                TextInput::make('profession')->label('Professione'),
-                                            ]),
-                                        Section::make('Reddito e coordinate')
-                                            ->columns(['default' => 1, 'md' => 2, 'xl' => 3])
-                                            ->schema([
-                                                TextInput::make('salary')
-                                                    ->label('Reddito netto mensile')
-                                                    ->numeric()
-                                                    ->prefix('€')
-                                                    ->visible(fn ($livewire): bool => self::shows(FinancingSection::ClienteReddito, $livewire)),
-                                                TextInput::make('salary_quote')
-                                                    ->label('Quota cedibile')
-                                                    ->numeric()
-                                                    ->prefix('€')
-                                                    ->visible(fn ($livewire): bool => self::shows(FinancingSection::ClienteQuotaCedibile, $livewire)),
-                                                TextInput::make('iban')
-                                                    ->label('IBAN')
-                                                    ->maxLength(34)
-                                                    ->dehydrateStateUsing(fn (?string $state): ?string => filled($state) ? strtoupper(str_replace(' ', '', $state)) : null),
-                                            ]),
+                                        Select::make('employment_typology')
+                                            ->label('Tipologia')
+                                            ->options(collect(EmploymentRelationship::cases())->mapWithKeys(fn (EmploymentRelationship $case): array => [$case->getLabel() => $case->getLabel()])->all())
+                                            ->searchable()
+                                            ->live()
+                                            ->afterStateUpdated(function (?string $state, Set $set): void {
+                                                if (self::isRetired($state)) {
+                                                    $set('hiring_date', null);
+                                                }
+                                            }),
+                                        DatePicker::make('hiring_date')
+                                            ->label('Data di assunzione')
+                                            ->native(false)
+                                            ->displayFormat('d/m/Y')
+                                            ->visible(fn (Get $get): bool => filled($get('employment_typology')) && ! self::isRetired($get('employment_typology'))),
+                                        Select::make('employer_id')
+                                            ->label('Datore di lavoro')
+                                            ->helperText(fn (?Client $record): ?string => app(DatoreDiLavoro::class)->richiesto($record) ? 'Cessione o delega: indica il datore di lavoro o l\'ente. Eredita il tipo di amministrazione della pratica.' : null)
+                                            ->relationship('employer', 'name', fn (Builder $query) => $query->where('is_person', false))
+                                            ->searchable()
+                                            ->preload()
+                                            ->createOptionForm(self::datoreDiLavoroForm())
+                                            ->createOptionUsing(fn (array $data, ?Client $record): int => (int) app(DatoreDiLavoro::class)->crea($record, $data)->getKey())
+                                            ->visible(fn (?Client $record): bool => app(DatoreDiLavoro::class)->richiesto($record)),
+                                        TextInput::make('profession')->label('Professione'),
+                                    ]),
+                                Section::make('Reddito e coordinate')
+                                    ->columnSpanFull()
+                                    ->columns(['default' => 1, 'md' => 2, 'xl' => 3])
+                                    ->schema([
+                                        TextInput::make('salary')
+                                            ->label('Reddito netto mensile')
+                                            ->numeric()
+                                            ->prefix('€')
+                                            ->visible(fn ($livewire): bool => self::shows(FinancingSection::ClienteReddito, $livewire)),
+                                        TextInput::make('salary_quote')
+                                            ->label('Quota cedibile')
+                                            ->numeric()
+                                            ->prefix('€')
+                                            ->visible(fn ($livewire): bool => self::shows(FinancingSection::ClienteQuotaCedibile, $livewire)),
+                                        TextInput::make('iban')
+                                            ->label('IBAN')
+                                            ->maxLength(34)
+                                            ->dehydrateStateUsing(fn (?string $state): ?string => filled($state) ? strtoupper(str_replace(' ', '', $state)) : null),
                                     ]),
                             ]),
                         Tab::make('Dati societari')
@@ -223,15 +245,26 @@ class ClientForm
                             ->icon(Heroicon::OutlinedShieldCheck)
                             ->hidden(fn (?Client $record): bool => self::soloDatore($record))
                             ->schema([
+                                Section::make('KYC (adeguata verifica)')
+                                    ->key('kyc')
+                                    ->extraAttributes(['id' => 'kyc-adeguata-verifica'])
+                                    ->relationship('questionarioKyc')
+                                    ->columnSpanFull()
+                                    ->headerActions([
+                                        self::stampaModuloKycAction(),
+                                    ])
+                                    ->columns(['default' => 1, 'md' => 2, 'xl' => 3])
+                                    ->schema([
+                                        KycQuestionnaireForm::financingPurpose($isPerson),
+                                        KycQuestionnaireForm::riskLevel(),
+                                        KycQuestionnaireForm::pepStatus($isPerson),
+                                        Textarea::make('notes')->label('Note')->columnSpanFull(),
+                                        KycQuestionnaireForm::personSection($isPerson),
+                                    ]),
                                 Section::make('Valutazione rischio')
+                                    ->columnSpanFull()
                                     ->columns(['default' => 1, 'md' => 2, 'xl' => 4])
                                     ->headerActions([
-                                        Action::make('kyc')
-                                            ->label('KYC')
-                                            ->icon(Heroicon::OutlinedShieldCheck)
-                                            ->color('warning')
-                                            ->visible(fn (?Client $record): bool => $record !== null)
-                                            ->url('#kyc-adeguata-verifica'),
                                         self::amlAction(),
                                     ])
                                     ->schema([
@@ -251,18 +284,13 @@ class ClientForm
                                             ]),
                                         DateTimePicker::make('blacklist_at')->label('Data blacklist')->readOnly(),
                                     ]),
-                                Section::make('KYC (adeguata verifica)')
-                                    ->extraAttributes(['id' => 'kyc-adeguata-verifica'])
-                                    ->relationship('questionarioKyc')
-                                    ->columns(['default' => 1, 'md' => 2, 'xl' => 3])
-                                    ->schema([
-                                        KycQuestionnaireForm::financingPurpose($isPerson),
-                                        KycQuestionnaireForm::riskLevel(),
-                                        KycQuestionnaireForm::pepStatus($isPerson),
-                                        Textarea::make('notes')->label('Note')->columnSpanFull(),
-                                        KycQuestionnaireForm::personSection($isPerson),
-                                    ]),
+                            ]),
+                        Tab::make('Privacy')
+                            ->icon(Heroicon::OutlinedLockClosed)
+                            ->visible(fn (Get $get): bool => (bool) $get('is_person'))
+                            ->schema([
                                 Section::make('Consensi privacy')
+                                    ->columnSpanFull()
                                     ->columns(['default' => 1, 'md' => 2, 'xl' => 4, '2xl' => 6])
                                     ->schema([
                                         DateTimePicker::make('general_consent_at')->label('Consenso base'),
@@ -293,6 +321,61 @@ class ClientForm
     private static function soloDatore(?Client $record): bool
     {
         return $record?->isDatoreDiLavoro() === true;
+    }
+
+    /** Stampa il modulo QAV (questionario di adeguata verifica) del cliente, compilato con i dati della sua ultima pratica. */
+    private static function stampaModuloKycAction(): Action
+    {
+        return Action::make('stampaModuloKyc')
+            ->label('Stampa modulo KYC')
+            ->icon(Heroicon::OutlinedPrinter)
+            ->color('gray')
+            ->visible(fn (?Client $record): bool => $record?->exists === true)
+            ->action(function (?Client $record) {
+                $modulo = PdfModule::query()->active()->where('name', 'like', $record->is_person ? 'QAV Persona fisica%' : 'QAV Persona giuridica%')->first();
+                $pratica = $record->ultimaPratica;
+
+                if ($modulo === null || $pratica === null) {
+                    Notification::make()->title('Modulo KYC non stampabile')->body($modulo === null ? 'Non c\'è un modulo QAV attivo per questo tipo di cliente.' : 'Il modulo si compila con i dati di una pratica: il cliente non ne ha.')->warning()->send();
+
+                    return null;
+                }
+
+                try {
+                    $contenuto = app(ModulePrinter::class)->print($pratica, $modulo);
+                } catch (PdfFormException $e) {
+                    report($e);
+                    Notification::make()->title('Stampa non disponibile')->body($e->getMessage())->danger()->send();
+
+                    return null;
+                }
+
+                return response()->streamDownload(fn () => print ($contenuto), 'kyc-'.Str::slug((string) $record->name).'.pdf', ['Content-Type' => 'application/pdf']);
+            });
+    }
+
+    /** Crea l'utente di accesso della persona fisica e lo collega alla scheda. */
+    private static function creaUtenteAction(): Action
+    {
+        return Action::make('creaUtente')
+            ->label('Crea utente')
+            ->icon(Heroicon::OutlinedUserPlus)
+            ->visible(fn (?Client $record, Get $get): bool => $record?->exists === true && (bool) $get('is_person') && blank($record->user_id))
+            ->requiresConfirmation()
+            ->modalHeading('Crea utente')
+            ->modalDescription('Viene creato l\'utente con l\'email salvata sulla scheda e collegato al cliente. La password la imposta lui con il recupero password.')
+            ->action(function (?Client $record, Set $set): void {
+                try {
+                    $utente = app(CreaUtenteCliente::class)->crea($record);
+                } catch (RuntimeException $e) {
+                    Notification::make()->title('Utente non creato')->body($e->getMessage())->warning()->send();
+
+                    return;
+                }
+
+                $set('user_id', $utente->getKey());
+                Notification::make()->title('Utente collegato')->body($utente->email)->success()->send();
+            });
     }
 
     private static function isRetired(mixed $typology): bool

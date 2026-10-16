@@ -69,6 +69,7 @@ class KycQuestionnaireForm
     {
         return Section::make('Persona fisica')
             ->columns(2)
+            ->columnSpanFull()
             ->visible($isPerson)
             ->schema([
                 Select::make('economic_activity')->label('Attività economica')->options(KycEconomicActivity::class)->required($required),

@@ -113,9 +113,9 @@ class ClientsTable
                 IconColumn::make('is_lead')
                     ->label('Lead')
                     ->boolean(),
-                TextColumn::make('leadsource.id')
+                TextColumn::make('leadsource_id')
                     ->label('Fonte del lead')
-                    ->searchable(),
+                    ->placeholder('—'),
                 TextColumn::make('acquired_at')
                     ->label('Acquisito il')
                     ->dateTime()
