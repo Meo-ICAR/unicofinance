@@ -75,13 +75,11 @@ class CambioOfferta
         $pratica->provvigioni()->get()->each(function (Provvigione $provvigione) use ($nuova, $banca): void {
             $copia = $provvigione->replicate(self::PROVVIGIONE_AZZERATI);
             $copia->id = (string) Str::uuid();
-            $copia->id_pratica = $nuova->getKey();
+            // Il legame con la pratica del database condiviso è il codice (`id_pratica`); `pratica_id` è un riferimento locale a Proforma.
+            $copia->id_pratica = $nuova->codice_pratica;
+            $copia->pratica_id = null;
             $copia->istituto_finanziario = $banca->name;
             $copia->annullato = false;
-
-            if ($copia->pratica_id !== null) {
-                $copia->pratica_id = (string) $nuova->getKey();
-            }
 
             $copia->save();
         });

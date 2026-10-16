@@ -29,6 +29,7 @@ class Provvigione extends Model
         return $query
             ->where('entrata_uscita', 'Uscita')
             ->where(fn (Builder $q) => $q->where('annullato', false)->orWhereNull('annullato'))
+            ->where(fn (Builder $q) => $q->where('status_compenso', '!=', 'Stornata')->orWhereNull('status_compenso'))
             ->where(fn (Builder $q) => $q->where('stato', '!=', 'Sospeso')->orWhereNull('stato'))
             ->where(fn (Builder $q) => $q
                 ->when(filled($agente->piva), fn (Builder $w) => $w->where('piva', $agente->piva))
@@ -36,15 +37,15 @@ class Provvigione extends Model
     }
 
     /**
-     * Esclude le provvigioni di pratiche declinate o sospese. Le pratiche stanno nel database del core: si cercano
-     * tra quelle delle provvigioni già selezionate.
+     * Esclude le provvigioni di pratiche declinate o sospese. Le pratiche stanno nel database del core e il legame con le provvigioni
+     * (database di Proforma) è il codice della pratica: `id_pratica` = `codice_pratica`.
      */
     public function scopeSenzaPraticheDeclinateOSospese(Builder $query): Builder
     {
         $escluse = Pratica::query()
-            ->whereIn('id', (clone $query)->whereNotNull('id_pratica')->distinct()->pluck('id_pratica'))
+            ->whereIn('codice_pratica', (clone $query)->whereNotNull('id_pratica')->distinct()->pluck('id_pratica'))
             ->where(fn (Builder $q) => $q->whereNotNull('rejected_at')->orWhereHas('praticaStato', fn (Builder $stato) => $stato->where('is_rejected', true)->orWhere('is_suspended', true)))
-            ->pluck('id');
+            ->pluck('codice_pratica');
 
         return $query->whereNotIn('id_pratica', $escluse);
     }
@@ -52,7 +53,7 @@ class Provvigione extends Model
     /** Pratica del compenso, con il suo stato. */
     public function pratica(): BelongsTo
     {
-        return $this->belongsTo(Pratica::class, 'id_pratica');
+        return $this->belongsTo(Pratica::class, 'id_pratica', 'codice_pratica');
     }
 
     protected function casts(): array
@@ -63,6 +64,7 @@ class Provvigione extends Model
             'data_inserimento_compenso' => 'date',
             'data_status' => 'date',
             'data_pagamento' => 'date',
+            'erogated_at' => 'date',
             'annullato' => 'boolean',
         ];
     }

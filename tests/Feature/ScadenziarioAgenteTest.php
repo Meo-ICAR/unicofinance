@@ -49,7 +49,7 @@ class ScadenziarioAgenteTest extends TestCase
 
         if ($conProvvigione) {
             (new Provvigione)->forceFill([
-                'id' => (string) Str::uuid(), 'id_pratica' => $pratica->getKey(), 'importo' => 10, 'stato' => 'Inserito', 'entrata_uscita' => 'Uscita',
+                'id' => (string) Str::uuid(), 'id_pratica' => $pratica->codice_pratica, 'importo' => 10, 'stato' => 'Inserito', 'entrata_uscita' => 'Uscita',
                 'piva' => $this->agente->piva, 'denominazione_riferimento' => $this->agente->name, 'annullato' => false,
             ])->save();
         }

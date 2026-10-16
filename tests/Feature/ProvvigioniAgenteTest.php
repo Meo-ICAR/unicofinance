@@ -50,7 +50,7 @@ class ProvvigioniAgenteTest extends TestCase
     private function provvigione(Pratica $pratica, ?string $stato, float $importo, array $attributi = []): Provvigione
     {
         $provvigione = (new Provvigione)->forceFill($attributi + [
-            'id' => (string) Str::uuid(), 'id_pratica' => $pratica->getKey(), 'cognome' => $pratica->cognome_cliente, 'descrizione' => 'Provvigione test',
+            'id' => (string) Str::uuid(), 'id_pratica' => $pratica->codice_pratica, 'cognome' => $pratica->cognome_cliente, 'descrizione' => 'Provvigione test',
             'importo' => $importo, 'stato' => $stato, 'entrata_uscita' => 'Uscita', 'piva' => $this->agente->piva,
             'denominazione_riferimento' => $this->agente->name, 'annullato' => false,
         ]);

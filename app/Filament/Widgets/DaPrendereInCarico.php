@@ -32,6 +32,7 @@ class DaPrendereInCarico extends TableWidget
         return $table
             ->query(fn (): Builder => Pratica::query()
                 ->whereNull('employee_id')
+                ->where('is_notowned', false)
                 ->whereNull('rejected_at')
                 ->whereDoesntHave('praticaStato', fn (Builder $stato) => $stato->where('is_suspended', true))
                 ->with(['tipoprodotto', 'fornitori']))

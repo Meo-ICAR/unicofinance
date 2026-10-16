@@ -25,6 +25,7 @@ class PraticheInCorso extends TableWidget
         return $table
             ->query(fn (): Builder => Pratica::query()
                 ->whereNotNull('employee_id')
+                ->where('is_notowned', false)
                 ->whereNull('rejected_at')
                 ->whereNull('erogated_at')
                 ->whereDoesntHave('praticaStato', fn (Builder $stato) => $stato->where('is_suspended', true)->orWhere('is_estingued', true))

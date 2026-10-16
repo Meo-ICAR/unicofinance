@@ -56,7 +56,9 @@ class ScadenziarioResource extends Resource
     /** Pratiche (id) legate alle provvigioni dell'agente, escluse declinate e sospese. */
     public static function idPratiche(): array
     {
-        return ProvvigioniAgente::base()->whereNotNull('id_pratica')->distinct()->pluck('id_pratica')->all();
+        $codici = ProvvigioniAgente::base()->whereNotNull('id_pratica')->distinct()->pluck('id_pratica');
+
+        return Pratica::query()->whereIn('codice_pratica', $codici)->pluck('id')->all();
     }
 
     public static function getEloquentQuery(): Builder

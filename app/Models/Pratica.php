@@ -35,7 +35,7 @@ class Pratica extends CorePratica
 
     public function provvigioni(): HasMany
     {
-        return $this->hasMany(Provvigione::class, 'id_pratica', 'id');
+        return $this->hasMany(Provvigione::class, 'id_pratica', 'codice_pratica');
     }
 
     /** Richiedente sull'anagrafica core, collegato dal codice fiscale. */

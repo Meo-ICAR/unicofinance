@@ -26,6 +26,7 @@ class RisposteBancaInSospeso extends TableWidget
         return $table
             ->query(fn (): Builder => Pratica::query()
                 ->whereNotNull('sended_at')
+                ->where('is_notowned', false)
                 ->whereNull('approved_at')
                 ->whereNull('rejected_at')
                 ->whereNull('erogated_at')

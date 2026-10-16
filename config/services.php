@@ -42,6 +42,12 @@ return [
         'cost' => env('AML_COST_PER_CALL', 0),
     ],
 
+    // Import di pratiche e compensi (comandi pratiche:import-api e provvigioni:import-api).
+    'mediafacile' => [
+        'base_url' => env('MEDIAFACILE_BASE_URL', 'https://races.mediafacile.it/ws/hassisto.php'),
+        'header_key' => env('MEDIAFACILE_HEADER_KEY'),
+    ],
+
     'openapi' => [
         'cost_creditscore' => (float) env('OPENAPI_COST_CREDITSCORE', 0),
         'token' => env('OPENAPI_TOKEN'),
