@@ -50,7 +50,7 @@ class PraticaDocumentiClientTest extends TestCase
 
         $manager()->callAction(TestAction::make('generaPlico')->table(), ['plichi' => [$task->id]])->assertNotified();
 
-        $documenti = Document::query()->where('document_requirement_id', '!=', null)->get();
+        $documenti = Document::query()->whereIn('document_requirement_id', $task->documentRequirements()->pluck('id'))->get();
         $this->assertCount(3, $documenti, 'contratto sulla pratica, identità di richiedente e coobbligato');
         $this->assertSame(0, $documenti->where('documentable_id', (string) $garante->id)->count());
 

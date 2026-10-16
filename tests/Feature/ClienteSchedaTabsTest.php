@@ -83,6 +83,18 @@ class ClienteSchedaTabsTest extends TestCase
             ->assertNotified();
     }
 
+    public function test_the_latest_practice_is_found_even_without_an_insertion_date(): void
+    {
+        $persona = Client::query()->create(['name' => 'Gialli', 'tax_code' => 'GLLLGI80A01H501U', 'is_person' => true]);
+        Pratica::query()->create(['codice_pratica' => 'KYC-SD-1', 'codice_fiscale' => $persona->tax_code, 'upload_at' => now()]);
+        $conData = Pratica::query()->create(['codice_pratica' => 'KYC-SD-2', 'codice_fiscale' => $persona->tax_code, 'data_inserimento_pratica' => now()->subDay(), 'upload_at' => now()]);
+
+        $this->assertSame($conData->getKey(), $persona->ultimaPratica->getKey());
+
+        $conData->delete();
+        $this->assertSame('KYC-SD-1', $persona->unsetRelation('ultimaPratica')->ultimaPratica->codice_pratica);
+    }
+
     public function test_the_client_list_search_does_not_touch_tables_missing_from_this_app(): void
     {
         $this->admin();

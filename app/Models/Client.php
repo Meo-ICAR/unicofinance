@@ -64,7 +64,9 @@ class Client extends CoreClient
     public function ultimaPratica(): HasOne
     {
         return $this->hasOne(Pratica::class, 'codice_fiscale', 'tax_code')
-            ->ofMany(['data_inserimento_pratica' => 'max', 'id' => 'max']);
+            ->orderByRaw('data_inserimento_pratica IS NULL')
+            ->orderByDesc('data_inserimento_pratica')
+            ->orderByDesc('id');
     }
 
     /** Soggetti collegati a una persona giuridica: soci, amministratori, titolari effettivi. */
