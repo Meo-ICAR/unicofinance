@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Documents\Api\LoggedCompanyDataFetcher;
 use App\Models\BlacklistClienteFornitore;
 use App\Models\ListinoProvvigionale;
 use App\Pdf\KycModuleDataProvider;
@@ -20,6 +21,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->tag(KycModuleDataProvider::class, 'unico-core.module-data-providers');
+        $this->app->tag(LoggedCompanyDataFetcher::class, 'unico-core.document-api-fetchers');
     }
 
     /**
