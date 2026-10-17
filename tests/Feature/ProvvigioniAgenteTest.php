@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Agenti\Resources\Pratiche\Pages\EditPratica;
 use App\Filament\Agenti\Widgets\ProvvigioniAgente;
 use App\Filament\Agenti\Widgets\SuntoProvvigioniAgente;
+use App\Filament\RelationManagers\ProvvigioniRelationManager;
 use App\Models\Pratica;
 use App\Models\Provvigione;
 use App\Models\User;
@@ -57,6 +59,21 @@ class ProvvigioniAgenteTest extends TestCase
         $provvigione->save();
 
         return $provvigione;
+    }
+
+    public function test_the_practice_commissions_show_the_agent_only_his_own_with_the_percentage(): void
+    {
+        $pratica = $this->pratica('Verdi');
+        $sua = $this->provvigione($pratica, 'Inserito', 100, ['percentuale' => 40]);
+        $istituto = $this->provvigione($pratica, 'Inserito', 999, ['entrata_uscita' => 'Entrata', 'tipo' => 'Istituto']);
+        $altrui = $this->provvigione($pratica, 'Inserito', 70, ['piva' => '11111111111', 'denominazione_riferimento' => 'Altro agente']);
+
+        Livewire::test(ProvvigioniRelationManager::class, ['ownerRecord' => $pratica, 'pageClass' => EditPratica::class])
+            ->assertCanSeeTableRecords([$sua])
+            ->assertCanNotSeeTableRecords([$istituto, $altrui])
+            ->assertTableColumnExists('percentuale')
+            ->assertTableColumnStateSet('percentuale', '40.0000', $sua)
+            ->assertTableColumnHidden('entrata_uscita');
     }
 
     public function test_by_default_only_the_matured_commissions_of_the_agent_are_listed_with_the_practice_state(): void

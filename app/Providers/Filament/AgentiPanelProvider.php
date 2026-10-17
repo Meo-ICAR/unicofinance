@@ -14,7 +14,6 @@ use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\Support\Enums\Width;
 use Filament\View\PanelsRenderHook;
-use Filament\Widgets\AccountWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
@@ -41,9 +40,8 @@ class AgentiPanelProvider extends PanelProvider
                 Dashboard::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Agenti/Widgets'), for: 'App\Filament\Agenti\Widgets')
-            ->widgets([
-                AccountWidget::class,
-            ])
+            // Niente widget predefiniti di Filament (profilo e disconnessione): ci sono già nel menu dell'utente.
+            ->widgets([])
             ->userMenuItems([
                 Action::make('leaveImpersonation')
                     ->label('Torna all\'admin')

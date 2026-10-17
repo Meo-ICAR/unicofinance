@@ -69,6 +69,8 @@ class ImportMediafacileTest extends TestCase
         $this->assertSame(2, $cliente->documents()->count());
         $this->assertSame(Company::query()->where('name', 'like', 'Races Finance%')->value('id'), $pratica->company_id);
         $this->assertSame($pratica->company_id, $cliente->company_id);
+        // La scheda è legata alla pratica come richiedente, anche rilanciando l'importazione.
+        $this->assertSame(['richiedente'], $pratica->praticaClients()->where('client_id', $cliente->getKey())->pluck('role')->all());
 
         // Le pratiche di terzi si importano, segnate come tali.
         $this->assertTrue((bool) Pratica::query()->where('codice_pratica', 'QT90002')->firstOrFail()->is_notowned);
@@ -222,12 +224,16 @@ class ImportMediafacileTest extends TestCase
             $riga('pc-2', 'Agente', '150', 'Uscita', 'QT90010'),
             $riga('pc-3', 'Istituto', '400', 'Entrata', 'QT90011'),
             $riga('pc-4', 'Cliente', '250', 'Entrata', 'QT90012'),
+            $riga('pc-5', 'Cliente', '300', 'Entrata', 'QT90010'),
         ]))]);
 
         $this->artisan('provvigioni:import-api')->assertSuccessful();
 
         $this->assertEquals(3, Provvigione::query()->findOrFail('pc-1')->percentuale, 'Cessione: 300 su 10.000 di erogato.');
         $this->assertEquals(50, Provvigione::query()->findOrFail('pc-2')->percentuale, 'Agente: 150 sui 300 delle provvigioni attive.');
+        // La mediazione del compenso «Cliente» si riporta sulla pratica che non l'ha; quella già indicata (percentuale) non si tocca.
+        $this->assertEquals(300, Pratica::query()->where('codice_pratica', 'QT90010')->firstOrFail()->mediation_fee_amount);
+        $this->assertNull(Pratica::query()->where('codice_pratica', 'QT90012')->firstOrFail()->mediation_fee_amount);
         $this->assertEquals(2.5, Provvigione::query()->findOrFail('pc-4')->percentuale, 'Cliente: la percentuale è quella scritta sulla pratica.');
         $this->assertEquals(20, Provvigione::query()->findOrFail('pc-3')->percentuale, 'Prestito: 400 su 2.000 di interessi (200 × 60 − 10.000 erogato).');
     }

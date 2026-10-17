@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Client;
 use App\Models\Pratica;
 use App\Services\Importazione\MediafacileApi;
+use App\Services\Istruttoria\RichiedentePratica;
 use App\Services\Provvigioni\PercentualeProvvigione;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
@@ -13,6 +14,7 @@ use RuntimeException;
 use Unico\Core\Models\Cliente;
 use Unico\Core\Models\Company;
 use Unico\Core\Models\Fornitore;
+use Unico\Core\Models\PraticaClient;
 use Unico\Core\Models\PraticaStato;
 use Unico\Core\Models\TipoProdotto;
 
@@ -85,6 +87,7 @@ class ImportPraticheFromApi extends Command
                 if ($pratica === null) {
                     $pratica = Pratica::query()->create($dati);
                     $this->registraStato($pratica, null);
+                    $this->collegaRichiedente($pratica);
                     $importate++;
 
                     continue;
@@ -93,6 +96,7 @@ class ImportPraticheFromApi extends Command
                 $statoPrecedente = $pratica->pratica_stato_id;
                 $pratica->update($dati);
                 $this->registraStato($pratica, $statoPrecedente);
+                $this->collegaRichiedente($pratica);
                 $aggiornate++;
             } catch (\Throwable $e) {
                 $this->error('Errore su una pratica: '.$e->getMessage());
@@ -194,6 +198,27 @@ class ImportPraticheFromApi extends Command
             'is_person' => strlen($codice) === 16,
             'company_id' => $companyId,
         ]);
+    }
+
+    /** La scheda cliente del richiedente (se non c'è si crea) è legata alla pratica con il ruolo «richiedente»: vale anche per le pratiche già importate. */
+    private function collegaRichiedente(Pratica $pratica): void
+    {
+        $codice = strtoupper(preg_replace('/\s+/', '', (string) $pratica->codice_fiscale));
+
+        if (! in_array(strlen($codice), [11, 16], true)) {
+            return;
+        }
+
+        $cliente = app(RichiedentePratica::class)->ensureClient($pratica);
+
+        if ($cliente === null) {
+            return;
+        }
+
+        PraticaClient::query()->firstOrCreate(
+            ['pratica_id' => $pratica->getKey(), 'client_id' => $cliente->getKey()],
+            ['role' => 'richiedente', 'name' => trim(($cliente->first_name ?? '').' '.($cliente->name ?? ''))],
+        );
     }
 
     /**

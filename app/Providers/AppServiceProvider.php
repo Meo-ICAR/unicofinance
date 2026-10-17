@@ -36,6 +36,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Il pannello dei produttori: sui documenti niente esito dell'istruttoria, solleciti né servizi a pagamento.
+        config(['unico-core.documents.producer_panels' => ['agenti']]);
+
         // Il modello Fornitore è del pacchetto core: i listini si aggiungono come relazione dinamica.
         Fornitore::resolveRelationUsing('listiniProvvigionali', fn (Fornitore $fornitore) => $fornitore
             ->belongsToMany(ListinoProvvigionale::class, ListinoProvvigionale::assegnazioniTable(), 'fornitori_id', 'listino_provvigionale_id')

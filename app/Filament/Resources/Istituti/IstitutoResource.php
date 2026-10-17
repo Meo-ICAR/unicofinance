@@ -40,6 +40,8 @@ class IstitutoResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Istituti';
 
+    protected static ?int $navigationSort = 3;
+
     public static function canViewAny(): bool
     {
         $user = auth()->user();

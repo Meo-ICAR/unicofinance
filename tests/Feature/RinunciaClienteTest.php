@@ -25,7 +25,7 @@ class RinunciaClienteTest extends TestCase
     /**
      * @var array<int, string>
      */
-    protected array $connectionsToTransact = [null, 'core'];
+    protected array $connectionsToTransact = [null, 'core', 'proforma'];
 
     public function test_the_producer_waives_the_client_and_the_instructor_sees_it_until_acknowledged(): void
     {
@@ -36,6 +36,7 @@ class RinunciaClienteTest extends TestCase
         $cessione = TipoProdotto::query()->where('name', 'Cessione')->firstOrFail();
         $rinuncia = PraticaStato::query()->where('codice', 'RINUNCIA CLIENTE')->where('tipo_finanziamento', 'Cessione')->firstOrFail();
         $pratica = Pratica::query()->create(['codice_pratica' => 'ZZRIN-'.Str::upper(Str::random(4)), 'fornitori_id' => $fornitore->getKey(), 'tipoprodotto_id' => $cessione->getKey(), 'upload_at' => now()]);
+        $this->collegaProvvigioneProduttore($fornitore, $pratica);
 
         $this->actingAs($staff);
         app(AgentImpersonationService::class)->start($staff, $fornitore);
@@ -87,6 +88,7 @@ class RinunciaClienteTest extends TestCase
         $fornitore = Fornitore::query()->create(['name' => 'Produttore', 'piva' => '996'.random_int(10000000, 99999999), 'user_id' => $agent->id, 'is_active' => true]);
         $cessione = TipoProdotto::query()->where('name', 'Cessione')->firstOrFail();
         $pratica = Pratica::query()->create(['codice_pratica' => 'ZZRIN-'.Str::upper(Str::random(4)), 'fornitori_id' => $fornitore->getKey(), 'tipoprodotto_id' => $cessione->getKey(), 'upload_at' => now()]);
+        $this->collegaProvvigioneProduttore($fornitore, $pratica);
 
         $this->actingAs($staff);
         app(AgentImpersonationService::class)->start($staff, $fornitore);

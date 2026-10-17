@@ -4,6 +4,8 @@ namespace App\Filament\Resources\ApiCalls;
 
 use App\Filament\Resources\ApiCalls\Pages\ListApiCalls;
 use App\Filament\Resources\ApiCalls\Pages\ViewApiCall;
+use App\Filament\Resources\Clients\ClientResource;
+use App\Filament\Resources\Praticas\PraticaResource;
 use App\Models\ApiCall;
 use App\Models\User;
 use BackedEnum;
@@ -13,7 +15,10 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Unico\Core\Models\Document;
 use UnitEnum;
 
 /** Registro delle chiamate ai web service esterni (AI, Cerved, Openapi, sanzioni), in sola lettura. */
@@ -30,6 +35,8 @@ class ApiCallResource extends Resource
     protected static ?string $modelLabel = 'Chiamata API';
 
     protected static ?string $pluralModelLabel = 'Chiamate API';
+
+    protected static ?int $navigationSort = 5;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedServerStack;
 
@@ -55,6 +62,15 @@ class ApiCallResource extends Resource
         return false;
     }
 
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->with(['subject' => function (MorphTo $morph): void {
+            $morph->morphWith([
+                Document::class => ['documentable'],
+            ]);
+        }]);
+    }
+
     public static function infolist(Schema $schema): Schema
     {
         return $schema->components([
@@ -62,6 +78,17 @@ class ApiCallResource extends Resource
             TextEntry::make('provider')->label('Servizio')->badge(),
             TextEntry::make('operation')->label('Operazione'),
             TextEntry::make('status')->label('Esito')->badge(),
+            TextEntry::make('cost')->label('Costo')->money('EUR'),
+            TextEntry::make('pratica_riferimento')
+                ->label('Pratica')
+                ->state(fn (ApiCall $record): ?string => $record->etichettaPratica())
+                ->url(fn (ApiCall $record): ?string => ($pratica = $record->praticaDiRiferimento()) ? PraticaResource::getUrl('edit', ['record' => $pratica]) : null)
+                ->placeholder('—'),
+            TextEntry::make('cliente_riferimento')
+                ->label('Cliente')
+                ->state(fn (ApiCall $record): ?string => $record->etichettaCliente())
+                ->url(fn (ApiCall $record): ?string => ($cliente = $record->clienteDiRiferimento()) ? ClientResource::getUrl('edit', ['record' => $cliente]) : null)
+                ->placeholder('—'),
             TextEntry::make('http_status')->label('HTTP')->placeholder('—'),
             TextEntry::make('duration_ms')->label('Durata (ms)')->placeholder('—'),
             TextEntry::make('summary')->label('Sintesi')->placeholder('—')->columnSpanFull(),
@@ -77,10 +104,22 @@ class ApiCallResource extends Resource
             ->columns([
                 TextColumn::make('created_at')->label('Data')->dateTime('d/m/y H:i')->sortable(),
                 TextColumn::make('provider')->label('Servizio')->badge()->sortable(),
-                TextColumn::make('operation')->label('Operazione')->searchable(),
+                TextColumn::make('operation')->label('Operazione')->searchable()->sortable(),
                 TextColumn::make('status')->label('Esito')->badge()->sortable(),
-                TextColumn::make('summary')->label('Sintesi')->limit(60),
-                TextColumn::make('cost')->label('Costo')->money('EUR')->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('summary')->label('Sintesi')->limit(60)->sortable(),
+                TextColumn::make('cost')->label('Costo')->money('EUR')->sortable(),
+                TextColumn::make('pratica_riferimento')
+                    ->label('Pratica')
+                    ->state(fn (ApiCall $record): ?string => $record->etichettaPratica())
+                    ->url(fn (ApiCall $record): ?string => ($pratica = $record->praticaDiRiferimento()) ? PraticaResource::getUrl('edit', ['record' => $pratica]) : null)
+                    ->placeholder('—')
+                    ->sortable(query: fn (Builder $query, string $direction): Builder => $query->orderByPratica($direction)),
+                TextColumn::make('cliente_riferimento')
+                    ->label('Cliente')
+                    ->state(fn (ApiCall $record): ?string => $record->etichettaCliente())
+                    ->url(fn (ApiCall $record): ?string => ($cliente = $record->clienteDiRiferimento()) ? ClientResource::getUrl('edit', ['record' => $cliente]) : null)
+                    ->placeholder('—')
+                    ->sortable(query: fn (Builder $query, string $direction): Builder => $query->orderByCliente($direction)),
             ])
             ->defaultSort('id', 'desc')
             ->recordUrl(fn (ApiCall $record): string => static::getUrl('view', ['record' => $record]));

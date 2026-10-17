@@ -40,11 +40,15 @@ class DocumentiDaSeguire extends TableWidget
                 TextColumn::make('documentable.cognome_cliente')
                     ->label('Pratica')
                     ->description(fn (Document $record): ?string => $record->documentable?->denominazione_banca)
-                    ->url(fn (Document $record): ?string => $record->documentable ? PraticaResource::getUrl('edit', ['record' => $record->documentable]) : null),
-                TextColumn::make('name')->label('Documento')->searchable(),
-                TextColumn::make('status')->label('Stato')->badge(),
-                TextColumn::make('rejection_note')->label('Nota')->limit(60)->placeholder('—'),
-                TextColumn::make('updated_at')->label('Aggiornato')->since(),
+                    ->url(fn (Document $record): ?string => $record->documentable ? PraticaResource::getUrl('edit', ['record' => $record->documentable]) : null)
+                    ->sortable(query: fn (Builder $query, string $direction): Builder => $query->orderBy(
+                        Pratica::query()->select('cognome_cliente')->whereColumn('pratiches.id', 'documents.documentable_id')->limit(1),
+                        $direction === 'desc' ? 'desc' : 'asc',
+                    )),
+                TextColumn::make('name')->label('Documento')->searchable()->sortable(),
+                TextColumn::make('status')->label('Stato')->badge()->sortable(),
+                TextColumn::make('rejection_note')->label('Nota')->limit(60)->placeholder('—')->sortable(),
+                TextColumn::make('updated_at')->label('Aggiornato')->since()->sortable(),
             ])
             ->filters([
                 Filter::make('mie')

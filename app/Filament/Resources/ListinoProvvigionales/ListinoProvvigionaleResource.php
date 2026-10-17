@@ -35,6 +35,8 @@ class ListinoProvvigionaleResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Listini provvigionali';
 
+    protected static ?int $navigationSort = 2;
+
     public static function canViewAny(): bool
     {
         $user = auth()->user();

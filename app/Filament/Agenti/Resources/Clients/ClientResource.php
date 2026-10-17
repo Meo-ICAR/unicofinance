@@ -5,6 +5,8 @@ namespace App\Filament\Agenti\Resources\Clients;
 use App\Filament\Agenti\Resources\Clients\Pages\EditClient;
 use App\Filament\Agenti\Resources\Clients\Pages\ListClients;
 use App\Filament\Agenti\Resources\Clients\Schemas\ClientForm;
+use App\Filament\RelationManagers\AddressesRelationManager;
+use App\Filament\RelationManagers\BranchesRelationManager;
 use App\Models\Client;
 use App\Models\Pratica;
 use App\Services\Agenti\AgentImpersonationService;
@@ -78,7 +80,7 @@ class ClientResource extends Resource
 
         return $schema->components([
             Section::make('Contatti')
-                ->columns(4)
+                ->columns(['default' => 1, 'md' => 3])
                 ->columnSpanFull()
                 ->schema([
                     TextInput::make('email')->label('Email')->email()->maxLength(255),
@@ -116,6 +118,8 @@ class ClientResource extends Resource
     {
         return [
             DocumentsRelationManager::class,
+            AddressesRelationManager::class,
+            BranchesRelationManager::class,
         ];
     }
 

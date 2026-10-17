@@ -75,6 +75,59 @@ class CambioStatoPratica
         return true;
     }
 
+    /** Lo stato «SOSPESA» del tipo di finanziamento della pratica (altrimenti il primo stato sospeso con quel codice). */
+    public function statoSospesa(Pratica $pratica): ?PraticaStato
+    {
+        return $this->statoDelProdotto($pratica, 'SOSPESA');
+    }
+
+    /** Lo stato «PREVENTIVO» a cui torna una pratica ripresa. */
+    public function statoPreventivo(Pratica $pratica): ?PraticaStato
+    {
+        return $this->statoDelProdotto($pratica, 'PREVENTIVO');
+    }
+
+    public function eSospesa(Pratica $pratica): bool
+    {
+        return (bool) $pratica->praticaStato?->is_suspended;
+    }
+
+    /** Il produttore sospende il preventivo: la pratica passa a «SOSPESA». */
+    public function sospendi(Pratica $pratica, ?string $nota = null): bool
+    {
+        $stato = $this->statoSospesa($pratica);
+
+        if ($stato === null || $this->eSospesa($pratica)) {
+            return false;
+        }
+
+        $this->cambia($pratica, $stato->getKey(), trim('Sospesa dal produttore'.($nota ? ': '.$nota : '')), 'agenti');
+
+        return true;
+    }
+
+    /** Il produttore riprende il preventivo sospeso: la pratica torna a «PREVENTIVO». */
+    public function riprendi(Pratica $pratica): bool
+    {
+        $stato = $this->statoPreventivo($pratica);
+
+        if ($stato === null || ! $this->eSospesa($pratica)) {
+            return false;
+        }
+
+        $this->cambia($pratica, $stato->getKey(), 'Ripresa dal produttore', 'agenti');
+
+        return true;
+    }
+
+    private function statoDelProdotto(Pratica $pratica, string $codice): ?PraticaStato
+    {
+        $stati = PraticaStato::query()->where('codice', $codice)->orderBy('id')->get();
+        $prodotto = $pratica->tipoprodotto?->name;
+
+        return $stati->first(fn (PraticaStato $stato): bool => $prodotto !== null && strcasecmp((string) $stato->tipo_finanziamento, $prodotto) === 0) ?? $stati->first();
+    }
+
     /** L'istruttore prende visione dei cambi di stato non fatti da lui. */
     public function presaVisione(Pratica $pratica): int
     {

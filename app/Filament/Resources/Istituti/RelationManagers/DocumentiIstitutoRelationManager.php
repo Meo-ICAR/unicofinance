@@ -26,11 +26,11 @@ class DocumentiIstitutoRelationManager extends RelationManager
 {
     protected static string $relationship = 'documentTypes';
 
-    protected static ?string $title = 'Documenti richiesti';
+    protected static ?string $title = 'Modulistica banca';
 
     protected static ?string $modelLabel = 'Documento';
 
-    protected static ?string $pluralModelLabel = 'Documenti richiesti';
+    protected static ?string $pluralModelLabel = 'Modulistica banca';
 
     public function isReadOnly(): bool
     {

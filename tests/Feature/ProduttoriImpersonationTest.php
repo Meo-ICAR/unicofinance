@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Filament\Resources\Produttori\Pages\ListProduttori;
+use App\Filament\Resources\Produttori\Pages\ViewProduttore;
 use App\Models\User;
 use App\Services\Agenti\AgentImpersonationService;
 use Filament\Actions\Testing\TestAction;
@@ -145,5 +146,23 @@ class ProduttoriImpersonationTest extends TestCase
             ->call('updateTableColumnState', 'allows_direct_requests', (string) $produttore->getKey(), true);
 
         $this->assertTrue((bool) $produttore->refresh()->allows_direct_requests);
+    }
+
+    public function test_the_producer_card_shows_the_mobile_and_the_institute_blacklist(): void
+    {
+        Filament::setCurrentPanel('admin');
+        $this->actingAs(User::factory()->create(['role' => 'super_admin']));
+        $produttore = $this->fornitore(['tel' => '3331234567']);
+
+        Livewire::test(ListProduttori::class)
+            ->searchTable($produttore->name)
+            ->assertSee('Cellulare')
+            ->assertSee('3331234567');
+
+        Livewire::test(ViewProduttore::class, ['record' => $produttore->getKey()])
+            ->assertSee('Cellulare')
+            ->assertSee('3331234567')
+            ->assertSee('Blacklist istituti')
+            ->assertDontSee('Istituti che non lavorano con lui');
     }
 }

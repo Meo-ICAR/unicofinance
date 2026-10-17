@@ -15,10 +15,10 @@ use App\Filament\RelationManagers\PraticheRelationManager;
 use App\Filament\RelationManagers\ProvvigioniRelationManager;
 use App\Filament\RelationManagers\WebsitesRelationManager;
 use App\Models\Pratica;
+use App\Models\Provvigione;
 use App\Services\Agenti\AgentImpersonationService;
 use App\Services\CodiceFiscaleDecoder;
 use App\Services\PortaleBanca;
-use App\Support\CompensoMediazione;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
@@ -29,7 +29,6 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
-use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
@@ -41,8 +40,10 @@ use Filament\Tables\Table;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\HtmlString;
 use Unico\Core\Filament\RelationManagers\DocumentsRelationManager;
 use Unico\Core\Models\Cliente;
+use Unico\Core\Models\Fornitore;
 use Unico\Core\Models\TipoProdotto;
 
 class PraticaResource extends Resource
@@ -84,11 +85,30 @@ class PraticaResource extends Resource
         $fornitoreId = app(AgentImpersonationService::class)->agentFornitoreId();
         $query = parent::getEloquentQuery();
 
-        if ($fornitoreId === null) {
+        $fornitore = $fornitoreId === null ? null : Fornitore::query()->find($fornitoreId);
+
+        if (! $fornitore instanceof Fornitore) {
             return $query->whereRaw('0 = 1');
         }
 
-        return $query->where('fornitori_id', $fornitoreId);
+        $codiciConProvvigione = Provvigione::query()
+            ->dellAgente($fornitore)
+            ->whereNotNull('id_pratica')
+            ->distinct()
+            ->pluck('id_pratica');
+
+        return $query->where(function (Builder $visibili) use ($fornitore, $codiciConProvvigione): void {
+            $visibili->whereIn('codice_pratica', $codiciConProvvigione)
+                ->orWhere(fn (Builder $terzi) => $terzi->where('is_notowned', true)->whereIn(
+                    'codice_fiscale',
+                    Pratica::query()
+                        ->where('fornitori_id', $fornitore->getKey())
+                        ->where('is_notowned', false)
+                        ->whereNotNull('codice_fiscale')
+                        ->where('codice_fiscale', '!=', '')
+                        ->select('codice_fiscale'),
+                ));
+        });
     }
 
     /** Nei titoli e nelle briciole di pane la pratica è il cognome o la ragione sociale del richiedente, non il codice. */
@@ -104,10 +124,37 @@ class PraticaResource extends Resource
         // Cessione e delega si calcolano sulla rata; gli altri prodotti su importo richiesto e durata.
         $sulla_rata = fn (Get $get): bool => in_array(TipoProdotto::query()->whereKey($get('tipoprodotto_id'))->value('name'), ['Cessione', 'Delega'], true);
 
+        // Impegno di terzi: di un'altra società, ci interessano solo tipo, banca, scadenza e rata.
+        $impegnoDiTerzi = fn (Get $get): bool => (bool) $get('is_notowned');
+
         return $schema->components([
-            Section::make('Richiedente')
+            Section::make()
+                ->columnSpanFull()
+                ->columns(['default' => 1, 'md' => 3])
+                ->schema([
+                    Placeholder::make('intestazione_prodotto')
+                        ->label('Prodotto')
+                        ->content(fn (Get $get): string => TipoProdotto::query()->whereKey($get('tipoprodotto_id'))->value('name') ?? '—'),
+                    Placeholder::make('intestazione_banca')
+                        ->label('Banca')
+                        ->content(function (Get $get): HtmlString|string {
+                            $nome = Cliente::query()->whereKey($get('clienti_id'))->value('name');
+                            $url = static::portaleBanca($get('clienti_id'));
+
+                            if ($nome === null) {
+                                return '—';
+                            }
+
+                            return $url === null ? $nome : new HtmlString('<a href="'.e($url).'" target="_blank" rel="noopener" class="text-primary-600 underline">'.e($nome).' ↗</a>');
+                        }),
+                    Placeholder::make('intestazione_estremi')
+                        ->label('Estremi')
+                        ->content(fn (Get $get): string => collect([trim(($get('cognome_cliente') ?? '').' '.($get('nome_cliente') ?? '')), $get('codice_fiscale')])->filter()->implode(' · ') ?: '—'),
+                ]),
+            Section::make('Estremi')
                 ->icon('heroicon-o-user')
-                ->columns(['default' => 1, 'md' => 2, 'xl' => 4])
+                ->collapsed()
+                ->columns(['default' => 1, 'md' => 3])
                 ->columnSpanFull()
                 ->schema([
                     TextInput::make('cognome_cliente')->label('Cognome')->maxLength(191),
@@ -164,10 +211,11 @@ class PraticaResource extends Resource
                 ]),
             Section::make('Prodotto richiesto')
                 ->icon('heroicon-o-banknotes')
+                ->collapsed()
                 ->columns(['default' => 1, 'md' => 2, 'xl' => 4, '2xl' => 6])
                 ->columnSpanFull()
                 ->schema([
-                    Toggle::make('is_notowned')->label('Impegno di terzi')->inline(false),
+                    Toggle::make('is_notowned')->label('Impegno di terzi')->inline(false)->live(),
                     Select::make('tipoprodotto_id')
                         ->label('Tipo prodotto')
                         ->relationship('tipoprodotto', 'name')
@@ -191,26 +239,30 @@ class PraticaResource extends Resource
                         ->label('Rata')
                         ->numeric()
                         ->prefix('€')
-                        ->visible($sulla_rata),
+                        ->visible(fn (Get $get): bool => $sulla_rata($get) || $impegnoDiTerzi($get)),
+                    DatePicker::make('scadenza')
+                        ->label('Scadenza')
+                        ->helperText('Fine del finanziamento, dell\'assegno di mantenimento o della ritenuta.')
+                        ->native(false)
+                        ->displayFormat('d/m/Y')
+                        ->visible($impegnoDiTerzi),
                     TextInput::make('amount')
                         ->label('Importo richiesto')
                         ->numeric()
                         ->prefix('€')
-                        ->visible(fn (Get $get): bool => ! $sulla_rata($get)),
+                        ->visible(fn (Get $get): bool => ! $sulla_rata($get) && ! $impegnoDiTerzi($get)),
                     TextInput::make('nrate')
                         ->label('Durata (mesi)')
                         ->numeric()
                         ->integer()
-                        ->visible(fn (Get $get): bool => ! $sulla_rata($get)),
-                    Placeholder::make('mediazione_dovuta')
-                        ->label('Mediazione richiesta al cliente')
-                        ->content(fn (?Pratica $record, Get $get): string => CompensoMediazione::formatta($record?->mediation_fee_amount, $record?->mediation_fee_percent, $get('amount') ?? $record?->amount)),
+                        ->visible(fn (Get $get): bool => ! $sulla_rata($get) && ! $impegnoDiTerzi($get)),
                     TextInput::make('codice_pratica')->label('Numero pratica')->maxLength(255),
-                    TextInput::make('codice_pratica_banca')->label('Codice pratica banca')->helperText('Assegnato dalla banca sul suo portale')->maxLength(100),
+                    TextInput::make('codice_pratica_banca')->label('Codice pratica banca')->helperText('Assegnato dalla banca sul suo portale')->maxLength(100)->hidden($impegnoDiTerzi),
                     DatePicker::make('data_inserimento_pratica')
                         ->label('Data richiesta')
                         ->native(false)
-                        ->displayFormat('d/m/Y'),
+                        ->displayFormat('d/m/Y')
+                        ->hidden($impegnoDiTerzi),
                 ]),
             Tabs::make('Altri dati')
                 ->columnSpanFull()
@@ -228,31 +280,29 @@ class PraticaResource extends Resource
                     Tab::make('Dettagli')
                         ->icon('heroicon-o-clipboard-document-list')
                         ->schema([
-                            Grid::make(['default' => 1, 'lg' => 3])
+                            Section::make('Istruttoria')
                                 ->columnSpanFull()
+                                ->columns(['default' => 1, 'md' => 3])
                                 ->schema([
-                                    Section::make('Istruttoria')
-                                        ->columns(1)
-                                        ->schema([
-                                            Select::make('pratica_stato_id')
-                                                ->label('Stato')
-                                                ->relationship('praticaStato', 'codice')
-                                                ->searchable()
-                                                ->preload(),
-                                            TextInput::make('denominazione_prodotto')->label('Prodotto')->maxLength(191),
-                                            TextInput::make('denominazione_agente')->label('Agente')->maxLength(191),
-                                        ]),
-                                    Section::make('Avanzamento')
-                                        ->columns(['default' => 1, 'md' => 2, 'xl' => 3])
-                                        ->columnSpan(['lg' => 2])
-                                        ->schema([
-                                            DatePicker::make('presa_in_carico_at')->label('Data presa in carico')->native(false)->displayFormat('d/m/Y'),
-                                            DatePicker::make('lavorazione_at')->label('Data lavorazione')->native(false)->displayFormat('d/m/Y'),
-                                            DatePicker::make('sended_at')->label('Data invio istruttoria')->native(false)->displayFormat('d/m/Y'),
-                                            DatePicker::make('approved_at')->label('Approvazione')->native(false)->displayFormat('d/m/Y'),
-                                            DatePicker::make('erogated_at')->label('Erogazione')->native(false)->displayFormat('d/m/Y'),
-                                            DatePicker::make('rejected_at')->label('Rifiuto')->native(false)->displayFormat('d/m/Y'),
-                                        ]),
+                                    Select::make('pratica_stato_id')
+                                        ->label('Stato')
+                                        ->relationship('praticaStato', 'codice')
+                                        ->searchable()
+                                        ->preload(),
+                                    TextInput::make('denominazione_prodotto')->label('Prodotto')->maxLength(191),
+                                    TextInput::make('denominazione_agente')->label('Agente')->maxLength(191),
+                                ]),
+                            Section::make('Avanzamento')
+                                ->collapsed()
+                                ->columnSpanFull()
+                                ->columns(['default' => 3])
+                                ->schema([
+                                    DatePicker::make('presa_in_carico_at')->label('Data presa in carico')->native(false)->displayFormat('d/m/Y'),
+                                    DatePicker::make('lavorazione_at')->label('Data lavorazione')->native(false)->displayFormat('d/m/Y'),
+                                    DatePicker::make('sended_at')->label('Data invio istruttoria')->native(false)->displayFormat('d/m/Y'),
+                                    DatePicker::make('approved_at')->label('Approvazione')->native(false)->displayFormat('d/m/Y'),
+                                    DatePicker::make('erogated_at')->label('Erogazione')->native(false)->displayFormat('d/m/Y'),
+                                    DatePicker::make('rejected_at')->label('Rifiuto')->native(false)->displayFormat('d/m/Y'),
                                 ]),
                             Section::make('Importi')
                                 ->columns(['default' => 1, 'md' => 2])

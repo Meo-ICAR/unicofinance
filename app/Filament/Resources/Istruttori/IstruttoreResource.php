@@ -34,6 +34,8 @@ class IstruttoreResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'name';
 
+    protected static ?int $navigationSort = 6;
+
     public static function canViewAny(): bool
     {
         $utente = auth()->user();

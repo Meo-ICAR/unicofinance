@@ -38,15 +38,20 @@ class ScadenzeDocumenti extends TableWidget
                 TextColumn::make('documentable.cognome_cliente')
                     ->label('Pratica')
                     ->description(fn (Document $record): ?string => $record->documentable?->denominazione_banca)
-                    ->url(fn (Document $record): ?string => $record->documentable ? PraticaResource::getUrl('edit', ['record' => $record->documentable]) : null),
-                TextColumn::make('name')->label('Documento')->searchable(),
+                    ->url(fn (Document $record): ?string => $record->documentable ? PraticaResource::getUrl('edit', ['record' => $record->documentable]) : null)
+                    ->sortable(query: fn (Builder $query, string $direction): Builder => $query->orderBy(
+                        Pratica::query()->select('cognome_cliente')->whereColumn('pratiches.id', 'documents.documentable_id')->limit(1),
+                        $direction === 'desc' ? 'desc' : 'asc',
+                    )),
+                TextColumn::make('name')->label('Documento')->searchable()->sortable(),
                 TextColumn::make('expires_at')->label('Scade il')->date('d/m/Y')->sortable(),
                 TextColumn::make('giorni')
                     ->label('Giorni')
                     ->state(fn (Document $record): int => (int) now()->startOfDay()->diffInDays($record->expires_at->startOfDay(), false))
                     ->badge()
                     ->color(fn (int $state): string => $state < 0 ? 'danger' : ($state <= 7 ? 'warning' : 'gray'))
-                    ->formatStateUsing(fn (int $state): string => $state < 0 ? 'scaduto da '.abs($state).' gg' : 'tra '.$state.' gg'),
+                    ->formatStateUsing(fn (int $state): string => $state < 0 ? 'scaduto da '.abs($state).' gg' : 'tra '.$state.' gg')
+                    ->sortable(query: fn (Builder $query, string $direction): Builder => $query->orderBy('expires_at', $direction === 'desc' ? 'desc' : 'asc')),
             ])
             ->filters([
                 Filter::make('mie')

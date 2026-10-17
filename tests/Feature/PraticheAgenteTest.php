@@ -31,7 +31,7 @@ class PraticheAgenteTest extends TestCase
     /**
      * @var array<int, string>
      */
-    protected array $connectionsToTransact = [null, 'core'];
+    protected array $connectionsToTransact = [null, 'core', 'proforma'];
 
     public function test_the_agents_panel_lists_only_the_impersonated_agents_practices(): void
     {
@@ -59,6 +59,7 @@ class PraticheAgenteTest extends TestCase
             'fornitori_id' => $fornitore->getKey(),
             'upload_at' => now(),
         ]);
+        $this->collegaProvvigioneProduttore($fornitore, $own);
         $foreign = Pratica::query()->create([
             'codice_pratica' => $marker.'-ALTRA',
             'cognome_cliente' => 'Bianchi',
@@ -93,7 +94,8 @@ class PraticheAgenteTest extends TestCase
 
         Livewire::test(EditPratica::class, ['record' => $own->getKey()])
             ->assertOk()
-            ->assertSee('Richiedente')
+            ->assertSee('Estremi')
+            ->assertDontSee('Mediazione richiesta al cliente')
             ->assertSee('Prodotto richiesto')
             ->assertSee('Dettagli')
             // Cessione: rata; gli altri prodotti: importo richiesto e durata.
@@ -236,6 +238,7 @@ class PraticheAgenteTest extends TestCase
             'fornitori_id' => $fornitore->getKey(),
             'upload_at' => now(),
         ]);
+        $this->collegaProvvigioneProduttore($fornitore, $pratica);
 
         Livewire::test(EditPratica::class, ['record' => $pratica->getKey()])
             ->assertFormSet([
@@ -264,6 +267,7 @@ class PraticheAgenteTest extends TestCase
             'fornitori_id' => $fornitore->getKey(),
             'upload_at' => now(),
         ]);
+        $this->collegaProvvigioneProduttore($fornitore, $societa);
 
         Livewire::test(EditPratica::class, ['record' => $societa->getKey()])
             ->fillForm([

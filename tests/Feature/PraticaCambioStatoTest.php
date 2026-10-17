@@ -24,7 +24,7 @@ class PraticaCambioStatoTest extends TestCase
     /**
      * @var array<int, string>
      */
-    protected array $connectionsToTransact = [null, 'core'];
+    protected array $connectionsToTransact = [null, 'core', 'proforma'];
 
     private function stato(string $name): PraticaStato
     {
@@ -184,6 +184,7 @@ class PraticaCambioStatoTest extends TestCase
         $da = $this->stato('Inserita');
         $a = $this->stato('Richiesta Istruttoria');
         $pratica = Pratica::query()->create(['codice_pratica' => 'ZZAG-'.Str::upper(Str::random(4)), 'cognome_cliente' => 'Bianchi', 'pratica_stato_id' => $da->getKey(), 'fornitori_id' => $fornitore->getKey(), 'upload_at' => now()]);
+        $this->collegaProvvigioneProduttore($fornitore, $pratica);
 
         Livewire::test(EditPraticaAgente::class, ['record' => $pratica->getKey()])
             ->assertSeeInOrder(['Bianchi'])

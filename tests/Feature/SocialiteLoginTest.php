@@ -74,6 +74,53 @@ class SocialiteLoginTest extends TestCase
         $this->assertNotNull($linked);
         $this->assertTrue($linked->user->is($user));
         $this->assertSame($user->email, $linked->email);
+        $this->assertSame('https://example.com/avatar.jpg', $linked->avatar);
+    }
+
+    public function test_microsoft_login_drops_a_data_uri_avatar(): void
+    {
+        $user = User::factory()->create([
+            'role' => 'employee',
+            'email' => 'microsoft.'.uniqid().'@example.test',
+        ]);
+        Socialite::fake('microsoft', OAuthUser::fake([
+            'id' => 'microsoft-photo',
+            'email' => $user->email,
+            'name' => $user->name,
+            'avatar' => 'data:image/png;base64,'.str_repeat('A', 400),
+            'token' => str_repeat('t', 2000),
+        ]));
+
+        $response = $this->get('/admin/oauth/callback/microsoft');
+
+        $response->assertRedirect('/admin');
+        $this->assertAuthenticatedAs($user);
+        $linked = SocialiteUser::query()->where('provider_id', 'microsoft-photo')->first();
+        $this->assertNotNull($linked);
+        $this->assertNull($linked->avatar);
+        $this->assertSame(str_repeat('t', 2000), $linked->token);
+    }
+
+    public function test_login_drops_an_avatar_longer_than_the_column(): void
+    {
+        $user = User::factory()->create([
+            'role' => 'employee',
+            'email' => 'google.'.uniqid().'@example.test',
+        ]);
+        Socialite::fake('google', OAuthUser::fake([
+            'id' => 'google-long-avatar',
+            'email' => $user->email,
+            'name' => $user->name,
+            'avatar' => 'https://example.test/'.str_repeat('a', 300),
+        ]));
+
+        $response = $this->get('/admin/oauth/callback/google');
+
+        $response->assertRedirect('/admin');
+        $this->assertAuthenticatedAs($user);
+        $linked = SocialiteUser::query()->where('provider_id', 'google-long-avatar')->first();
+        $this->assertNotNull($linked);
+        $this->assertNull($linked->avatar);
     }
 
     public function test_unknown_email_is_not_registered(): void

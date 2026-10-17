@@ -20,7 +20,7 @@ class IstitutiBloccatiRelationManager extends RelationManager
 {
     protected static string $relationship = 'blacklistIstituti';
 
-    protected static ?string $title = 'Istituti che non lavorano con lui';
+    protected static ?string $title = 'Blacklist istituti';
 
     protected static ?string $modelLabel = 'Divieto';
 

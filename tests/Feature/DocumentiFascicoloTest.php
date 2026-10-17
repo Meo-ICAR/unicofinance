@@ -277,4 +277,27 @@ class DocumentiFascicoloTest extends TestCase
         $this->assertEqualsCanonicalizing([$identita->getKey(), $reddito->getKey()], array_map(fn ($risultato) => $risultato->document->document_type_id, $risultati));
         $this->assertSame(2, Document::query()->where('documentable_type', 'pratica')->where('documentable_id', (string) $pratica->getKey())->whereIn('document_type_id', [$identita->getKey(), $reddito->getKey()])->count());
     }
+
+    public function test_in_the_producers_panel_the_documents_hide_the_outcome_reminders_and_paid_services(): void
+    {
+        [$pratica, $documenti] = $this->pratica();
+        $documento = $documenti['caricato'];
+        Filament::setCurrentPanel('agenti');
+
+        $tabella = fn () => Livewire::test(DocumentsRelationManager::class, ['ownerRecord' => $pratica, 'pageClass' => EditPratica::class]);
+
+        $tabella()
+            ->mountAction(TestAction::make('edit')->table($documento))
+            ->assertActionHidden(TestAction::make('esitoIstruttoria'))
+            ->assertActionHidden(TestAction::make('richiediApi'))
+            ->assertActionExists(TestAction::make('stampa'))
+            ->assertTableColumnExists('responsible');
+
+        $tabella()
+            ->assertTableBulkActionHidden('inviaSollecito')
+            ->assertTableBulkActionHidden('esitoIstruttoriaMassivo')
+            ->assertTableBulkActionHidden('setEmittedAt')
+            ->assertTableBulkActionVisible('stampaSelezionati')
+            ->assertTableBulkActionVisible('inviaSelezionatiOtp');
+    }
 }

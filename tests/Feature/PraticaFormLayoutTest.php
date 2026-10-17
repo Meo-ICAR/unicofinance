@@ -27,7 +27,7 @@ class PraticaFormLayoutTest extends TestCase
     /**
      * @var array<int, string>
      */
-    protected array $connectionsToTransact = [null, 'core'];
+    protected array $connectionsToTransact = [null, 'core', 'proforma'];
 
     /** @return array{0: Fornitore, 1: User} */
     private function agent(): array
@@ -51,6 +51,7 @@ class PraticaFormLayoutTest extends TestCase
         $cessione = TipoProdotto::query()->where('name', 'Cessione')->firstOrFail();
         $prestito = TipoProdotto::query()->where('name', 'Prestito')->firstOrFail();
         $pratica = Pratica::query()->create(['codice_pratica' => 'ZZLAY-'.Str::upper(Str::random(4)), 'fornitori_id' => $fornitore->getKey(), 'tipoprodotto_id' => $cessione->getKey(), 'upload_at' => now()]);
+        $this->collegaProvvigioneProduttore($fornitore, $pratica);
 
         $page = Livewire::test(EditPratica::class, ['record' => $pratica->getKey()])
             ->assertSee('Impegno di terzi')
@@ -62,7 +63,8 @@ class PraticaFormLayoutTest extends TestCase
 
         $html = $page->html();
         $order = ['Impegno di terzi', 'Tipo prodotto', 'Banca', 'Rata', 'Numero pratica', 'Data richiesta'];
-        $positions = array_map(fn (string $label): int|false => strpos($html, $label), $order);
+        $sezione = (int) strpos($html, 'Prodotto richiesto');
+        $positions = array_map(fn (string $label): int|false => strpos($html, $label, $sezione), $order);
         $this->assertNotContains(false, $positions);
         $sorted = $positions;
         sort($sorted);
@@ -80,6 +82,7 @@ class PraticaFormLayoutTest extends TestCase
         $banca = Cliente::query()->create(['name' => 'BANCA DI PROVA', 'abi' => '03069', 'is_active' => true, 'portal_url' => 'https://portale.banca.test/agenti']);
         $senzaPortale = Cliente::query()->create(['name' => 'BANCA SENZA PORTALE', 'is_active' => true]);
         $pratica = Pratica::query()->create(['codice_pratica' => 'ZZBNK-'.Str::upper(Str::random(4)), 'cognome_cliente' => 'Rossi', 'fornitori_id' => $fornitore->getKey(), 'upload_at' => now()]);
+        $this->collegaProvvigioneProduttore($fornitore, $pratica);
 
         $this->assertSame('https://portale.banca.test/agenti', PraticaResource::portaleBanca($banca->getKey()));
         $this->assertNull(PraticaResource::portaleBanca($senzaPortale->getKey()));
@@ -107,6 +110,7 @@ class PraticaFormLayoutTest extends TestCase
             'fornitori_id' => $fornitore->getKey(),
             'upload_at' => now(),
         ]);
+        $this->collegaProvvigioneProduttore($fornitore, $pratica);
         $this->assertNull(Client::query()->where('tax_code', 'NRELCU80A01H501X')->first());
 
         Livewire::test(EditPratica::class, ['record' => $pratica->getKey()])
@@ -143,6 +147,7 @@ class PraticaFormLayoutTest extends TestCase
     {
         [$fornitore] = $this->agent();
         $pratica = Pratica::query()->create(['codice_pratica' => 'ZZDATA-'.Str::upper(Str::random(4)), 'fornitori_id' => $fornitore->getKey(), 'upload_at' => now()]);
+        $this->collegaProvvigioneProduttore($fornitore, $pratica);
 
         Livewire::test(EditPratica::class, ['record' => $pratica->getKey()])
             ->assertSee('Data presa in carico')

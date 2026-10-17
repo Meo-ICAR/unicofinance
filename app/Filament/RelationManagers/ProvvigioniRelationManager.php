@@ -3,14 +3,18 @@
 namespace App\Filament\RelationManagers;
 
 use App\Models\Pratica;
+use App\Services\Agenti\AgentImpersonationService;
 use App\Services\Provvigioni\PercentualeListino;
+use App\Support\PannelloProduttori;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Unico\Core\Models\Fornitore;
 
 class ProvvigioniRelationManager extends RelationManager
 {
@@ -52,10 +56,23 @@ class ProvvigioniRelationManager extends RelationManager
 
     public function table(Table $table): Table
     {
+        $produttore = PannelloProduttori::attivo();
+
         return $table
             ->description(fn (): ?string => $this->descrizioneListino())
+            // Il produttore vede solo i propri compensi, mai quelli dell'istituto né dei suoi colleghi.
+            ->modifyQueryUsing(function (Builder $query) use ($produttore): Builder {
+                if (! $produttore) {
+                    return $query;
+                }
+
+                $agente = Fornitore::query()->find(app(AgentImpersonationService::class)->agentFornitoreId());
+
+                return $agente === null ? $query->whereRaw('0 = 1') : $query->dellAgente($agente);
+            })
             ->columns([
                 TextColumn::make('entrata_uscita')
+                    ->visible(! $produttore)
                     ->label('Entrata/Uscita')
                     ->badge()
                     ->color(fn (?string $state): string => match ($state) {
@@ -70,7 +87,7 @@ class ProvvigioniRelationManager extends RelationManager
                 TextColumn::make('status_compenso')->label('Stato compenso'),
                 TextColumn::make('data_status')->label('Data stato')->date('d/m/Y'),
             ])
-            ->recordActions([
+            ->recordActions($produttore ? [] : [
                 EditAction::make(),
             ]);
     }

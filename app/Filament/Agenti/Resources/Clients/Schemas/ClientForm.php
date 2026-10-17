@@ -34,15 +34,22 @@ class ClientForm
      */
     public static function components(Closure $isPerson, bool $withScreening = true): array
     {
+        // Persona fisica: l'interruttore segue il cognome; società: segue la partita IVA.
+        $interruttorePersona = fn (bool $dopoIlCognome): Toggle => Toggle::make('is_person')
+            ->label('Persona fisica')
+            ->live()
+            ->visible(fn (Get $get): bool => (bool) $get('is_person') === $dopoIlCognome);
+
         return [
-            Grid::make(['default' => 1, 'md' => 2])
+            Grid::make(['default' => 1])
                 ->columnSpanFull()
                 ->schema([
                     Section::make('Anagrafica')
-                        ->columns(['default' => 1, 'md' => 2])
+                        ->columns(['default' => 1, 'md' => 3])
                         ->schema([
                             TextInput::make('name')->label('Cognome / ragione sociale')->required()->maxLength(255),
-                            TextInput::make('first_name')->label('Nome')->maxLength(255),
+                            $interruttorePersona(true),
+                            TextInput::make('first_name')->label('Nome')->maxLength(255)->visible(fn (Get $get): bool => (bool) $get('is_person')),
                             TextInput::make('tax_code')
                                 ->label('Codice fiscale')
                                 ->maxLength(16)
@@ -64,10 +71,12 @@ class ClientForm
                                     $set('sex', $decoded['sex']);
                                     $set('birth_place', $decoded['birth_place']);
                                 }),
-                            Toggle::make('is_person')->label('Persona fisica')->live(),
+                            $interruttorePersona(false),
                         ]),
                     Section::make('Dati anagrafici')
-                        ->columns(['default' => 1, 'md' => 2])
+                        ->collapsed()
+                        ->columns(['default' => 1, 'md' => 4])
+                        ->visible(fn (Get $get): bool => (bool) $get('is_person'))
                         ->schema([
                             DatePicker::make('birth_date')->label('Data di nascita')->native(false)->displayFormat('d/m/Y'),
                             TextInput::make('birth_place')->label('Luogo di nascita')->maxLength(100),
@@ -92,6 +101,7 @@ class ClientForm
                 ]),
             Section::make('Valutazione rischio (AML)')
                 ->key('valutazioneAml')
+                ->collapsed()
                 ->columns(['default' => 1, 'md' => 2, 'xl' => 4])
                 ->columnSpanFull()
                 ->headerActions([
@@ -116,6 +126,7 @@ class ClientForm
                 ]),
             Section::make('KYC (adeguata verifica)')
                 ->relationship('questionarioKyc')
+                ->collapsed()
                 ->columns(['default' => 1, 'md' => 2, 'xl' => 3])
                 ->columnSpanFull()
                 ->schema([

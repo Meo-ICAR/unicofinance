@@ -15,6 +15,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
 use Unico\Core\Enums\DocumentStatus;
+use Unico\Core\Models\Cliente;
 use Unico\Core\Models\Document;
 use Unico\Core\Models\Employee;
 use Unico\Core\Models\PraticaStato;
@@ -57,6 +58,21 @@ class DashboardIstruttoreTest extends TestCase
             ->assertNotified('Pratica presa in carico');
 
         $this->assertSame($istruttore->getKey(), (int) $nuova->fresh()->employee_id);
+    }
+
+    public function test_waiting_days_are_an_integer_and_the_insertion_date_is_not_shown(): void
+    {
+        $this->istruttore();
+        $pratica = Pratica::query()->create([
+            'codice_pratica' => 'DSH-ATT',
+            'cognome_cliente' => 'Attesa',
+            'data_inserimento_pratica' => today()->subDays(4)->toDateString(),
+            'upload_at' => now(),
+        ]);
+
+        Livewire::test(DaPrendereInCarico::class)
+            ->assertTableColumnDoesNotExist('data_inserimento_pratica')
+            ->assertTableColumnStateSet('giorni_attesa', 4, $pratica);
     }
 
     public function test_a_user_without_an_employee_card_cannot_take_over_a_practice(): void
@@ -148,6 +164,45 @@ class DashboardIstruttoreTest extends TestCase
             ->assertCanNotSeeTableRecords([$recente, $approvata])
             ->filterTable('da', '0')
             ->assertCanSeeTableRecords([$ferma, $recente]);
+    }
+
+    public function test_bank_waiting_practices_can_be_filtered_by_bank_and_their_status_changed(): void
+    {
+        $istruttore = $this->istruttore();
+        $prima = Cliente::query()->create(['name' => 'Banca Prima', 'is_active' => true]);
+        $seconda = Cliente::query()->create(['name' => 'Banca Seconda', 'is_active' => true]);
+        $sua = Pratica::query()->create([
+            'codice_pratica' => 'DSH-BN1',
+            'cognome_cliente' => 'FermaBanca',
+            'employee_id' => $istruttore->getKey(),
+            'clienti_id' => $prima->getKey(),
+            'sended_at' => today()->subDays(10)->toDateString(),
+            'upload_at' => now(),
+        ]);
+        $altra = Pratica::query()->create([
+            'codice_pratica' => 'DSH-BN2',
+            'cognome_cliente' => 'AltraBanca',
+            'employee_id' => $istruttore->getKey(),
+            'clienti_id' => $seconda->getKey(),
+            'sended_at' => today()->subDays(10)->toDateString(),
+            'upload_at' => now(),
+        ]);
+        $nuovo = $this->stato();
+
+        Livewire::test(RisposteBancaInSospeso::class)
+            ->filterTable('clienti_id', $prima->getKey())
+            ->assertCanSeeTableRecords([$sua])
+            ->assertCanNotSeeTableRecords([$altra])
+            ->callTableAction('cambiaStato', $sua, data: [
+                'stato' => $nuovo->getKey(),
+                'motivazione' => 'Esito dal portale',
+            ])
+            ->assertNotified('Stato aggiornato');
+
+        $sua->refresh();
+        $this->assertSame($nuovo->getKey(), $sua->pratica_stato_id);
+        $this->assertSame('Esito dal portale', $sua->praticaStatusHistory()->value('notes'));
+        $this->assertSame('admin', $sua->praticaStatusHistory()->value('source'));
     }
 
     public function test_the_signature_widget_renders_open_requests(): void

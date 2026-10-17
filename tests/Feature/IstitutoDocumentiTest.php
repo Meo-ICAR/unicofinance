@@ -59,7 +59,7 @@ class IstitutoDocumentiTest extends TestCase
         $this->actingAs(User::factory()->create(['role' => 'super_admin']));
         $banca = Cliente::query()->create(['name' => 'Banca Vista']);
 
-        Livewire::test(EditIstituto::class, ['record' => $banca->getKey()])->assertSee('Documenti richiesti');
+        Livewire::test(EditIstituto::class, ['record' => $banca->getKey()])->assertSee('Modulistica banca');
     }
 
     public function test_the_read_only_view_pages_are_gone_and_the_institute_edit_shows_its_registry(): void

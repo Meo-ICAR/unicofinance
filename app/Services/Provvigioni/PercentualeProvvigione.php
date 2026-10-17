@@ -16,8 +16,9 @@ class PercentualeProvvigione
     /** Base di calcolo della pratica secondo il prodotto; null se il prodotto non la indica o la pratica non ha il dato. */
     public function base(Pratica $pratica): ?float
     {
-        $lordo = $pratica->rata !== null && $pratica->nrate !== null ? (float) $pratica->rata * (int) $pratica->nrate : null;
-        $erogato = $pratica->erogato !== null ? (float) $pratica->erogato : null;
+        // Le pratiche importate da Mediafacile hanno il montante (`amount`) e l'importo erogato (`net`) al posto di rata, durata ed erogato.
+        $lordo = $pratica->rata !== null && $pratica->nrate !== null ? (float) $pratica->rata * (int) $pratica->nrate : ($pratica->amount !== null ? (float) $pratica->amount : null);
+        $erogato = $pratica->erogato !== null ? (float) $pratica->erogato : ($pratica->net !== null ? (float) $pratica->net : null);
 
         $base = match (strtolower((string) $pratica->tipoprodotto?->tipo_provvigioni)) {
             'lordo' => $lordo,
@@ -57,7 +58,8 @@ class PercentualeProvvigione
                         $this->eDelCliente($riga) => $this->percentualeCliente($pratica),
                         default => $riga->percentuale === null ? null : (float) $riga->percentuale,
                     };
-                    $percentuale = $percentuale === null ? null : round($percentuale, 4);
+                    // La colonna è decimal(7,4): una percentuale fuori scala (base minuscola, storni) non ha senso e resta vuota.
+                    $percentuale = $percentuale === null || abs($percentuale) >= 1000 ? null : round($percentuale, 4);
 
                     if ($percentuale !== ($riga->percentuale === null ? null : round((float) $riga->percentuale, 4))) {
                         Provvigione::query()->whereKey($riga->getKey())->update(['percentuale' => $percentuale]);

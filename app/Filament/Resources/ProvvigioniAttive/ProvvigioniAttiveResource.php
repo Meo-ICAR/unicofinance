@@ -33,6 +33,8 @@ class ProvvigioniAttiveResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Provvigioni attive';
 
+    protected static ?int $navigationSort = 4;
+
     public static function canViewAny(): bool
     {
         $user = auth()->user();

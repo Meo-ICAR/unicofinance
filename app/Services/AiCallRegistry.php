@@ -31,6 +31,11 @@ class AiCallRegistry implements AiCallLog
 
     public function url(string $reference): ?string
     {
+        // Il registro è dello staff: ai produttori resta l'icona rossa, senza collegamento.
+        if (! ApiCallResource::canViewAny()) {
+            return null;
+        }
+
         return ApiCallResource::getUrl('view', ['record' => $reference], panel: 'admin');
     }
 }

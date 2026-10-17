@@ -17,6 +17,7 @@ use Filament\Tables\Table;
 use Filament\Widgets\TableWidget;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Unico\Core\Models\Document;
 
 /** Pratiche senza istruttore (`employee_id`), escluse respinte e sospese: l'istruttore le prende in carico. */
 class DaPrendereInCarico extends TableWidget
@@ -39,14 +40,16 @@ class DaPrendereInCarico extends TableWidget
             ->defaultSort('data_inserimento_pratica', 'desc')
             ->paginated([10, 25])
             ->columns([
-                TextColumn::make('cognome_cliente')->label('Cliente')->searchable()->description(fn (Pratica $record): ?string => $record->nome_cliente),
-                TextColumn::make('tipoprodotto.name')->label('Prodotto'),
-                TextColumn::make('denominazione_banca')->label('Banca')->searchable(),
-                TextColumn::make('fornitori.name')->label('Agente')->placeholder('—'),
-                TextColumn::make('data_inserimento_pratica')->label('Inserita il')->date('d/m/Y')->sortable(),
+                TextColumn::make('cognome_cliente')->label('Cliente')->searchable()->sortable()->description(fn (Pratica $record): ?string => $record->nome_cliente),
+                TextColumn::make('tipoprodotto.name')->label('Prodotto')->sortable(),
+                TextColumn::make('denominazione_banca')->label('Banca')->searchable()->sortable(),
+                TextColumn::make('fornitori.name')->label('Agente')->placeholder('—')->sortable(),
                 TextColumn::make('giorni_attesa')
-                    ->label('In attesa')
-                    ->state(fn (Pratica $record): string => $record->data_inserimento_pratica ? $record->data_inserimento_pratica->diffInDays(now()).' gg' : '—'),
+                    ->label('Attesa')
+                    ->state(fn (Pratica $record): ?int => $record->data_inserimento_pratica === null ? null : (int) $record->data_inserimento_pratica->diffInDays(today()))
+                    ->numeric(decimalPlaces: 0)
+                    ->placeholder('—')
+                    ->sortable(query: fn (Builder $query, string $direction): Builder => $query->orderBy('data_inserimento_pratica', $direction === 'asc' ? 'desc' : 'asc')),
                 TextColumn::make('documentazione')
                     ->label('Documenti')
                     ->state(function (Pratica $record): string {
@@ -54,7 +57,11 @@ class DaPrendereInCarico extends TableWidget
 
                         return $completezza['totale'] === 0 ? '—' : $completezza['presenti'].'/'.$completezza['totale'];
                     })
-                    ->badge(),
+                    ->badge()
+                    ->sortable(query: fn (Builder $query, string $direction): Builder => $query->orderBy(
+                        Document::query()->selectRaw('count(*)')->where('documentable_type', 'pratica')->whereColumn('documents.documentable_id', 'pratiches.id')->whereIn('status', ['na', 'caricato', 'approvato', 'provvisorio', 'firmato_otp', 'da_approvare_otp']),
+                        $direction === 'desc' ? 'desc' : 'asc',
+                    )),
             ])
             ->filters([
                 // Le pratiche storiche sono tutte senza istruttore: di default si guarda solo il recente.

@@ -44,17 +44,22 @@ class ProvvigioniAgente extends TableWidget
             ->defaultSort('data_inserimento_compenso', 'desc')
             ->paginated([10, 25])
             ->columns([
-                TextColumn::make('cognome')->label('Cliente')->searchable()->description(fn (Provvigione $record): ?string => $record->nome),
-                TextColumn::make('prodotto')->label('Prodotto')->placeholder('—'),
-                TextColumn::make('istituto_finanziario')->label('Banca')->placeholder('—'),
-                TextColumn::make('pratica.praticaStato.name')->label('Stato pratica')->badge()->placeholder(fn (Provvigione $record): string => $record->status_pratica ?: '—'),
-                TextColumn::make('descrizione')->label('Descrizione')->limit(40),
+                TextColumn::make('cognome')->label('Cliente')->searchable()->sortable()->description(fn (Provvigione $record): ?string => $record->nome),
+                TextColumn::make('prodotto')->label('Prodotto')->placeholder('—')->sortable(),
+                TextColumn::make('istituto_finanziario')->label('Banca')->placeholder('—')->sortable(),
+                TextColumn::make('pratica.praticaStato.name')
+                    ->label('Stato pratica')
+                    ->badge()
+                    ->placeholder(fn (Provvigione $record): string => $record->status_pratica ?: '—')
+                    ->sortable(query: fn (Builder $query, string $direction): Builder => $query->orderBy('status_pratica', $direction === 'desc' ? 'desc' : 'asc')),
+                TextColumn::make('descrizione')->label('Descrizione')->limit(40)->sortable(),
                 TextColumn::make('maturazione')
                     ->label('Provvigione')
                     ->state(fn (Provvigione $record): MaturazioneProvvigione => MaturazioneProvvigione::da($record->stato))
-                    ->badge(),
+                    ->badge()
+                    ->sortable(query: fn (Builder $query, string $direction): Builder => $query->orderBy('stato', $direction === 'desc' ? 'desc' : 'asc')),
                 TextColumn::make('importo')->label('Importo')->money('EUR')->sortable()->summarize(Sum::make()->money('EUR')->label('Totale')),
-                TextColumn::make('data_pagamento')->label('Pagata il')->date('d/m/Y')->placeholder('—'),
+                TextColumn::make('data_pagamento')->label('Pagata il')->date('d/m/Y')->placeholder('—')->sortable(),
             ])
             ->filters([
                 SelectFilter::make('maturazione')

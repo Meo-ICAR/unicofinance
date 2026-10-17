@@ -12,6 +12,7 @@ use App\Models\FinancingQuote;
 use App\Models\Pratica;
 use App\Models\User;
 use Filament\Facades\Filament;
+use Filament\Widgets\AccountWidget;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -28,7 +29,7 @@ class DashboardAgenteTest extends TestCase
     /**
      * @var array<int, string>
      */
-    protected array $connectionsToTransact = [null, 'core'];
+    protected array $connectionsToTransact = [null, 'core', 'proforma'];
 
     private function agente(): Fornitore
     {
@@ -76,6 +77,37 @@ class DashboardAgenteTest extends TestCase
         $this->assertNotNull(FinancingQuote::query()->find($mio->getKey()));
     }
 
+    public function test_a_quote_can_be_suspended_resumed_and_deleted_from_the_icon_actions(): void
+    {
+        $agente = $this->agente();
+        $attivo = $this->preventivo($agente, 1);
+        $sospendere = $this->preventivo($agente, 2);
+        $eliminare = $this->preventivo($agente, 3);
+
+        $widget = fn () => Livewire::test(PreventiviDaPerfezionare::class);
+
+        $widget()
+            ->assertTableActionExists('perfeziona')
+            ->callTableAction('sospendi', $sospendere);
+        $this->assertSame('SOSPESA', $sospendere->pratica()->first()->praticaStato->codice, 'Sospendi porta la pratica allo stato SOSPESA.');
+        $this->assertSame('salvato', $sospendere->refresh()->status);
+
+        $widget()
+            ->assertCanSeeTableRecords([$attivo])
+            ->assertCanNotSeeTableRecords([$sospendere])
+            ->filterTable('sospesi')
+            ->assertCanSeeTableRecords([$attivo, $sospendere])
+            ->assertTableActionHidden('perfeziona', $sospendere)
+            ->assertTableActionVisible('riprendi', $sospendere)
+            ->callTableAction('riprendi', $sospendere);
+        $this->assertFalse((bool) $sospendere->pratica()->first()->praticaStato->is_suspended);
+        $this->assertSame('PREVENTIVO', $sospendere->pratica()->first()->praticaStato->codice);
+
+        $widget()->callTableAction('elimina', $eliminare);
+        $this->assertNull(FinancingQuote::query()->find($eliminare->getKey()));
+        $this->assertNotNull(FinancingQuote::query()->find($attivo->getKey()));
+    }
+
     public function test_a_quote_is_resumed_in_the_simulation_ready_to_be_perfected(): void
     {
         $agente = $this->agente();
@@ -101,6 +133,8 @@ class DashboardAgenteTest extends TestCase
         $agente = $this->agente();
         $libera = Pratica::query()->create(['codice_pratica' => 'AGD-L', 'cognome_cliente' => 'Libera', 'fornitori_id' => $agente->getKey(), 'upload_at' => now()]);
         $inCarico = Pratica::query()->create(['codice_pratica' => 'AGD-C', 'cognome_cliente' => 'InCarico', 'fornitori_id' => $agente->getKey(), 'employee_id' => Employee::query()->create(['name' => 'Istruttore'])->getKey(), 'upload_at' => now()]);
+        $this->collegaProvvigioneProduttore($agente, $libera);
+        $this->collegaProvvigioneProduttore($agente, $inCarico);
 
         Livewire::test(EditPratica::class, ['record' => $libera->getKey()])->assertOk();
         Livewire::test(EditPratica::class, ['record' => $inCarico->getKey()])->assertForbidden();
@@ -126,5 +160,12 @@ class DashboardAgenteTest extends TestCase
         Livewire::test(DocumentiDaSeguireAgente::class)->assertCanSeeTableRecords([$mancante])->assertCanNotSeeTableRecords([$approvato, $altrui]);
 
         $this->get('/agenti')->assertOk()->assertSeeLivewire(PreventiviDaPerfezionare::class);
+    }
+
+    public function test_no_panel_registers_the_default_account_widget(): void
+    {
+        foreach (['admin', 'agenti'] as $pannello) {
+            $this->assertNotContains(AccountWidget::class, Filament::getPanel($pannello)->getWidgets(), $pannello);
+        }
     }
 }

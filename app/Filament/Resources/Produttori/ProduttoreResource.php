@@ -40,7 +40,7 @@ class ProduttoreResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Produttori';
 
-    protected static ?int $navigationSort = -1;
+    protected static ?int $navigationSort = 1;
 
     public static function canViewAny(): bool
     {
@@ -79,7 +79,7 @@ class ProduttoreResource extends Resource
         return $schema->components([
             TextEntry::make('name')->label('Produttore'),
             TextEntry::make('email')->label('Email'),
-            TextEntry::make('piva')->label('P. IVA'),
+            TextEntry::make('tel')->label('Cellulare'),
             IconEntry::make('allows_direct_requests')->label('Richieste dirette al cliente')->boolean(),
         ]);
     }
@@ -104,17 +104,21 @@ class ProduttoreResource extends Resource
                     ->sortable(),
                 TextColumn::make('email')
                     ->label('Email')
-                    ->searchable(),
-                TextColumn::make('piva')
-                    ->label('P. IVA')
-                    ->searchable(),
+                    ->searchable()
+                    ->sortable(),
+                TextColumn::make('tel')
+                    ->label('Cellulare')
+                    ->searchable()
+                    ->sortable(),
                 IconColumn::make('accesso_portale')
                     ->label('Portale')
                     ->state(fn (Fornitore $record): bool => $record->user_id !== null)
                     ->boolean()
+                    ->sortable(query: fn (Builder $query, string $direction): Builder => $query->orderBy('user_id', $direction === 'desc' ? 'desc' : 'asc'))
                     ->tooltip(fn (Fornitore $record): string => $record->user?->email ?? 'Nessun accesso'),
                 ToggleColumn::make('allows_direct_requests')
                     ->label('Richieste dirette')
+                    ->sortable()
                     ->tooltip('Acceso: possiamo chiedere i documenti direttamente al cliente o all\'emittente (es. integrativi). Spento: preferisce fornirli lui.'),
             ])
             ->defaultSort('name')
