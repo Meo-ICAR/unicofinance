@@ -7,6 +7,7 @@ use App\Filament\Resources\Praticas\Pages\ListPraticas;
 use App\Models\Pratica;
 use App\Models\User;
 use App\Services\Istruttoria\CompletezzaDocumentale;
+use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -78,13 +79,14 @@ class CompletezzaDocumentaleTest extends TestCase
 
         Livewire::test($manager, ['ownerRecord' => $pratica, 'pageClass' => EditPratica::class])
             ->assertCanSeeTableRecords([$documento])
-            ->assertTableActionExists('esitoIstruttoria')
-            ->callTableAction('esitoIstruttoria', $documento, data: ['status' => DocumentStatus::REJECTED->value])
-            ->assertHasTableActionErrors(['nota' => 'required']);
+            ->mountAction(TestAction::make('edit')->table($documento))
+            ->assertActionExists(TestAction::make('esitoIstruttoria'))
+            ->callAction(TestAction::make('esitoIstruttoria'), ['status' => DocumentStatus::REJECTED->value])
+            ->assertHasActionErrors(['nota' => 'required']);
 
         Livewire::test($manager, ['ownerRecord' => $pratica, 'pageClass' => EditPratica::class])
-            ->callTableAction('esitoIstruttoria', $documento, data: ['status' => DocumentStatus::SUPPLEMENTARY->value, 'nota' => 'Richiesto dalla banca'])
-            ->assertHasNoTableActionErrors();
+            ->callAction([TestAction::make('edit')->table($documento), TestAction::make('esitoIstruttoria')], ['status' => DocumentStatus::SUPPLEMENTARY->value, 'nota' => 'Richiesto dalla banca'])
+            ->assertHasNoActionErrors();
 
         $documento->refresh();
         $this->assertSame(DocumentStatus::SUPPLEMENTARY, $documento->status);

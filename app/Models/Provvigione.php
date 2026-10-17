@@ -61,6 +61,7 @@ class Provvigione extends Model
         return [
             'importo' => 'decimal:2',
             'importo_effettivo' => 'decimal:2',
+            'percentuale' => 'decimal:4',
             'data_inserimento_compenso' => 'date',
             'data_status' => 'date',
             'data_pagamento' => 'date',

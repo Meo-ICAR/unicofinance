@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Support\Collection;
 use Unico\Core\Models\Address;
 use Unico\Core\Models\Client as CoreClient;
 
@@ -36,10 +38,39 @@ class Client extends CoreClient
         }
     }
 
-    /** Persona giuridica con almeno un dipendente (cliente con ruolo `dipendente`): è un datore di lavoro, non un'azienda cliente. */
+    /**
+     * Datore di lavoro: il cliente che in `client_relations` ha almeno una persona con ruolo `dipendente`. Il legame si crea da solo
+     * quando sul dipendente si indica il datore (`employer_id`).
+     */
     public function isDatoreDiLavoro(): bool
     {
-        return $this->exists && ! $this->is_person && ($this->soci()->where('role', ClientRelation::RUOLO_DIPENDENTE)->exists() || $this->employees()->exists());
+        if (! $this->exists) {
+            return false;
+        }
+
+        $dipendenti = $this->soci()->where('role', ClientRelation::RUOLO_DIPENDENTE)->pluck('client_id');
+
+        return $dipendenti->isNotEmpty() && static::query()->whereIn('id', $dipendenti)->where('is_person', true)->exists();
+    }
+
+    /** @param  Builder<Client>  $query */
+    public function scopeDatoriDiLavoro(Builder $query): Builder
+    {
+        return $query->whereIn($this->getQualifiedKeyName(), $this->datoriDiLavoroIds());
+    }
+
+    /** @param  Builder<Client>  $query */
+    public function scopeSenzaDatoriDiLavoro(Builder $query): Builder
+    {
+        return $query->whereNotIn($this->getQualifiedKeyName(), $this->datoriDiLavoroIds());
+    }
+
+    /** Gli id dei datori di lavoro. Le relazioni stanno nel database dell'app e i clienti in quello del core: niente join tra database. */
+    private function datoriDiLavoroIds(): Collection
+    {
+        $dipendenti = static::query()->where('is_person', true)->pluck('id');
+
+        return ClientRelation::query()->where('role', ClientRelation::RUOLO_DIPENDENTE)->whereIn('client_id', $dipendenti)->distinct()->pluck('company_id');
     }
 
     public function getMorphClass(): string

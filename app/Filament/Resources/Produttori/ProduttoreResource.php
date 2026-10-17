@@ -11,11 +11,13 @@ use App\Filament\Resources\Produttori\RelationManagers\ListiniProvvigionaliRelat
 use App\Models\User;
 use BackedEnum;
 use Filament\Actions\Action;
+use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -78,6 +80,7 @@ class ProduttoreResource extends Resource
             TextEntry::make('name')->label('Produttore'),
             TextEntry::make('email')->label('Email'),
             TextEntry::make('piva')->label('P. IVA'),
+            IconEntry::make('allows_direct_requests')->label('Richieste dirette al cliente')->boolean(),
         ]);
     }
 
@@ -110,6 +113,9 @@ class ProduttoreResource extends Resource
                     ->state(fn (Fornitore $record): bool => $record->user_id !== null)
                     ->boolean()
                     ->tooltip(fn (Fornitore $record): string => $record->user?->email ?? 'Nessun accesso'),
+                ToggleColumn::make('allows_direct_requests')
+                    ->label('Richieste dirette')
+                    ->tooltip('Acceso: possiamo chiedere i documenti direttamente al cliente o all\'emittente (es. integrativi). Spento: preferisce fornirli lui.'),
             ])
             ->defaultSort('name')
             ->recordActions([

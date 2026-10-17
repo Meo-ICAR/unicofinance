@@ -46,7 +46,7 @@ class DocumentoViaApiTest extends TestCase
         [$societa, $documento] = $this->documento('openapi_company');
 
         Livewire::test(DocumentsRelationManager::class, ['ownerRecord' => $societa, 'pageClass' => EditClient::class])
-            ->callAction(TestAction::make('richiediApi')->table($documento))
+            ->callAction([TestAction::make('edit')->table($documento), TestAction::make('richiediApi')])
             ->assertNotified();
 
         $documento->refresh();
@@ -63,7 +63,7 @@ class DocumentoViaApiTest extends TestCase
         [$societa, $documento] = $this->documento('openapi_company');
 
         Livewire::test(DocumentsRelationManager::class, ['ownerRecord' => $societa, 'pageClass' => EditClient::class])
-            ->callAction(TestAction::make('richiediApi')->table($documento))
+            ->callAction([TestAction::make('edit')->table($documento), TestAction::make('richiediApi')])
             ->assertNotified();
 
         $this->assertSame(DocumentStatus::PENDING, $documento->refresh()->status);
@@ -75,6 +75,7 @@ class DocumentoViaApiTest extends TestCase
         [$societa, $documento] = $this->documento(null);
 
         Livewire::test(DocumentsRelationManager::class, ['ownerRecord' => $societa, 'pageClass' => EditClient::class])
-            ->assertActionHidden(TestAction::make('richiediApi')->table($documento));
+            ->mountAction(TestAction::make('edit')->table($documento))
+            ->assertActionHidden(TestAction::make('richiediApi'));
     }
 }

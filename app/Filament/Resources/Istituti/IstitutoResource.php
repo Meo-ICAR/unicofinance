@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Istituti;
 use App\Filament\Resources\Istituti\Pages\EditIstituto;
 use App\Filament\Resources\Istituti\Pages\ListIstituti;
 use App\Filament\Resources\Istituti\RelationManagers\DocumentiIstitutoRelationManager;
+use App\Filament\Resources\Istituti\RelationManagers\PortaliIstitutoRelationManager;
 use App\Filament\Resources\Istituti\RelationManagers\ProduttoriBloccatiRelationManager;
 use App\Filament\Resources\Istituti\RelationManagers\ProvvigioniAttiveRelationManager;
 use App\Filament\Resources\Istituti\Tables\IstitutiTable;
@@ -71,11 +72,6 @@ class IstitutoResource extends Resource
             TextInput::make('email')->label('Email')->disabled()->dehydrated(false),
             Toggle::make('is_active')->label('Attivo')->disabled()->dehydrated(false),
             TextInput::make('website')->label('Sito')->url()->maxLength(255),
-            TextInput::make('portal_url')
-                ->label('Portale per l\'immissione delle pratiche')
-                ->helperText('Il collegamento compare accanto alla banca nella pratica dell\'agente.')
-                ->url()
-                ->maxLength(255),
         ]);
     }
 
@@ -89,6 +85,7 @@ class IstitutoResource extends Resource
         return [
             DocumentsRelationManager::class,
             DocumentiIstitutoRelationManager::class,
+            PortaliIstitutoRelationManager::class,
             ProvvigioniAttiveRelationManager::class,
             ProduttoriBloccatiRelationManager::class,
         ];

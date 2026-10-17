@@ -30,7 +30,8 @@ class AddressesRelationManager extends RelationManager
 
     public static function canViewForRecord(Model $ownerRecord, string $pageClass): bool
     {
-        return $ownerRecord instanceof Pratica || $ownerRecord instanceof Client;
+        // Le persone giuridiche non hanno residenza e domicilio: le loro sedi sono nelle sedi (branches).
+        return $ownerRecord instanceof Pratica || ($ownerRecord instanceof Client && (bool) $ownerRecord->is_person);
     }
 
     public function getRelationship(): Relation|Builder

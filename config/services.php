@@ -48,6 +48,10 @@ return [
         'header_key' => env('MEDIAFACILE_HEADER_KEY'),
     ],
 
+    'anthropic' => [
+        'cost' => (float) env('ANTHROPIC_CALL_COST', 0),
+    ],
+
     'openapi' => [
         'cost_creditscore' => (float) env('OPENAPI_COST_CREDITSCORE', 0),
         'token' => env('OPENAPI_TOKEN'),

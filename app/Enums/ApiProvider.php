@@ -10,6 +10,7 @@ enum ApiProvider: string implements HasLabel
     case SanctionsIo = 'sanctions_io';
     case Openapi = 'openapi';
     case OpenapiCreditScore = 'openapi_creditscore';
+    case Anthropic = 'anthropic';
 
     public function getLabel(): ?string
     {
@@ -18,6 +19,7 @@ enum ApiProvider: string implements HasLabel
             self::SanctionsIo => 'sanctions.io (PEP)',
             self::Openapi => 'Openapi (dati societari)',
             self::OpenapiCreditScore => 'Openapi (credit score)',
+            self::Anthropic => 'AI (lettura documenti)',
         };
     }
 
@@ -31,6 +33,7 @@ enum ApiProvider: string implements HasLabel
             self::SanctionsIo => 'services.aml.cost',
             self::Openapi => 'services.openapi.cost_advanced',
             self::OpenapiCreditScore => 'services.openapi.cost_creditscore',
+            self::Anthropic => 'services.anthropic.cost',
         }, 0);
     }
 }

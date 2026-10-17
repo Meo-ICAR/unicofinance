@@ -65,6 +65,7 @@ class ProvvigioniRelationManager extends RelationManager
                     }),
                 TextColumn::make('denominazione_riferimento')->label('Produttore'),
                 TextColumn::make('importo')->label('Importo')->money('EUR'),
+                TextColumn::make('percentuale')->label('%')->suffix('%')->placeholder('—'),
                 TextColumn::make('descrizione')->label('Descrizione'),
                 TextColumn::make('status_compenso')->label('Stato compenso'),
                 TextColumn::make('data_status')->label('Data stato')->date('d/m/Y'),

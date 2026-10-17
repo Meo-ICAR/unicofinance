@@ -3,6 +3,9 @@
 namespace Tests\Feature;
 
 use App\Filament\Resources\Clients\Pages\EditClient;
+use App\Filament\Resources\Clients\Pages\ListClients;
+use App\Filament\Resources\DatoriDiLavoro\Pages\EditDatoreDiLavoro;
+use App\Filament\Resources\DatoriDiLavoro\Pages\ListDatoriDiLavoro;
 use App\Models\Client;
 use App\Models\ClientRelation;
 use App\Models\User;
@@ -43,6 +46,52 @@ class DatoreDiLavoroTest extends TestCase
         $persona->update(['employer_id' => null]);
 
         $this->assertFalse($altro->refresh()->isDatoreDiLavoro() && ClientRelation::query()->where('role', 'dipendente')->where('client_id', $persona->getKey())->exists());
+    }
+
+    public function test_the_employer_is_the_client_with_at_least_one_person_as_dipendente_in_the_relations(): void
+    {
+        $datore = Client::query()->create(['name' => 'Comune di Prova', 'tax_code' => '12345678903', 'is_person' => false]);
+        $azienda = Client::query()->create(['name' => 'Azienda Cliente', 'tax_code' => '98765432109', 'is_person' => false]);
+        $persona = Client::query()->create(['name' => 'Rossi', 'tax_code' => 'RSSMRA80A01H501U', 'is_person' => true]);
+        $socio = Client::query()->create(['name' => 'Bianchi', 'tax_code' => 'BNCMRA80A01H501U', 'is_person' => true]);
+        ClientRelation::query()->create(['company_id' => $datore->getKey(), 'client_id' => $persona->getKey(), 'role' => ClientRelation::RUOLO_DIPENDENTE]);
+        ClientRelation::query()->create(['company_id' => $azienda->getKey(), 'client_id' => $socio->getKey(), 'role' => 'socio']);
+
+        $this->assertTrue($datore->isDatoreDiLavoro());
+        $this->assertFalse($azienda->isDatoreDiLavoro());
+        $datori = Client::query()->datoriDiLavoro()->pluck('id')->all();
+        $altri = Client::query()->senzaDatoriDiLavoro()->pluck('id')->all();
+        $this->assertContains($datore->getKey(), $datori);
+        $this->assertNotContains($azienda->getKey(), $datori);
+        $this->assertNotContains($datore->getKey(), $altri);
+        $this->assertContains($azienda->getKey(), $altri);
+        $this->assertContains($persona->getKey(), $altri);
+    }
+
+    public function test_employers_have_their_own_list_and_are_hidden_from_the_clients_unless_asked(): void
+    {
+        $this->admin();
+        $marker = 'ZZ-'.uniqid();
+        $datore = Client::query()->create(['name' => $marker.' Comune', 'tax_code' => '12345678903', 'is_person' => false]);
+        $azienda = Client::query()->create(['name' => $marker.' Azienda', 'tax_code' => '98765432109', 'is_person' => false]);
+        Client::query()->create(['name' => $marker.' Rossi', 'tax_code' => 'RSSMRA80A01H501U', 'is_person' => true, 'employer_id' => $datore->getKey()]);
+
+        Livewire::test(ListDatoriDiLavoro::class)
+            ->searchTable($marker)
+            ->assertCanSeeTableRecords([$datore])
+            ->assertCanNotSeeTableRecords([$azienda]);
+
+        Livewire::test(ListClients::class)
+            ->searchTable($marker)
+            ->assertCanSeeTableRecords([$azienda])
+            ->assertCanNotSeeTableRecords([$datore])
+            ->filterTable('con_datori')
+            ->assertCanSeeTableRecords([$azienda, $datore]);
+
+        Livewire::test(EditDatoreDiLavoro::class, ['record' => $datore->getKey()])
+            ->assertSuccessful()
+            ->assertSee('Organigramma')
+            ->assertDontSee('Soci e titolari effettivi');
     }
 
     public function test_an_employer_shows_typology_and_benestare_but_not_company_data_nor_verifications(): void

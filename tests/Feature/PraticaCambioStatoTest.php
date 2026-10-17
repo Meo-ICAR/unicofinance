@@ -99,8 +99,9 @@ class PraticaCambioStatoTest extends TestCase
 
         $page = Livewire::test(EditPratica::class, ['record' => $pratica->getKey()])
             ->assertDontSee('Offerta valida fino al')
-            ->assertSee('Richiedente')
+            ->assertSee('Estremi')
             ->assertSee('Prodotto richiesto')
+            ->assertFormFieldIsHidden('richiedente_persona_fisica')
             ->assertSee('Numero pratica')
             ->assertSee('Data richiesta')
             ->assertFormFieldIsVisible('rata')
@@ -113,11 +114,48 @@ class PraticaCambioStatoTest extends TestCase
             ->assertFormFieldIsVisible('nrate');
 
         $html = $page->html();
-        $positions = array_map(fn (string $label) => strpos($html, $label), ['Impegno di terzi', 'Tipo prodotto', 'Banca', 'Importo richiesto', 'Numero pratica', 'Data richiesta']);
+        $sezione = (int) strpos($html, 'Prodotto richiesto');
+        $positions = array_map(fn (string $label) => strpos($html, $label, $sezione), ['Impegno di terzi', 'Tipo prodotto', 'Banca', 'Importo richiesto', 'Numero pratica', 'Data richiesta']);
         $this->assertNotContains(false, $positions);
         $sorted = $positions;
         sort($sorted);
         $this->assertSame($sorted, $positions);
+    }
+
+    public function test_the_mediation_is_hidden_for_third_party_products(): void
+    {
+        Filament::setCurrentPanel('admin');
+        $this->actingAs(User::factory()->create(['role' => 'super_admin']));
+        $proprio = TipoProdotto::query()->where('name', 'Cessione')->firstOrFail();
+        $terzi = TipoProdotto::query()->where('is_third_party', true)->firstOrFail();
+        $pratica = Pratica::query()->create(['codice_pratica' => 'ZZMED-'.Str::upper(Str::random(4)), 'cognome_cliente' => 'Rossi', 'tipoprodotto_id' => $proprio->getKey(), 'upload_at' => now()]);
+
+        $page = Livewire::test(EditPratica::class, ['record' => $pratica->getKey()])
+            ->assertFormFieldIsVisible('mediation_fee_percent')
+            ->assertFormFieldIsVisible('mediation_fee_amount');
+
+        $page->fillForm(['tipoprodotto_id' => $terzi->getKey()])
+            ->assertFormFieldIsHidden('mediation_fee_percent')
+            ->assertFormFieldIsHidden('mediation_fee_amount')
+            ->assertFormFieldIsHidden('mediation_fee_terms');
+    }
+
+    public function test_a_third_party_commitment_shows_only_product_bank_expiry_and_installment(): void
+    {
+        Filament::setCurrentPanel('admin');
+        $this->actingAs(User::factory()->create(['role' => 'super_admin']));
+        $assegno = TipoProdotto::query()->where('name', 'Assegno di mantenimento')->firstOrFail();
+        $pratica = Pratica::query()->create(['codice_pratica' => 'ZZTRZ-'.Str::upper(Str::random(4)), 'cognome_cliente' => 'Rossi', 'tipoprodotto_id' => $assegno->getKey(), 'upload_at' => now()]);
+
+        Livewire::test(EditPratica::class, ['record' => $pratica->getKey()])
+            ->assertFormFieldIsHidden('scadenza')
+            ->fillForm(['is_notowned' => true])
+            ->assertFormFieldIsVisible('scadenza')
+            ->assertFormFieldIsVisible('rata')
+            ->assertFormFieldIsHidden('amount')
+            ->assertFormFieldIsHidden('nrate')
+            ->assertFormFieldIsHidden('data_inserimento_pratica')
+            ->assertFormFieldIsHidden('mediation_fee_percent');
     }
 
     public function test_the_tax_code_link_opens_the_client_card_of_the_admin_panel(): void

@@ -103,8 +103,9 @@ class ClienteSchedaTabsTest extends TestCase
         $documento = Document::query()->where('documentable_type', 'client')->where('documentable_id', (string) $persona->getKey())->where('document_type_id', $tipo->getKey())->firstOrFail();
 
         Livewire::test(DocumentsRelationManager::class, ['ownerRecord' => $persona, 'pageClass' => EditClient::class])
-            ->assertTableColumnStateSet('otp', 'Invia OTP', $documento)
-            ->callAction(TestAction::make('sendForSignature')->table($documento), ['cliente' => ['first_name' => 'Mario', 'last_name' => 'Rossi', 'email' => 'mario.rossi@example.com', 'phone' => '3330001111', 'tax_code' => 'RSSMRA80A01H501U']])
+            ->mountAction(TestAction::make('edit')->table($documento))
+            ->assertActionVisible(TestAction::make('sendForSignature'))
+            ->callAction(TestAction::make('sendForSignature'), ['cliente' => ['first_name' => 'Mario', 'last_name' => 'Rossi', 'email' => 'mario.rossi@example.com', 'phone' => '3330001111', 'tax_code' => 'RSSMRA80A01H501U']])
             ->assertNotified('Richiesta di firma inviata');
 
         $this->assertNotNull($documento->fresh()->latestSignatureRequest());
@@ -136,22 +137,23 @@ class ClienteSchedaTabsTest extends TestCase
     {
         $this->admin();
         $persona = Client::query()->create(['name' => 'Meo', 'first_name' => 'Piergiuseppe', 'tax_code' => 'MEOPGS64D04F839I', 'is_person' => true]);
-        $identita = DocumentType::query()->where('is_identity', true)->where('code', 'CARTA_IDENTITA')->firstOrFail();
-        $altro = DocumentType::query()->where('is_identity', false)->where('code', 'PROCEDURA_KYC')->first() ?? DocumentType::query()->where('is_identity', false)->firstOrFail();
+        $documento = fn (string $nome) => $persona->documents()->whereHas('documentType', fn ($query) => $query->where('name', $nome))->firstOrFail();
+        $carta = $documento('Carta d\'Identità');
+        $patente = $documento('Patente di Guida');
         $gestore = fn () => Livewire::test(DocumentsRelationManager::class, ['ownerRecord' => $persona, 'pageClass' => EditClient::class]);
 
         // Il numero è obbligatorio per i documenti d'identità.
-        $gestore()->callAction(TestAction::make('create')->table(), ['document_type_id' => $identita->getKey(), 'name' => 'Carta', 'emitted_at' => '2020-01-10'])->assertHasFormErrors(['docnumber' => 'required']);
+        $gestore()->callAction(TestAction::make('edit')->table($carta), ['docnumber' => '', 'emitted_at' => '2020-01-10'])->assertHasFormErrors(['docnumber' => 'required']);
 
-        $vecchio = DocumentType::query()->where('code', 'DOCUMENTO_IDENTIFICATIVO')->firstOrFail();
-        $gestore()->callAction(TestAction::make('create')->table(), ['document_type_id' => $vecchio->getKey(), 'name' => 'Documento vecchio', 'docnumber' => 'OLD111', 'emitted_by' => 'Comune di Roma', 'emitted_at' => '2015-01-10', 'is_monitored' => false])->assertHasNoFormErrors();
-        $gestore()->callAction(TestAction::make('create')->table(), ['document_type_id' => $identita->getKey(), 'name' => 'Carta nuova', 'docnumber' => 'CA12345XX', 'emitted_by' => 'Comune di Napoli', 'emitted_at' => '2024-03-01', 'is_monitored' => false])->assertHasNoFormErrors();
+        $gestore()->callAction(TestAction::make('edit')->table($patente), ['docnumber' => 'PAT111', 'emitted_by' => 'Motorizzazione', 'emitted_at' => '2015-01-10', 'is_monitored' => false])->assertHasNoFormErrors();
+        $gestore()->callAction(TestAction::make('edit')->table($carta), ['docnumber' => 'CA12345XX', 'emitted_by' => 'Comune di Napoli', 'emitted_at' => '2024-03-01', 'is_monitored' => false])->assertHasNoFormErrors();
 
-        $documento = app(PracticeModuleData::class)->identityDocument($persona->load('documents.documentType'));
-        $this->assertSame('CA12345XX', $documento->docnumber);
-        $this->assertSame('Comune di Napoli', $documento->emitted_by);
+        $valido = app(PracticeModuleData::class)->identityDocument($persona->load('documents.documentType'));
+        $this->assertSame('CA12345XX', $valido->docnumber);
+        $this->assertSame('Comune di Napoli', $valido->emitted_by);
 
         // Per gli altri tipi i campi non esistono nemmeno.
+        $altro = DocumentType::query()->where(fn ($query) => $query->whereNull('codegroup')->orWhere('codegroup', '!=', DocumentType::CODEGROUP_IDENTITA))->firstOrFail();
         $gestore()->mountAction(TestAction::make('create')->table())->fillForm(['document_type_id' => $altro->getKey()])->assertFormFieldHidden('docnumber')->assertFormFieldHidden('emitted_by');
     }
 
@@ -172,6 +174,23 @@ class ClienteSchedaTabsTest extends TestCase
 
         $this->assertSame(['Residenza', 'Domicilio'], $persona->addresses()->with('addressType')->orderBy('id')->get()->map(fn ($indirizzo) => $indirizzo->addressType->name)->all());
         $this->assertSame(0, $societa->addresses()->count());
+        $this->assertSame(['Carta d\'Identità', 'Patente di Guida'], $persona->documents()->with('documentType')->orderBy('id')->get()->map(fn ($documento) => $documento->documentType->name)->all());
+        $this->assertSame(0, $societa->documents()->count());
+    }
+
+    public function test_the_command_fills_in_the_existing_natural_persons_without_duplicating(): void
+    {
+        $persona = Client::query()->create(['name' => 'Antico', 'tax_code' => 'NTCLGI80A01H501U', 'is_person' => true]);
+        $persona->addresses()->delete();
+        $persona->documents()->delete();
+
+        $this->artisan('unico-core:clients-prepare')->assertSuccessful();
+        $this->assertSame(2, $persona->addresses()->count());
+        $this->assertSame(2, $persona->documents()->count());
+
+        $this->artisan('unico-core:clients-prepare')->assertSuccessful();
+        $this->assertSame(2, $persona->addresses()->count());
+        $this->assertSame(2, $persona->documents()->count());
     }
 
     public function test_the_latest_practice_is_found_even_without_an_insertion_date(): void
@@ -189,11 +208,11 @@ class ClienteSchedaTabsTest extends TestCase
     public function test_the_client_list_search_does_not_touch_tables_missing_from_this_app(): void
     {
         $this->admin();
-        Client::query()->create(['name' => 'Hassisto Srl', 'tax_code' => '12345678903', 'is_person' => false]);
+        $societa = Client::query()->create(['name' => 'Hassisto Srl', 'tax_code' => '12345678903', 'is_person' => false]);
 
         Livewire::test(ListClients::class)
             ->searchTable('hass')
-            ->assertCanSeeTableRecords(Client::query()->where('name', 'like', '%hass%')->get());
+            ->assertCanSeeTableRecords([$societa]);
     }
 
     public function test_kyc_financing_nature_is_prefilled_from_the_last_practice_and_shows_the_employer_for_salary_products(): void
@@ -237,6 +256,35 @@ class ClienteSchedaTabsTest extends TestCase
         $tipo = PdfModule::query()->active()->where('name', 'like', 'QAV Persona fisica%')->firstOrFail()->documentType;
         $documento = Document::query()->where('documentable_type', 'client')->where('documentable_id', (string) $persona->getKey())->where('document_type_id', $tipo->getKey())->firstOrFail();
         $this->assertNotNull($documento->currentMedia());
-        $this->assertSame(DocumentStatus::UPLOADED, $documento->status);
+        $this->assertSame(DocumentStatus::TO_SEND_OTP, $documento->status);
+    }
+
+    public function test_the_documents_table_prints_the_selected_modules_and_moves_them_to_the_otp_phase(): void
+    {
+        $this->admin();
+        $persona = Client::query()->create(['name' => 'Meo', 'tax_code' => 'MEOPGS64D04F839I', 'is_person' => true]);
+        Pratica::query()->create(['codice_pratica' => 'KYC-4', 'codice_fiscale' => $persona->tax_code, 'tipoprodotto_id' => TipoProdotto::query()->where('name', 'Cessione')->value('id'), 'data_inserimento_pratica' => now(), 'upload_at' => now()]);
+        $tipo = PdfModule::query()->active()->where('name', 'like', 'QAV Persona fisica%')->firstOrFail()->documentType;
+        $documento = Document::query()->create(['documentable_type' => 'client', 'documentable_id' => (string) $persona->getKey(), 'document_type_id' => $tipo->getKey(), 'name' => $tipo->name, 'status' => DocumentStatus::PENDING]);
+
+        Livewire::test(DocumentsRelationManager::class, ['ownerRecord' => $persona, 'pageClass' => EditClient::class])
+            ->assertTableBulkActionExists('stampaSelezionati')
+            ->assertTableBulkActionExists('inviaSelezionatiOtp')
+            ->callTableBulkAction('stampaSelezionati', [$documento]);
+
+        $this->assertNotNull($documento->refresh()->currentMedia());
+        $this->assertSame(DocumentStatus::TO_SEND_OTP, $documento->status);
+    }
+
+    public function test_the_scheduled_command_moves_the_unsent_modules_to_the_print_phases(): void
+    {
+        $persona = Client::query()->create(['name' => 'Meo', 'tax_code' => 'MEOPGS64D04F839I', 'is_person' => true]);
+        Pratica::query()->create(['codice_pratica' => 'KYC-5', 'codice_fiscale' => $persona->tax_code, 'tipoprodotto_id' => TipoProdotto::query()->where('name', 'Cessione')->value('id'), 'data_inserimento_pratica' => now(), 'upload_at' => now()]);
+        $tipo = PdfModule::query()->active()->where('name', 'like', 'QAV Persona fisica%')->firstOrFail()->documentType;
+        $documento = Document::query()->create(['documentable_type' => 'client', 'documentable_id' => (string) $persona->getKey(), 'document_type_id' => $tipo->getKey(), 'name' => $tipo->name, 'status' => DocumentStatus::PENDING]);
+
+        $this->artisan('unico-core:documents-print-refresh')->assertSuccessful();
+
+        $this->assertContains($documento->refresh()->status, [DocumentStatus::MISSING_DATA, DocumentStatus::PRINT]);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Filament\RelationManagers;
 
+use App\Models\Client;
 use App\Models\Pratica;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
@@ -29,7 +30,7 @@ class BranchesRelationManager extends RelationManager
 
     public static function canViewForRecord(Model $ownerRecord, string $pageClass): bool
     {
-        return $ownerRecord instanceof Pratica || $ownerRecord instanceof Fornitore;
+        return $ownerRecord instanceof Pratica || $ownerRecord instanceof Fornitore || ($ownerRecord instanceof Client && ! $ownerRecord->is_person);
     }
 
     public function form(Schema $schema): Schema

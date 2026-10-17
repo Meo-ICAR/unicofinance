@@ -132,4 +132,18 @@ class ProduttoriImpersonationTest extends TestCase
         $this->assertFalse($service->canImpersonate($staff, $fornitore));
         $this->assertFalse($service->canImpersonate($staff, $ceased));
     }
+
+    public function test_staff_enables_direct_document_requests_on_a_producer(): void
+    {
+        Filament::setCurrentPanel('admin');
+        $this->actingAs(User::factory()->create(['role' => 'super_admin']));
+        $produttore = $this->fornitore();
+        $this->assertFalse((bool) $produttore->allows_direct_requests);
+
+        Livewire::test(ListProduttori::class)
+            ->searchTable($produttore->name)
+            ->call('updateTableColumnState', 'allows_direct_requests', (string) $produttore->getKey(), true);
+
+        $this->assertTrue((bool) $produttore->refresh()->allows_direct_requests);
+    }
 }

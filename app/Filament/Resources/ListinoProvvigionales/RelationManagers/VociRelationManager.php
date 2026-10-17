@@ -44,6 +44,7 @@ class VociRelationManager extends RelationManager
                 ->required()
                 ->unique(ignoreRecord: true, modifyRuleUsing: fn (Unique $rule) => $rule->where('listino_provvigionale_id', $listino->getKey())),
             TextInput::make('percentuale')->label('Percentuale')->numeric()->minValue(0)->maxValue(100)->suffix('%')->required(),
+            TextInput::make('precaricato')->label('Punti precaricati')->numeric()->minValue(0)->maxValue(99.9)->step(0.1)->default(0)->required(),
         ])->columns(2);
     }
 
@@ -54,6 +55,7 @@ class VociRelationManager extends RelationManager
             ->columns([
                 TextColumn::make('voce')->label('Voce')->formatStateUsing(fn (string $state, ListinoProvvigionaleVoce $record): string => $record->etichetta()),
                 TextColumn::make('percentuale')->label('Percentuale')->suffix('%'),
+                TextColumn::make('precaricato')->label('Punti precaricati'),
             ])
             ->headerActions([CreateAction::make()])
             ->recordActions([EditAction::make(), DeleteAction::make()]);

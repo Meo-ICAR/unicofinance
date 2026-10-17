@@ -6,6 +6,7 @@ use App\Models\Client;
 use App\Models\Pratica;
 use App\Models\Provvigione;
 use App\Services\Importazione\MediafacileApi;
+use App\Services\Provvigioni\PercentualeProvvigione;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
@@ -144,6 +145,7 @@ class ImportProvvigioniFromApi extends Command
         }
 
         $this->riallinea();
+        $this->info(app(PercentualeProvvigione::class)->ricalcola($righe->pluck('ID Pratica')->filter()->unique()).' percentuali dei compensi calcolate.');
         $this->info("Importazione completata. Nuove: {$importate}, aggiornate: {$aggiornate}, già lavorate: {$saltate}, errori: {$errori}.");
 
         return self::SUCCESS;

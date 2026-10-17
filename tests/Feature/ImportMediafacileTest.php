@@ -64,6 +64,9 @@ class ImportMediafacileTest extends TestCase
         $this->assertSame('Rossi', $cliente->name);
         $this->assertSame('Mario', $cliente->first_name);
         $this->assertTrue($cliente->is_person);
+        // Anche il cliente nato dall'importazione ha residenza, domicilio e i due documenti d'identità da raccogliere.
+        $this->assertSame(2, $cliente->addresses()->count());
+        $this->assertSame(2, $cliente->documents()->count());
         $this->assertSame(Company::query()->where('name', 'like', 'Races Finance%')->value('id'), $pratica->company_id);
         $this->assertSame($pratica->company_id, $cliente->company_id);
 
@@ -199,5 +202,33 @@ class ImportMediafacileTest extends TestCase
         $this->assertFalse((bool) Provvigione::query()->findOrFail('orfano-fatturato')->annullato);
         $this->assertFalse((bool) Provvigione::query()->findOrFail('buono-1')->annullato);
         $this->assertNotNull($esistente->getKey());
+    }
+
+    public function test_the_commission_percentages_are_calculated_on_the_product_basis_and_on_the_active_commissions(): void
+    {
+        $produttore = Fornitore::query()->create(['name' => 'AGENTE PERCENTUALI', 'piva' => '12345678904', 'is_active' => true]);
+        $cessione = TipoProdotto::query()->where('name', 'Cessione')->firstOrFail();
+        $prestito = TipoProdotto::query()->where('name', 'Prestito')->firstOrFail();
+        $this->assertSame('Erogato', $cessione->tipo_provvigioni);
+        $this->assertSame('Interessi', $prestito->tipo_provvigioni);
+        Pratica::query()->create(['codice_pratica' => 'QT90010', 'fornitori_id' => $produttore->getKey(), 'tipoprodotto_id' => $cessione->getKey(), 'erogato' => 10000, 'upload_at' => now()]);
+        Pratica::query()->create(['codice_pratica' => 'QT90012', 'fornitori_id' => $produttore->getKey(), 'tipoprodotto_id' => $cessione->getKey(), 'erogato' => 10000, 'mediation_fee_percent' => 2.5, 'upload_at' => now()]);
+        Pratica::query()->create(['codice_pratica' => 'QT90011', 'fornitori_id' => $produttore->getKey(), 'tipoprodotto_id' => $prestito->getKey(), 'rata' => 200, 'nrate' => 60, 'erogato' => 10000, 'upload_at' => now()]);
+        $intestazioni = ['ID Compenso', 'Data Inserimento', 'Descrizione', 'Tipo', 'Importo', 'Importo Effettivo', 'Stato', 'Data Pagamento', 'N. Fattura', 'Data Fattura', 'Data Status', 'Status Compenso', 'Denominazione Riferimento', 'Entrata Uscita', 'ID Pratica', 'Agente', 'Istituto finanziario', 'Partita IVA Agente', 'Codice Fiscale Agente', 'ANNULLATA'];
+        $riga = fn (string $id, string $tipo, string $importo, string $verso, string $pratica) => ['ID Compenso' => $id, 'Tipo' => $tipo, 'Importo' => $importo, 'Entrata Uscita' => $verso, 'ID Pratica' => $pratica, 'Denominazione Riferimento' => 'AGENTE PERCENTUALI', 'Agente' => 'AGENTE PERCENTUALI', 'Partita IVA Agente' => '12345678904'];
+
+        Http::fake(['mediafacile.test/*' => Http::response($this->tsv($intestazioni, [
+            $riga('pc-1', 'Istituto', '300', 'Entrata', 'QT90010'),
+            $riga('pc-2', 'Agente', '150', 'Uscita', 'QT90010'),
+            $riga('pc-3', 'Istituto', '400', 'Entrata', 'QT90011'),
+            $riga('pc-4', 'Cliente', '250', 'Entrata', 'QT90012'),
+        ]))]);
+
+        $this->artisan('provvigioni:import-api')->assertSuccessful();
+
+        $this->assertEquals(3, Provvigione::query()->findOrFail('pc-1')->percentuale, 'Cessione: 300 su 10.000 di erogato.');
+        $this->assertEquals(50, Provvigione::query()->findOrFail('pc-2')->percentuale, 'Agente: 150 sui 300 delle provvigioni attive.');
+        $this->assertEquals(2.5, Provvigione::query()->findOrFail('pc-4')->percentuale, 'Cliente: la percentuale è quella scritta sulla pratica.');
+        $this->assertEquals(20, Provvigione::query()->findOrFail('pc-3')->percentuale, 'Prestito: 400 su 2.000 di interessi (200 × 60 − 10.000 erogato).');
     }
 }

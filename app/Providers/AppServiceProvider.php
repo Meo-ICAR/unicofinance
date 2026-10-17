@@ -6,11 +6,13 @@ use App\Documents\Api\LoggedCompanyDataFetcher;
 use App\Models\BlacklistClienteFornitore;
 use App\Models\ListinoProvvigionale;
 use App\Pdf\KycModuleDataProvider;
+use App\Services\AiCallRegistry;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use SocialiteProviders\Google\GoogleExtendSocialite;
 use SocialiteProviders\Manager\SocialiteWasCalled;
 use SocialiteProviders\Microsoft\MicrosoftExtendSocialite;
+use Unico\Core\Documents\Contracts\AiCallLog;
 use Unico\Core\Models\Branch;
 use Unico\Core\Models\Cliente;
 use Unico\Core\Models\Document;
@@ -24,6 +26,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->bind(AiCallLog::class, AiCallRegistry::class);
         $this->app->tag(KycModuleDataProvider::class, 'unico-core.module-data-providers');
         $this->app->tag(LoggedCompanyDataFetcher::class, 'unico-core.document-api-fetchers');
     }

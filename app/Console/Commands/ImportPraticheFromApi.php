@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Client;
 use App\Models\Pratica;
 use App\Services\Importazione\MediafacileApi;
+use App\Services\Provvigioni\PercentualeProvvigione;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
@@ -98,6 +99,9 @@ class ImportPraticheFromApi extends Command
                 $errori++;
             }
         }
+
+        $ricalcolate = app(PercentualeProvvigione::class)->ricalcola($righe->pluck('ID Pratica')->filter()->unique());
+        $this->info("{$ricalcolate} percentuali dei compensi ricalcolate sulle pratiche importate.");
 
         foreach ($this->prodottiSconosciuti as $prodotto) {
             $this->warn("Tipo prodotto non presente tra i prodotti: «{$prodotto}» (pratiche importate senza prodotto).");

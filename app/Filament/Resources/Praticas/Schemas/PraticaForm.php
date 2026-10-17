@@ -19,7 +19,6 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
-use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
@@ -27,9 +26,12 @@ use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\HtmlString;
 use Livewire\Component;
 use Unico\Core\Clients\OpenApiCompanyService;
 use Unico\Core\Models\Cliente;
+use Unico\Core\Models\Fornitore;
 use Unico\Core\Models\TipoProdotto;
 
 class PraticaForm
@@ -38,6 +40,35 @@ class PraticaForm
     {
         return $schema
             ->components([
+                Section::make()
+                    ->columnSpanFull()
+                    ->columns(['default' => 1, 'md' => 2, 'xl' => 4])
+                    ->schema([
+                        Placeholder::make('intestazione_prodotto')
+                            ->label('Prodotto')
+                            ->content(fn (Get $get): string => TipoProdotto::query()->whereKey($get('tipoprodotto_id'))->value('name') ?? '—'),
+                        Placeholder::make('intestazione_banca')
+                            ->label('Banca')
+                            ->content(function (Get $get): HtmlString|string {
+                                $nome = Cliente::query()->whereKey($get('clienti_id'))->value('name');
+                                $url = PortaleBanca::url($get('clienti_id'));
+
+                                if ($nome === null) {
+                                    return '—';
+                                }
+
+                                return $url === null ? $nome : new HtmlString('<a href="'.e($url).'" target="_blank" rel="noopener" class="text-primary-600 underline">'.e($nome).' ↗</a>');
+                            }),
+                        Placeholder::make('intestazione_agente')
+                            ->label('Agente')
+                            ->content(fn (Get $get): string => Fornitore::query()->whereKey($get('fornitori_id'))->value('name') ?? '—'),
+                        Placeholder::make('intestazione_estremi')
+                            ->label('Estremi')
+                            ->content(fn (Get $get): string => collect([
+                                trim(($get('cognome_cliente') ?? '').' '.($get('richiedente_persona_fisica') ? ($get('nome_cliente') ?? '') : '')),
+                                $get('codice_fiscale'),
+                            ])->filter()->implode(' · ') ?: '—'),
+                    ]),
                 Tabs::make('Pratica')
                     ->columnSpanFull()
                     ->persistTabInQueryString()
@@ -45,11 +76,13 @@ class PraticaForm
                         Tab::make('Dati della richiesta')
                             ->icon(Heroicon::OutlinedUser)
                             ->schema([
-                                Section::make('Richiedente')
-                                    ->columns(['default' => 1, 'md' => 2, 'xl' => 4])
+                                Section::make('Estremi')
+                                    ->collapsed()
+                                    ->columns(['default' => 1, 'md' => 3])
                                     ->schema([
                                         Toggle::make('richiedente_persona_fisica')
                                             ->label('Persona fisica')
+                                            ->hidden(fn (Get $get): bool => self::soloPersoneFisiche($get))
                                             ->inline(false)
                                             ->live()
                                             ->dehydrated(false)
@@ -83,15 +116,22 @@ class PraticaForm
                                             ]),
                                     ]),
                                 Section::make('Prodotto richiesto')
+                                    ->collapsed()
                                     ->columns(['default' => 1, 'md' => 2, 'xl' => 4, '2xl' => 6])
                                     ->schema([
-                                        Toggle::make('is_notowned')->label('Impegno di terzi')->inline(false),
+                                        Toggle::make('is_notowned')->label('Impegno di terzi')->inline(false)->live(),
                                         Select::make('tipoprodotto_id')
                                             ->label('Tipo prodotto')
                                             ->relationship('tipoprodotto', 'name')
                                             ->searchable()
                                             ->preload()
-                                            ->live(),
+                                            ->live()
+                                            ->afterStateUpdated(function (Get $get, Set $set): void {
+                                                // Cessione, delega, prestito e TFS sono per persone fisiche: il richiedente lo è.
+                                                if (self::soloPersoneFisiche($get)) {
+                                                    $set('richiedente_persona_fisica', true);
+                                                }
+                                            }),
                                         Select::make('clienti_id')
                                             ->label('Banca')
                                             ->relationship('clienti', 'name')
@@ -109,55 +149,62 @@ class PraticaForm
                                             ),
                                         Hidden::make('denominazione_banca'),
                                         // Cessione e delega si calcolano sulla rata; gli altri prodotti su importo richiesto e durata.
-                                        TextInput::make('rata')->label('Rata')->numeric()->prefix('€')->visible(fn (Get $get): bool => self::sullaRata($get)),
-                                        TextInput::make('amount')->label('Importo richiesto')->numeric()->prefix('€')->live(onBlur: true)->visible(fn (Get $get): bool => ! self::sullaRata($get)),
-                                        TextInput::make('nrate')->label('Durata (mesi)')->numeric()->integer()->visible(fn (Get $get): bool => ! self::sullaRata($get)),
+                                        TextInput::make('rata')->label('Rata')->numeric()->prefix('€')->visible(fn (Get $get): bool => self::sullaRata($get) || self::impegnoDiTerzi($get)),
+                                        DatePicker::make('scadenza')->label('Scadenza')->helperText('Fine del finanziamento, dell\'assegno di mantenimento o della ritenuta.')->visible(fn (Get $get): bool => self::impegnoDiTerzi($get)),
+                                        TextInput::make('amount')->label('Importo richiesto')->numeric()->prefix('€')->live(onBlur: true)->visible(fn (Get $get): bool => ! self::sullaRata($get) && ! self::impegnoDiTerzi($get)),
+                                        TextInput::make('nrate')->label('Durata (mesi)')->numeric()->integer()->visible(fn (Get $get): bool => ! self::sullaRata($get) && ! self::impegnoDiTerzi($get)),
                                         Placeholder::make('mediazione_dovuta')
                                             ->label('Mediazione richiesta al cliente')
+                                            ->hidden(fn (Get $get): bool => self::prodottoDiTerzi($get))
                                             ->content(fn (Get $get): string => CompensoMediazione::formatta($get('mediation_fee_amount'), $get('mediation_fee_percent'), $get('amount'))),
                                         TextInput::make('codice_pratica')->label('Numero pratica'),
-                                        TextInput::make('codice_pratica_banca')->label('Codice pratica banca')->helperText('Assegnato dalla banca sul suo portale')->maxLength(100),
-                                        DatePicker::make('data_inserimento_pratica')->label('Data richiesta'),
+                                        TextInput::make('codice_pratica_banca')->label('Codice pratica banca')->helperText('Assegnato dalla banca sul suo portale')->maxLength(100)->hidden(fn (Get $get): bool => self::impegnoDiTerzi($get)),
+                                        DatePicker::make('data_inserimento_pratica')->label('Data richiesta')->hidden(fn (Get $get): bool => self::impegnoDiTerzi($get)),
                                     ]),
                             ]),
                         Tab::make('Dati di lavorazione')
                             ->icon(Heroicon::OutlinedClipboardDocumentCheck)
                             ->schema([
-                                Grid::make(['default' => 1, 'lg' => 3])
+                                Section::make('Istruttoria')
                                     ->columnSpanFull()
+                                    ->columns(['default' => 1, 'md' => 3])
                                     ->schema([
-                                        Section::make('Istruttoria')
-                                            ->columns(1)
-                                            ->schema([
-                                                Select::make('pratica_stato_id')
-                                                    ->label('Stato pratica')
-                                                    ->relationship('praticaStato', 'name')
-                                                    ->searchable()
-                                                    ->preload(),
-                                                Select::make('employee_id')
-                                                    ->label('Istruttore')
-                                                    ->relationship('employee', 'name')
-                                                    ->searchable()
-                                                    ->preload(),
-                                                Select::make('fornitori_id')
-                                                    ->label('Agente')
-                                                    ->relationship('fornitori', 'name')
-                                                    ->searchable()
-                                                    ->preload(),
-                                                TextInput::make('denominazione_prodotto')->label('Prodotto'),
-                                                TextInput::make('assicurazione')->label('Assicurazione'),
-                                            ]),
-                                        Section::make('Avanzamento')
-                                            ->columns(['default' => 1, 'md' => 2, 'xl' => 3])
-                                            ->columnSpan(['lg' => 2])
-                                            ->schema([
-                                                DatePicker::make('presa_in_carico_at')->label('Data presa in carico'),
-                                                DatePicker::make('lavorazione_at')->label('Data lavorazione'),
-                                                DatePicker::make('sended_at')->label('Data invio istruttoria'),
-                                                DatePicker::make('approved_at')->label('Approvazione'),
-                                                DatePicker::make('erogated_at')->label('Erogazione'),
-                                                DatePicker::make('rejected_at')->label('Rifiuto'),
-                                            ]),
+                                        Select::make('pratica_stato_id')
+                                            ->label('Stato pratica')
+                                            ->relationship('praticaStato', 'name')
+                                            ->searchable()
+                                            ->preload(),
+                                        Select::make('employee_id')
+                                            ->label('Istruttore')
+                                            ->relationship('employee', 'name', fn (Builder $query) => $query->whereJsonContains('employee_roles', 'istruttore'))
+                                            ->searchable()
+                                            ->preload(),
+                                        Select::make('fornitori_id')
+                                            ->label('Agente')
+                                            ->relationship('fornitori', 'name')
+                                            ->searchable()
+                                            ->preload(),
+                                        Select::make('allows_direct_requests')
+                                            ->label('Richieste dirette di documenti')
+                                            ->helperText('Eccezione al flag del produttore: chiedere i documenti direttamente al cliente o all\'emittente.')
+                                            ->options(['1' => 'Abilitate', '0' => 'Non abilitate'])
+                                            ->placeholder('Come il produttore')
+                                            ->formatStateUsing(fn ($state): ?string => $state === null ? null : (string) (int) $state)
+                                            ->dehydrateStateUsing(fn ($state): ?bool => filled($state) ? (bool) (int) $state : null),
+                                        TextInput::make('denominazione_prodotto')->label('Prodotto'),
+                                        TextInput::make('assicurazione')->label('Assicurazione'),
+                                    ]),
+                                Section::make('Avanzamento')
+                                    ->collapsed()
+                                    ->columnSpanFull()
+                                    ->columns(['default' => 3])
+                                    ->schema([
+                                        DatePicker::make('presa_in_carico_at')->label('Data presa in carico'),
+                                        DatePicker::make('lavorazione_at')->label('Data lavorazione'),
+                                        DatePicker::make('sended_at')->label('Data invio istruttoria'),
+                                        DatePicker::make('approved_at')->label('Approvazione'),
+                                        DatePicker::make('erogated_at')->label('Erogazione'),
+                                        DatePicker::make('rejected_at')->label('Rifiuto'),
                                     ]),
                                 Section::make('Offerta')
                                     ->hidden()
@@ -170,28 +217,39 @@ class PraticaForm
                         Tab::make('Dati finanziari')
                             ->icon(Heroicon::OutlinedBanknotes)
                             ->schema([
-                                Grid::make(['default' => 1, 'md' => 2])
+                                Section::make('Dati finanziari')
                                     ->columnSpanFull()
+                                    ->columns(['default' => 1, 'md' => 2, 'xl' => 4])
                                     ->schema([
-                                        Section::make('Importi')
-                                            ->columns(['default' => 1, 'md' => 2])
-                                            ->schema([
-                                                TextInput::make('net')->label('Importo netto')->numeric()->prefix('€'),
-                                                TextInput::make('erogato')->label('Erogato')->numeric()->prefix('€'),
-                                            ]),
-                                        Section::make('Mediazione e costi')
-                                            ->columns(['default' => 1, 'md' => 2])
-                                            ->schema([
-                                                TextInput::make('mediation_fee_percent')->label('Mediazione %')->numeric()->suffix('%')->live(onBlur: true),
-                                                TextInput::make('mediation_fee_amount')->label('Mediazione €')->numeric()->prefix('€')->live(onBlur: true),
-                                                TextInput::make('istruttoria_costs')->label('Costi istruttoria')->numeric()->prefix('€'),
-                                                Textarea::make('mediation_fee_terms')->label('Condizioni di mediazione')->columnSpanFull(),
-                                            ]),
+                                        TextInput::make('net')->label('Importo netto')->numeric()->prefix('€'),
+                                        TextInput::make('erogato')->label('Erogato')->numeric()->prefix('€'),
+                                        TextInput::make('mediation_fee_percent')->label('Mediazione %')->numeric()->suffix('%')->live(onBlur: true)->hidden(fn (Get $get): bool => self::prodottoDiTerzi($get)),
+                                        TextInput::make('mediation_fee_amount')->label('Mediazione €')->numeric()->prefix('€')->live(onBlur: true)->hidden(fn (Get $get): bool => self::prodottoDiTerzi($get)),
+                                        TextInput::make('istruttoria_costs')->label('Costi istruttoria')->numeric()->prefix('€'),
+                                        Textarea::make('mediation_fee_terms')->label('Condizioni di mediazione')->columnSpanFull()->hidden(fn (Get $get): bool => self::prodottoDiTerzi($get)),
                                     ]),
                             ]),
                     ]),
                 Hidden::make('upload_at')->default(now()),
             ]);
+    }
+
+    /** Impegno di terzi (`is_notowned`): di un'altra società, ci interessano solo tipo, banca, scadenza e rata (anche assegno di mantenimento o ritenuta CRAL). */
+    private static function impegnoDiTerzi(Get $get): bool
+    {
+        return (bool) $get('is_notowned');
+    }
+
+    /** Prodotto di terzi (`tipoprodotto.is_third_party`) o impegno di terzi: la mediazione non è nostra e non si mostra. */
+    private static function prodottoDiTerzi(Get $get): bool
+    {
+        return self::impegnoDiTerzi($get) || (bool) TipoProdotto::query()->whereKey($get('tipoprodotto_id'))->value('is_third_party');
+    }
+
+    /** Prodotti solo per persone fisiche: il richiedente non può essere una società e l'interruttore si nasconde. */
+    private static function soloPersoneFisiche(Get $get): bool
+    {
+        return in_array(TipoProdotto::query()->whereKey($get('tipoprodotto_id'))->value('name'), ['Cessione', 'Delega', 'Prestito', 'TFS'], true);
     }
 
     /** Cessione e delega si calcolano sulla rata. */

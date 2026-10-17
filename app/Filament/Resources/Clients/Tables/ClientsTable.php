@@ -9,7 +9,9 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class ClientsTable
 {
@@ -248,8 +250,10 @@ class ClientsTable
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
+            // I datori di lavoro hanno la loro voce di menu: qui si vedono solo con il filtro acceso.
+            ->modifyQueryUsing(fn (Builder $query, $livewire): Builder => ($livewire->tableFilters['con_datori']['isActive'] ?? false) ? $query : $query->senzaDatoriDiLavoro())
             ->filters([
-                //
+                Filter::make('con_datori')->label('Includi i datori di lavoro')->toggle()->query(fn (Builder $query): Builder => $query),
             ])
             ->recordUrl(fn (Client $record): string => ClientResource::getUrl('edit', ['record' => $record]))
             ->recordActions([

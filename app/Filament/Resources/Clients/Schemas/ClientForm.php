@@ -24,7 +24,6 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
-use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
@@ -50,6 +49,17 @@ class ClientForm
     {
         $isPerson = fn (?Get $get = null): bool => $get instanceof Get && (bool) $get('../is_person');
 
+        // Cessione, delega e prestito sono per persone fisiche: se il cliente è legato a uno di questi prodotti l'interruttore resta acceso.
+        $interruttorePersona = fn (bool $dopoIlCognome): Toggle => Toggle::make('is_person')
+            ->label('Persona fisica')
+            ->default(true)
+            ->inline(false)
+            ->live()
+            ->visible(fn (Get $get, ?Client $record): bool => ! self::soloDatore($record) && (bool) $get('is_person') === $dopoIlCognome)
+            ->disabled(fn (?Client $record): bool => self::soloPersonaFisica($record))
+            ->dehydrated()
+            ->helperText(fn (?Client $record): ?string => self::soloPersonaFisica($record) ? 'Legato a cessione, delega o prestito: persona fisica.' : null);
+
         return $schema
             ->components([
                 Section::make()
@@ -61,15 +71,8 @@ class ClientForm
                             ->maxLength(255)
                             ->live(onBlur: true)
                             ->columnSpan(fn (Get $get): int => $get('is_person') ? 1 : 2),
-                        // Cessione, delega e prestito sono per persone fisiche: se il cliente è legato a uno di questi prodotti l'interruttore resta acceso.
-                        Toggle::make('is_person')
-                            ->label('Persona fisica')
-                            ->default(true)
-                            ->inline(false)
-                            ->live()
-                            ->disabled(fn (?Client $record): bool => self::soloPersonaFisica($record))
-                            ->dehydrated()
-                            ->helperText(fn (?Client $record): ?string => self::soloPersonaFisica($record) ? 'Legato a cessione, delega o prestito: persona fisica.' : null),
+                        // Persona fisica: l'interruttore segue il cognome; società: segue la partita IVA.
+                        $interruttorePersona(true),
                         TextInput::make('first_name')
                             ->label('Nome')
                             ->maxLength(255)
@@ -93,6 +96,14 @@ class ClientForm
                             ->suffixActions([
                                 self::creditScoreAction(),
                             ]),
+                        $interruttorePersona(false),
+                        // Datore di lavoro: il tipo di amministrazione sta in testata, ereditato dalla pratica di cessione o delega.
+                        Select::make('employment_typology')
+                            ->label('Tipo amministrazione')
+                            ->helperText('Ereditato dalla pratica di cessione o delega.')
+                            ->options(collect(EmploymentRelationship::cases())->mapWithKeys(fn (EmploymentRelationship $case): array => [$case->getLabel() => $case->getLabel()])->all())
+                            ->searchable()
+                            ->visible(fn (?Client $record): bool => self::soloDatore($record)),
                     ])
                     ->columnSpanFull(),
                 Tabs::make('Cliente')
@@ -102,26 +113,25 @@ class ClientForm
                         Tab::make('Anagrafica')
                             ->icon(Heroicon::OutlinedUser)
                             ->schema([
-                                Grid::make(['default' => 1, 'md' => 2])
+                                Section::make('Contatti')
                                     ->columnSpanFull()
+                                    ->columns(['default' => 1, 'md' => 3])
                                     ->schema([
-                                        Section::make('Contatti')
-                                            ->columns(['default' => 1, 'md' => 2])
-                                            ->schema([
-                                                TextInput::make('email')->label('Email')->email(),
-                                                TextInput::make('phone')->label('Telefono')->tel(),
-                                                TextInput::make('pec')->label('PEC')->email()->visible(fn (Get $get): bool => ! $get('is_person')),
-                                                TextInput::make('website')->label('Sito web')->maxLength(50)->visible(fn (Get $get): bool => ! $get('is_person')),
-                                            ]),
-                                        Section::make('Dati anagrafici')
-                                            ->columns(['default' => 1, 'md' => 2])
-                                            ->visible(fn (Get $get, $livewire): bool => (bool) $get('is_person') && self::shows(FinancingSection::ClienteDatiNascita, $livewire))
-                                            ->schema([
-                                                DatePicker::make('birth_date')->label('Data di nascita')->native(false)->displayFormat('d/m/Y'),
-                                                TextInput::make('birth_place')->label('Luogo di nascita')->maxLength(100),
-                                                Select::make('sex')->label('Sesso')->options(['M' => 'M', 'F' => 'F']),
-                                                TextInput::make('citizenship')->label('Cittadinanza')->maxLength(60),
-                                            ]),
+                                        TextInput::make('email')->label('Email')->email(),
+                                        TextInput::make('phone')->label('Telefono')->tel(),
+                                        TextInput::make('pec')->label('PEC')->email(),
+                                        TextInput::make('website')->label('Sito web')->maxLength(50)->visible(fn (Get $get): bool => ! $get('is_person')),
+                                    ]),
+                                Section::make('Dati anagrafici')
+                                    ->collapsed()
+                                    ->columnSpanFull()
+                                    ->columns(['default' => 1, 'md' => 2, 'xl' => 4])
+                                    ->visible(fn (Get $get, $livewire): bool => (bool) $get('is_person') && self::shows(FinancingSection::ClienteDatiNascita, $livewire))
+                                    ->schema([
+                                        DatePicker::make('birth_date')->label('Data di nascita')->native(false)->displayFormat('d/m/Y'),
+                                        TextInput::make('birth_place')->label('Luogo di nascita')->maxLength(100),
+                                        Select::make('sex')->label('Sesso')->options(['M' => 'M', 'F' => 'F']),
+                                        TextInput::make('citizenship')->label('Cittadinanza')->maxLength(60),
                                     ]),
                             ]),
                         Tab::make('Lavoro e reddito')
@@ -183,6 +193,8 @@ class ClientForm
                             ->visible(fn (Get $get, ?Client $record, $livewire): bool => ! $get('is_person') && (self::shows(FinancingSection::ClienteDatiSocietari, $livewire) || self::soloDatore($record)))
                             ->schema([
                                 Section::make('Società')
+                                    ->columnSpanFull()
+                                    ->hidden(fn (?Client $record): bool => self::soloDatore($record))
                                     ->columns(['default' => 1, 'md' => 2, 'xl' => 4])
                                     ->schema([
                                         Select::make('legal_representative_id')
@@ -191,11 +203,6 @@ class ClientForm
                                             ->searchable()
                                             ->preload()
                                             ->hidden(fn (?Client $record): bool => self::soloDatore($record)),
-                                        Select::make('employment_typology')
-                                            ->label('Tipo amministrazione')
-                                            ->helperText('Per un datore di lavoro: ereditato dalla pratica di cessione o delega.')
-                                            ->options(collect(EmploymentRelationship::cases())->mapWithKeys(fn (EmploymentRelationship $case): array => [$case->getLabel() => $case->getLabel()])->all())
-                                            ->searchable(),
                                         TextInput::make('legal_form')->label('Forma giuridica')->maxLength(100)->hidden(fn (?Client $record): bool => self::soloDatore($record)),
                                         TextInput::make('ateco_code')->label('Codice Ateco')->maxLength(10)->hidden(fn (?Client $record): bool => self::soloDatore($record)),
                                         TextInput::make('cciaa_registration')->label('Iscrizione CCIAA')->maxLength(60)->hidden(fn (?Client $record): bool => self::soloDatore($record)),
@@ -204,29 +211,28 @@ class ClientForm
                                         DatePicker::make('company_started_at')->label('Inizio attività')->native(false)->displayFormat('d/m/Y')->hidden(fn (?Client $record): bool => self::soloDatore($record)),
                                         TextInput::make('iban')->label('IBAN')->maxLength(34)->hidden(fn (?Client $record): bool => self::soloDatore($record)),
                                     ]),
-                                Grid::make(['default' => 1, 'md' => 2])
+                                // Richiesta, ritiro e notifica del benestare: solo per chi è datore di lavoro di almeno un cliente.
+                                Section::make('Benestare del datore')
                                     ->columnSpanFull()
+                                    ->description('Come si chiede il benestare al datore, come si ritira e come si notifica.')
+                                    ->visible(fn (?Client $record): bool => $record?->exists === true && $record->isDatoreDiLavoro())
                                     ->schema([
-                                        // Richiesta, ritiro e notifica del benestare: solo per chi è datore di lavoro di almeno un cliente.
-                                        Section::make('Benestare del datore')
-                                            ->description('Come si chiede il benestare al datore, come si ritira e come si notifica.')
-                                            ->visible(fn (?Client $record): bool => $record?->exists === true && $record->isDatoreDiLavoro())
-                                            ->schema([
-                                                Textarea::make('richiesta_benestare')->label('Richiesta benestare'),
-                                                Textarea::make('ritiro_benestare')->label('Ritiro benestare'),
-                                                Textarea::make('notifica')->label('Notifica'),
-                                            ]),
-                                        Section::make('Ultimo bilancio')
-                                            ->hidden(fn (?Client $record): bool => self::soloDatore($record))
-                                            ->columns(['default' => 1, 'md' => 2, 'xl' => 3])
-                                            ->schema([
-                                                TextInput::make('balance_year')->label('Anno')->numeric(),
-                                                TextInput::make('share_capital')->label('Capitale sociale')->numeric()->prefix('€'),
-                                                TextInput::make('turnover')->label('Fatturato')->numeric()->prefix('€'),
-                                                TextInput::make('net_worth')->label('Patrimonio netto')->numeric()->prefix('€'),
-                                                TextInput::make('employees')->label('Dipendenti')->numeric(),
-                                            ]),
+                                        Textarea::make('richiesta_benestare')->label('Richiesta benestare'),
+                                        Textarea::make('ritiro_benestare')->label('Ritiro benestare'),
+                                        Textarea::make('notifica')->label('Notifica'),
                                     ]),
+                                Section::make('Ultimo bilancio')
+                                    ->columnSpanFull()
+                                    ->hidden(fn (?Client $record): bool => self::soloDatore($record))
+                                    ->columns(['default' => 1, 'md' => 2, 'xl' => 3])
+                                    ->schema([
+                                        TextInput::make('balance_year')->label('Anno')->numeric(),
+                                        TextInput::make('share_capital')->label('Capitale sociale')->numeric()->prefix('€'),
+                                        TextInput::make('turnover')->label('Fatturato')->numeric()->prefix('€'),
+                                        TextInput::make('net_worth')->label('Patrimonio netto')->numeric()->prefix('€'),
+                                        TextInput::make('employees')->label('Dipendenti')->numeric(),
+                                    ]),
+
                             ]),
                         Tab::make('Verifiche')
                             ->icon(Heroicon::OutlinedShieldCheck)
@@ -234,6 +240,7 @@ class ClientForm
                             ->schema([
                                 Section::make('KYC (adeguata verifica)')
                                     ->key('kyc')
+                                    ->collapsed()
                                     ->extraAttributes(['id' => 'kyc-adeguata-verifica'])
                                     ->relationship('questionarioKyc')
                                     ->columnSpanFull()
@@ -254,6 +261,7 @@ class ClientForm
                                             ->columnSpanFull(),
                                     ]),
                                 Section::make('Valutazione rischio')
+                                    ->collapsed()
                                     ->columnSpanFull()
                                     ->columns(['default' => 1, 'md' => 2, 'xl' => 4])
                                     ->headerActions([
@@ -279,11 +287,13 @@ class ClientForm
                             ]),
                         Tab::make('Info')
                             ->icon(Heroicon::OutlinedInformationCircle)
+                            ->hidden(fn (?Client $record): bool => self::soloDatore($record))
                             ->schema([
                                 Section::make('Consensi privacy')
+                                    ->collapsed()
                                     ->visible(fn (Get $get): bool => (bool) $get('is_person'))
                                     ->columnSpanFull()
-                                    ->columns(['default' => 1, 'md' => 2, 'xl' => 4, '2xl' => 6])
+                                    ->columns(['default' => 1, 'md' => 2, 'xl' => 4])
                                     ->schema([
                                         DateTimePicker::make('general_consent_at')->label('Consenso base'),
                                         DateTimePicker::make('privacy_policy_read_at')->label('Informativa letta'),
@@ -393,7 +403,8 @@ class ClientForm
                 ->toMediaCollection(Document::COLLECTION);
         });
 
-        $documento->forceFill(['status' => DocumentStatus::UPLOADED, 'is_printable' => true])->saveQuietly();
+        $documento->forceFill(['status' => DocumentStatus::TO_SEND_OTP])->saveQuietly();
+        $documento->syncResponsible();
     }
 
     /** Il cliente della scheda: nelle sezioni legate a una relazione (es. il KYC) `$record` è il record della relazione. */

@@ -10,6 +10,7 @@ use App\Models\ListinoProvvigionaleVoce;
 use App\Models\User;
 use App\Services\Provvigioni\PercentualeListino;
 use Database\Seeders\ListiniReteSeeder;
+use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -79,6 +80,22 @@ class ListiniReteTest extends TestCase
 
         Livewire::test(VociRelationManager::class, ['ownerRecord' => $listino, 'pageClass' => EditListinoProvvigionale::class])
             ->assertCanSeeTableRecords($listino->voci);
+    }
+
+    public function test_la_voce_del_listino_si_modifica_con_i_punti_precaricati(): void
+    {
+        Filament::setCurrentPanel('admin');
+        $this->actingAs(User::factory()->create(['role' => 'super_admin']));
+        $this->seed(ListiniReteSeeder::class);
+        $listino = ListinoProvvigionale::query()->where('name', 'Cessione Special')->where('coordinamento', false)->firstOrFail();
+        $voce = $listino->voci()->where('voce', 'standard')->firstOrFail();
+        $this->assertEquals(0, $voce->precaricato);
+
+        Livewire::test(VociRelationManager::class, ['ownerRecord' => $listino, 'pageClass' => EditListinoProvvigionale::class])
+            ->callAction(TestAction::make('edit')->table($voce), ['percentuale' => 60, 'precaricato' => 2.5])
+            ->assertHasNoFormErrors();
+
+        $this->assertSame('2.5', $voce->refresh()->precaricato);
     }
 
     public function test_delega_listini_are_assigned_like_the_cessione_ones_of_the_same_level(): void

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Filament\RelationManagers\AddressesRelationManager;
+use App\Filament\RelationManagers\BranchesRelationManager;
 use App\Filament\RelationManagers\SociRelationManager;
 use App\Filament\Resources\Clients\ClientResource;
 use App\Filament\Resources\Clients\Pages\EditClient;
@@ -63,9 +64,20 @@ class ClienteIstruttoriaTest extends TestCase
     public function test_the_client_resource_attaches_documents_and_addresses(): void
     {
         $this->assertSame(
-            [DocumentsRelationManager::class, SociRelationManager::class, AddressesRelationManager::class],
+            [DocumentsRelationManager::class, SociRelationManager::class, AddressesRelationManager::class, BranchesRelationManager::class],
             ClientResource::getRelations(),
         );
+    }
+
+    public function test_addresses_are_for_natural_persons_and_branches_for_companies(): void
+    {
+        $persona = new Client(['name' => 'Rossi', 'is_person' => true]);
+        $societa = new Client(['name' => 'Acme Srl', 'is_person' => false]);
+
+        $this->assertTrue(AddressesRelationManager::canViewForRecord($persona, EditClient::class));
+        $this->assertFalse(BranchesRelationManager::canViewForRecord($persona, EditClient::class));
+        $this->assertFalse(AddressesRelationManager::canViewForRecord($societa, EditClient::class));
+        $this->assertTrue(BranchesRelationManager::canViewForRecord($societa, EditClient::class));
     }
 
     /**

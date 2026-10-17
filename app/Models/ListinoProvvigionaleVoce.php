@@ -21,7 +21,7 @@ class ListinoProvvigionaleVoce extends Model
 
     protected function casts(): array
     {
-        return ['percentuale' => 'decimal:4'];
+        return ['percentuale' => 'decimal:4', 'precaricato' => 'decimal:1'];
     }
 
     protected static function booted(): void

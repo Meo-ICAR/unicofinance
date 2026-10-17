@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Clients;
 
 use App\Filament\RelationManagers\AddressesRelationManager;
+use App\Filament\RelationManagers\BranchesRelationManager;
 use App\Filament\RelationManagers\SociRelationManager;
 use App\Filament\Resources\Clients\Pages\CreateClient;
 use App\Filament\Resources\Clients\Pages\EditClient;
@@ -54,6 +55,7 @@ class ClientResource extends Resource
             DocumentsRelationManager::class,
             SociRelationManager::class,
             AddressesRelationManager::class,
+            BranchesRelationManager::class,
         ];
     }
 
