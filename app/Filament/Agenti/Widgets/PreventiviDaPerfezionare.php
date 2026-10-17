@@ -4,6 +4,7 @@ namespace App\Filament\Agenti\Widgets;
 
 use App\Enums\SimulationContractType;
 use App\Filament\Agenti\Pages\Simulazione;
+use App\Filament\Widgets\CollapsibleTableWidget;
 use App\Models\FinancingQuote;
 use App\Models\Pratica;
 use App\Services\Agenti\AgentImpersonationService;
@@ -17,12 +18,11 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
-use Filament\Widgets\TableWidget;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 /** Preventivi salvati dall'agente e non ancora perfezionati: si perfezionano, si sospendono (la pratica passa a SOSPESA e esce dall'elenco finché non si riprende) o si eliminano, anche in blocco. */
-class PreventiviDaPerfezionare extends TableWidget
+class PreventiviDaPerfezionare extends CollapsibleTableWidget
 {
     protected static ?int $sort = 1;
 
@@ -75,7 +75,18 @@ class PreventiviDaPerfezionare extends TableWidget
                     ->state(fn (FinancingQuote $record): ?string => $record->disbursed_min === null ? null : number_format((float) $record->disbursed_min, 0, ',', '.').' – '.number_format((float) $record->disbursed_max, 0, ',', '.').' €')
                     ->placeholder('—')
                     ->sortable(['disbursed_min', 'disbursed_max']),
-                TextColumn::make('pratica.praticaStato.name')->label('Stato')->badge()->color(fn (FinancingQuote $record): string => $record->pratica?->praticaStato?->is_suspended ? 'warning' : 'gray')->placeholder('—'),
+                TextColumn::make('pratica.praticaStato.name')
+                    ->label('Stato')
+                    ->badge()
+                    ->color(fn (FinancingQuote $record): string => $record->pratica?->praticaStato?->is_suspended ? 'warning' : 'gray')
+                    ->placeholder('—')
+                    ->sortable(query: function (Builder $query, string $direction): Builder {
+                        $direction = $direction === 'asc' ? 'asc' : 'desc';
+                        $core = (new Pratica)->getConnection()->getDatabaseName();
+                        $tabella = $query->getModel()->getTable();
+
+                        return $query->orderByRaw("(select ps.name from `{$core}`.pratiches as p inner join `{$core}`.pratica_stati as ps on ps.id = p.pratica_stato_id where p.id = {$tabella}.pratica_id limit 1) {$direction}");
+                    }),
                 TextColumn::make('created_at')->label('Salvato')->since()->sortable(),
             ])
             ->recordActions([

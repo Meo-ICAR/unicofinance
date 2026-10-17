@@ -71,6 +71,7 @@ class DashboardIstruttoreTest extends TestCase
         ]);
 
         Livewire::test(DaPrendereInCarico::class)
+            ->assertSee('pratiche')
             ->assertTableColumnDoesNotExist('data_inserimento_pratica')
             ->assertTableColumnStateSet('giorni_attesa', 4, $pratica);
     }
@@ -96,7 +97,9 @@ class DashboardIstruttoreTest extends TestCase
         $sua = Pratica::query()->create(['codice_pratica' => 'DSH-7', 'cognome_cliente' => 'Sua', 'employee_id' => $altro->getKey(), 'upload_at' => now()]);
         $erogata = Pratica::query()->create(['codice_pratica' => 'DSH-8', 'cognome_cliente' => 'Erogata', 'employee_id' => $istruttore->getKey(), 'erogated_at' => now()->toDateString(), 'upload_at' => now()]);
 
+        // Le pratiche già nel database di sviluppo non devono spingere queste fuori dalla prima pagina: le più recenti per prime.
         Livewire::test(PraticheInCorso::class)
+            ->sortTable('giorni_nello_stato', 'asc')
             ->assertCanSeeTableRecords([$mia])
             ->assertCanNotSeeTableRecords([$sua, $erogata])
             ->removeTableFilter('mie')

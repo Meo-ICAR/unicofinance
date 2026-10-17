@@ -20,6 +20,11 @@ class PercentualeProvvigione
         $lordo = $pratica->rata !== null && $pratica->nrate !== null ? (float) $pratica->rata * (int) $pratica->nrate : ($pratica->amount !== null ? (float) $pratica->amount : null);
         $erogato = $pratica->erogato !== null ? (float) $pratica->erogato : ($pratica->net !== null ? (float) $pratica->net : null);
 
+        // Cessione e delega: l'erogato è rata per durata.
+        if (in_array($pratica->tipoprodotto?->name, ['Cessione', 'Delega'], true) && $pratica->rata !== null && $pratica->nrate !== null) {
+            $erogato = (float) $pratica->rata * (int) $pratica->nrate;
+        }
+
         $base = match (strtolower((string) $pratica->tipoprodotto?->tipo_provvigioni)) {
             'lordo' => $lordo,
             'erogato' => $erogato,

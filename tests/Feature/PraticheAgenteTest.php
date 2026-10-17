@@ -98,10 +98,10 @@ class PraticheAgenteTest extends TestCase
             ->assertDontSee('Mediazione richiesta al cliente')
             ->assertSee('Prodotto richiesto')
             ->assertSee('Dettagli')
-            // Cessione: rata; gli altri prodotti: importo richiesto e durata.
+            // Rata e durata per ogni prodotto; l'importo richiesto solo fuori da cessione e delega.
             ->assertFormFieldVisible('rata')
+            ->assertFormFieldVisible('nrate')
             ->assertFormFieldHidden('amount')
-            ->assertFormFieldHidden('nrate')
             ->assertFormFieldExists('is_notowned')
             ->assertFormFieldExists('clienti_id')
             ->assertFormFieldExists('codice_pratica')

@@ -9,13 +9,12 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
-use Filament\Widgets\TableWidget;
 use Illuminate\Database\Eloquent\Builder;
 use Unico\Core\Enums\DocumentStatus;
 use Unico\Core\Models\Document;
 
 /** Documenti delle pratiche aperte da seguire: mancanti (richiesti), respinti, anomali o integrativi. Di default solo le mie pratiche. */
-class DocumentiDaSeguire extends TableWidget
+class DocumentiDaSeguire extends CollapsibleTableWidget
 {
     protected static ?int $sort = 3;
 

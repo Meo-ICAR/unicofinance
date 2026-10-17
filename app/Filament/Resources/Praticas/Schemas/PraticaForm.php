@@ -117,9 +117,8 @@ class PraticaForm
                                     ]),
                                 Section::make('Prodotto richiesto')
                                     ->collapsed()
-                                    ->columns(['default' => 1, 'md' => 2, 'xl' => 4, '2xl' => 6])
+                                    ->columns(['default' => 2, 'md' => 4])
                                     ->schema([
-                                        Toggle::make('is_notowned')->label('Impegno di terzi')->inline(false)->live(),
                                         Select::make('tipoprodotto_id')
                                             ->label('Tipo prodotto')
                                             ->relationship('tipoprodotto', 'name')
@@ -132,9 +131,14 @@ class PraticaForm
                                                     $set('richiedente_persona_fisica', true);
                                                 }
                                             }),
+                                        TextInput::make('rata')->label('Rata')->numeric()->prefix('€'),
+                                        TextInput::make('nrate')->label('Durata (mesi)')->numeric()->integer()->hidden(fn (Get $get): bool => self::impegnoDiTerzi($get)),
+                                        DatePicker::make('data_inserimento_pratica')->label('Data richiesta')->hidden(fn (Get $get): bool => self::impegnoDiTerzi($get)),
+                                        DatePicker::make('scadenza')->label('Scadenza')->helperText('Fine del finanziamento, dell\'assegno di mantenimento o della ritenuta.')->visible(fn (Get $get): bool => self::impegnoDiTerzi($get)),
+                                        TextInput::make('codice_pratica')->label('Numero pratica'),
                                         Select::make('clienti_id')
                                             ->label('Banca')
-                                            ->relationship('clienti', 'name')
+                                            ->relationship('clienti', 'name', fn (Builder $query) => $query->where('is_active', true))
                                             ->searchable()
                                             ->preload()
                                             ->live()
@@ -148,18 +152,14 @@ class PraticaForm
                                                     ->visible(fn (Get $get): bool => PortaleBanca::url($get('clienti_id')) !== null),
                                             ),
                                         Hidden::make('denominazione_banca'),
-                                        // Cessione e delega si calcolano sulla rata; gli altri prodotti su importo richiesto e durata.
-                                        TextInput::make('rata')->label('Rata')->numeric()->prefix('€')->visible(fn (Get $get): bool => self::sullaRata($get) || self::impegnoDiTerzi($get)),
-                                        DatePicker::make('scadenza')->label('Scadenza')->helperText('Fine del finanziamento, dell\'assegno di mantenimento o della ritenuta.')->visible(fn (Get $get): bool => self::impegnoDiTerzi($get)),
+                                        TextInput::make('codice_pratica_banca')->label('Codice pratica banca')->helperText('Assegnato dalla banca sul suo portale')->maxLength(100)->hidden(fn (Get $get): bool => self::impegnoDiTerzi($get)),
+                                        // Cessione e delega si calcolano sulla rata; gli altri prodotti anche sull'importo richiesto.
                                         TextInput::make('amount')->label('Importo richiesto')->numeric()->prefix('€')->live(onBlur: true)->visible(fn (Get $get): bool => ! self::sullaRata($get) && ! self::impegnoDiTerzi($get)),
-                                        TextInput::make('nrate')->label('Durata (mesi)')->numeric()->integer()->visible(fn (Get $get): bool => ! self::sullaRata($get) && ! self::impegnoDiTerzi($get)),
                                         Placeholder::make('mediazione_dovuta')
                                             ->label('Mediazione richiesta al cliente')
                                             ->hidden(fn (Get $get): bool => self::prodottoDiTerzi($get))
                                             ->content(fn (Get $get): string => CompensoMediazione::formatta($get('mediation_fee_amount'), $get('mediation_fee_percent'), $get('amount'))),
-                                        TextInput::make('codice_pratica')->label('Numero pratica'),
-                                        TextInput::make('codice_pratica_banca')->label('Codice pratica banca')->helperText('Assegnato dalla banca sul suo portale')->maxLength(100)->hidden(fn (Get $get): bool => self::impegnoDiTerzi($get)),
-                                        DatePicker::make('data_inserimento_pratica')->label('Data richiesta')->hidden(fn (Get $get): bool => self::impegnoDiTerzi($get)),
+                                        Toggle::make('is_notowned')->label('Impegno di terzi')->inline(false)->live(),
                                     ]),
                             ]),
                         Tab::make('Dati di lavorazione')
@@ -181,7 +181,7 @@ class PraticaForm
                                             ->preload(),
                                         Select::make('fornitori_id')
                                             ->label('Agente')
-                                            ->relationship('fornitori', 'name')
+                                            ->relationship('fornitori', 'name', fn (Builder $query) => $query->where('is_active', true))
                                             ->searchable()
                                             ->preload(),
                                         Select::make('allows_direct_requests')

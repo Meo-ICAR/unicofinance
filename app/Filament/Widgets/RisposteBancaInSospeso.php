@@ -15,12 +15,11 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
-use Filament\Widgets\TableWidget;
 use Illuminate\Database\Eloquent\Builder;
 use Unico\Core\Models\PraticaStato;
 
 /** Pratiche inviate alla banca senza esito da più giorni: l'istruttore controlla il portale e aggiorna lo stato. */
-class RisposteBancaInSospeso extends TableWidget
+class RisposteBancaInSospeso extends CollapsibleTableWidget
 {
     protected static ?int $sort = 5;
 
@@ -69,7 +68,7 @@ class RisposteBancaInSospeso extends TableWidget
                     ->query(fn (Builder $query, array $data): Builder => (int) ($data['value'] ?? 0) > 0 ? $query->where('sended_at', '<=', now()->subDays((int) $data['value'])->toDateString()) : $query),
                 SelectFilter::make('clienti_id')
                     ->label('Banca')
-                    ->relationship('clienti', 'name')
+                    ->relationship('clienti', 'name', fn (Builder $query) => $query->where('is_active', true))
                     ->searchable()
                     ->preload(),
             ])

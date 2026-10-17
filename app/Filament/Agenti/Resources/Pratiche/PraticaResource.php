@@ -212,16 +212,36 @@ class PraticaResource extends Resource
             Section::make('Prodotto richiesto')
                 ->icon('heroicon-o-banknotes')
                 ->collapsed()
-                ->columns(['default' => 1, 'md' => 2, 'xl' => 4, '2xl' => 6])
+                ->columns(['default' => 2, 'md' => 4])
                 ->columnSpanFull()
                 ->schema([
-                    Toggle::make('is_notowned')->label('Impegno di terzi')->inline(false)->live(),
                     Select::make('tipoprodotto_id')
                         ->label('Tipo prodotto')
                         ->relationship('tipoprodotto', 'name')
                         ->searchable()
                         ->preload()
                         ->live(),
+                    TextInput::make('rata')
+                        ->label('Rata')
+                        ->numeric()
+                        ->prefix('€'),
+                    TextInput::make('nrate')
+                        ->label('Durata (mesi)')
+                        ->numeric()
+                        ->integer()
+                        ->hidden($impegnoDiTerzi),
+                    DatePicker::make('data_inserimento_pratica')
+                        ->label('Data richiesta')
+                        ->native(false)
+                        ->displayFormat('d/m/Y')
+                        ->hidden($impegnoDiTerzi),
+                    DatePicker::make('scadenza')
+                        ->label('Scadenza')
+                        ->helperText('Fine del finanziamento, dell\'assegno di mantenimento o della ritenuta.')
+                        ->native(false)
+                        ->displayFormat('d/m/Y')
+                        ->visible($impegnoDiTerzi),
+                    TextInput::make('codice_pratica')->label('Numero pratica')->maxLength(255),
                     Select::make('clienti_id')
                         ->label('Banca')
                         ->options(fn (): array => Cliente::query()->where('is_active', true)->orderBy('name')->pluck('name', 'id')->all())
@@ -235,34 +255,13 @@ class PraticaResource extends Resource
                                 ->url(fn (Get $get): ?string => static::portaleBanca($get('clienti_id')), shouldOpenInNewTab: true)
                                 ->visible(fn (Get $get): bool => static::portaleBanca($get('clienti_id')) !== null),
                         ),
-                    TextInput::make('rata')
-                        ->label('Rata')
-                        ->numeric()
-                        ->prefix('€')
-                        ->visible(fn (Get $get): bool => $sulla_rata($get) || $impegnoDiTerzi($get)),
-                    DatePicker::make('scadenza')
-                        ->label('Scadenza')
-                        ->helperText('Fine del finanziamento, dell\'assegno di mantenimento o della ritenuta.')
-                        ->native(false)
-                        ->displayFormat('d/m/Y')
-                        ->visible($impegnoDiTerzi),
+                    TextInput::make('codice_pratica_banca')->label('Codice pratica banca')->helperText('Assegnato dalla banca sul suo portale')->maxLength(100)->hidden($impegnoDiTerzi),
                     TextInput::make('amount')
                         ->label('Importo richiesto')
                         ->numeric()
                         ->prefix('€')
                         ->visible(fn (Get $get): bool => ! $sulla_rata($get) && ! $impegnoDiTerzi($get)),
-                    TextInput::make('nrate')
-                        ->label('Durata (mesi)')
-                        ->numeric()
-                        ->integer()
-                        ->visible(fn (Get $get): bool => ! $sulla_rata($get) && ! $impegnoDiTerzi($get)),
-                    TextInput::make('codice_pratica')->label('Numero pratica')->maxLength(255),
-                    TextInput::make('codice_pratica_banca')->label('Codice pratica banca')->helperText('Assegnato dalla banca sul suo portale')->maxLength(100)->hidden($impegnoDiTerzi),
-                    DatePicker::make('data_inserimento_pratica')
-                        ->label('Data richiesta')
-                        ->native(false)
-                        ->displayFormat('d/m/Y')
-                        ->hidden($impegnoDiTerzi),
+                    Toggle::make('is_notowned')->label('Impegno di terzi')->inline(false)->live(),
                 ]),
             Tabs::make('Altri dati')
                 ->columnSpanFull()

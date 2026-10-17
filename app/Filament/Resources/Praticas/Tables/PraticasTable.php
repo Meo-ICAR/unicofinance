@@ -104,7 +104,7 @@ class PraticasTable
                     ->searchable(),
                 SelectFilter::make('fornitori_id')
                     ->label('Agente')
-                    ->relationship('fornitori', 'name')
+                    ->relationship('fornitori', 'name', fn (Builder $query) => $query->where('is_active', true))
                     ->searchable()
                     ->preload(),
                 SelectFilter::make('pratica_stato_id')

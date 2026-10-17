@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 use Unico\Core\Models\Cliente;
 use Unico\Core\Models\Company;
+use Unico\Core\Models\Employee;
 use Unico\Core\Models\Fornitore;
 use Unico\Core\Models\TipoProdotto;
 
@@ -236,5 +237,49 @@ class ImportMediafacileTest extends TestCase
         $this->assertNull(Pratica::query()->where('codice_pratica', 'QT90012')->firstOrFail()->mediation_fee_amount);
         $this->assertEquals(2.5, Provvigione::query()->findOrFail('pc-4')->percentuale, 'Cliente: la percentuale è quella scritta sulla pratica.');
         $this->assertEquals(20, Provvigione::query()->findOrFail('pc-3')->percentuale, 'Prestito: 400 su 2.000 di interessi (200 × 60 − 10.000 erogato).');
+    }
+
+    public function test_rata_and_installments_are_read_from_the_product_description(): void
+    {
+        $intestazioni = ['ID Pratica', 'Cognome Cliente', 'Nome Cliente', 'Codice Fiscale', 'Denominazione Agente', 'Partita IVA Agente', 'Denominazione Banca', 'Tipo Prodotto', 'Descrizione Prodotto', 'Data Inserimento Pratica', 'Stato Pratica', 'Data_invio_istruttoria', 'Data_delibera_banca', 'Data_erogazione', 'Data Annullamento', 'Montante', 'Importo_Erogazione', 'Pratica_terzi'];
+        $base = ['Cognome Cliente' => 'Rossi', 'Nome Cliente' => 'Mario', 'Codice Fiscale' => 'RSSMRA80A01H501U', 'Denominazione Agente' => 'AGENTE IMPORT', 'Partita IVA Agente' => '12345678903', 'Denominazione Banca' => 'BANCA DEL FUCINO', 'Tipo Prodotto' => 'Cessione', 'Data Inserimento Pratica' => '10/08/2026', 'Stato Pratica' => 'Inserita', 'Pratica_terzi' => 'NO'];
+        $completa = $base + ['ID Pratica' => 'QT90020', 'Descrizione Prodotto' => 'Cessione - BANCA DEL FUCINO - 270,50 x 120 (QT90020)'];
+        $senzaRata = $base + ['ID Pratica' => 'QT90021', 'Descrizione Prodotto' => 'Cessione - BANCA DEL FUCINO - x (QT90021)'];
+
+        Http::fake(['mediafacile.test/*' => Http::response($this->tsv($intestazioni, [$completa, $senzaRata]))]);
+        $this->artisan('pratiche:import-api', ['--no-close' => true])->assertSuccessful();
+
+        $pratica = Pratica::query()->where('codice_pratica', 'QT90020')->firstOrFail();
+        $this->assertEquals(270.5, $pratica->rata);
+        $this->assertSame(120, $pratica->nrate);
+        $this->assertEquals(32460, $pratica->erogato, 'Cessione e delega: l\'erogato è rata per durata.');
+        $this->assertNull(Pratica::query()->where('codice_pratica', 'QT90021')->firstOrFail()->rata);
+
+        // Una rata già indicata non si cancella se la denominazione non la riporta più.
+        Pratica::query()->where('codice_pratica', 'QT90021')->update(['rata' => 199, 'nrate' => 60]);
+        $this->artisan('pratiche:import-api', ['--no-close' => true])->assertSuccessful();
+        $this->assertEquals(199, Pratica::query()->where('codice_pratica', 'QT90021')->firstOrFail()->rata);
+    }
+
+    public function test_the_agent_who_is_also_an_instructor_becomes_the_practice_instructor(): void
+    {
+        $istruttore = Employee::query()->create(['name' => 'Mario Bianchi', 'employee_roles' => ['dipendente', 'istruttore']]);
+        $impiegato = Employee::query()->create(['name' => 'Luca Verdi', 'employee_roles' => ['dipendente']]);
+        $altro = Employee::query()->create(['name' => 'Anna Neri', 'employee_roles' => ['istruttore']]);
+        $intestazioni = ['ID Pratica', 'Cognome Cliente', 'Nome Cliente', 'Codice Fiscale', 'Denominazione Agente', 'Partita IVA Agente', 'Denominazione Banca', 'Tipo Prodotto', 'Descrizione Prodotto', 'Data Inserimento Pratica', 'Stato Pratica', 'Data_invio_istruttoria', 'Data_delibera_banca', 'Data_erogazione', 'Data Annullamento', 'Montante', 'Importo_Erogazione', 'Pratica_terzi'];
+        $riga = fn (string $id, string $agente) => ['ID Pratica' => $id, 'Cognome Cliente' => 'Rossi', 'Nome Cliente' => 'Mario', 'Codice Fiscale' => 'RSSMRA80A01H501U', 'Denominazione Agente' => $agente, 'Partita IVA Agente' => '---', 'Denominazione Banca' => 'BANCA IMPORT', 'Tipo Prodotto' => 'Cessione', 'Data Inserimento Pratica' => '10/08/2026', 'Stato Pratica' => 'Inserita', 'Pratica_terzi' => 'NO'];
+
+        Http::fake(['mediafacile.test/*' => Http::response($this->tsv($intestazioni, [$riga('QT90030', 'BIANCHI MARIO'), $riga('QT90031', 'LUCA VERDI'), $riga('QT90032', 'Agente Esterno')]))]);
+        $this->artisan('pratiche:import-api', ['--no-close' => true])->assertSuccessful();
+
+        $this->assertSame($istruttore->getKey(), Pratica::query()->where('codice_pratica', 'QT90030')->firstOrFail()->employee_id, 'Il nome coincide con un istruttore, anche con le parole in ordine diverso.');
+        $this->assertNull(Pratica::query()->where('codice_pratica', 'QT90031')->firstOrFail()->employee_id, 'Un dipendente che non è istruttore non conta.');
+        $this->assertNull(Pratica::query()->where('codice_pratica', 'QT90032')->firstOrFail()->employee_id);
+
+        // Un istruttore già assegnato non si cambia alla successiva importazione.
+        Pratica::query()->where('codice_pratica', 'QT90030')->update(['employee_id' => $altro->getKey()]);
+        $this->artisan('pratiche:import-api', ['--no-close' => true])->assertSuccessful();
+        $this->assertSame($altro->getKey(), Pratica::query()->where('codice_pratica', 'QT90030')->firstOrFail()->employee_id);
+        $this->assertNotNull($impiegato);
     }
 }

@@ -7,12 +7,14 @@ use App\Models\Pratica;
 use App\Services\Importazione\MediafacileApi;
 use App\Services\Istruttoria\RichiedentePratica;
 use App\Services\Provvigioni\PercentualeProvvigione;
+use App\Support\DenominazioneProdotto;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
 use RuntimeException;
 use Unico\Core\Models\Cliente;
 use Unico\Core\Models\Company;
+use Unico\Core\Models\Employee;
 use Unico\Core\Models\Fornitore;
 use Unico\Core\Models\PraticaClient;
 use Unico\Core\Models\PraticaStato;
@@ -38,11 +40,15 @@ class ImportPraticheFromApi extends Command
     /** @var list<string> */
     private array $prodottiSconosciuti = [];
 
+    /** @var Collection<string, Employee>|null istruttori per nome (le parole in ordine alfabetico) */
+    private ?Collection $istruttori = null;
+
     public function handle(MediafacileApi $api): int
     {
         $al = $this->option('end-date') ? Carbon::parse($this->option('end-date')) : now();
         $dal = $this->option('start-date') ? Carbon::parse($this->option('start-date')) : $al->copy()->subDays(60);
         $this->prodotti = collect();
+        $this->istruttori = null;
 
         $this->info("Importazione pratiche dal {$dal->format('Y-m-d')} al {$al->format('Y-m-d')}");
 
@@ -94,6 +100,12 @@ class ImportPraticheFromApi extends Command
                 }
 
                 $statoPrecedente = $pratica->pratica_stato_id;
+
+                // Un istruttore già assegnato alla pratica non si cambia.
+                if ($pratica->employee_id !== null) {
+                    unset($dati['employee_id']);
+                }
+
                 $pratica->update($dati);
                 $this->registraStato($pratica, $statoPrecedente);
                 $this->collegaRichiedente($pratica);
@@ -231,7 +243,13 @@ class ImportPraticheFromApi extends Command
     {
         $partitaIva = $riga['Partita IVA Agente'] ?? null;
 
-        return [
+        // Rata mensile e durata stanno nella denominazione del prodotto («Cessione - BANCA - 270 x 120 (QT00029)»): se non ci sono non si toccano.
+        $prodotto = DenominazioneProdotto::leggi($riga['Descrizione Prodotto'] ?? null);
+
+        return array_filter([
+            'rata' => $prodotto['rata'],
+            'nrate' => $prodotto['nrate'],
+        ], fn (mixed $valore): bool => $valore !== null) + [
             // La pratica si identifica con il suo codice (pratiches.codice_pratica); l'id intero lo assegna il database.
             'codice_pratica' => $riga['ID Pratica'] ?? null,
             'nome_cliente' => $riga['Nome Cliente'] ?? null,
@@ -265,12 +283,42 @@ class ImportPraticheFromApi extends Command
         $prodotto = $this->prodotto($nomeProdotto);
         $codiceStato = trim((string) ($riga['Stato Pratica'] ?? ''));
 
-        return [
+        // Se chi porta la pratica è anche un istruttore (stesso nome), la pratica è sua.
+        $istruttore = $this->istruttore((string) $dati['denominazione_agente']);
+
+        // Cessione e delega: l'erogato è rata per durata (il montante).
+        $erogato = in_array($prodotto?->name, ['Cessione', 'Delega'], true) && ($dati['rata'] ?? null) !== null && ($dati['nrate'] ?? null) !== null
+            ? ['erogato' => round((float) $dati['rata'] * (int) $dati['nrate'], 2)]
+            : [];
+
+        return ($istruttore === null ? [] : ['employee_id' => $istruttore->getKey()]) + $erogato + [
             'tipoprodotto_id' => $prodotto?->getKey(),
             'pratica_stato_id' => $codiceStato === '' ? null : $this->stato($codiceStato, $prodotto?->name ?? $nomeProdotto)->getKey(),
             'fornitori_id' => $this->produttore((string) $dati['denominazione_agente'], (string) $dati['partita_iva_agente'])?->getKey(),
             'clienti_id' => blank($dati['denominazione_banca']) ? null : Cliente::query()->firstOrCreate(['name' => $dati['denominazione_banca']])->getKey(),
         ];
+    }
+
+    /** L'istruttore con quel nome (le parole in qualsiasi ordine: «Rossi Mario» e «Mario Rossi» sono lo stesso). */
+    private function istruttore(string $nome): ?Employee
+    {
+        $chiave = $this->chiaveNome($nome);
+
+        if ($chiave === '') {
+            return null;
+        }
+
+        $this->istruttori ??= Employee::query()->whereJsonContains('employee_roles', 'istruttore')->get()->keyBy(fn (Employee $employee): string => $this->chiaveNome((string) $employee->name));
+
+        return $this->istruttori->get($chiave);
+    }
+
+    private function chiaveNome(string $nome): string
+    {
+        $parole = preg_split('/[\s,]+/u', mb_strtolower(trim($nome)), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        sort($parole);
+
+        return implode(' ', $parole);
     }
 
     private function prodotto(string $nome): ?TipoProdotto

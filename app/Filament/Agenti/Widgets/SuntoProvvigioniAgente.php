@@ -3,6 +3,7 @@
 namespace App\Filament\Agenti\Widgets;
 
 use App\Enums\MaturazioneProvvigione;
+use Filament\Schemas\Components\Component;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
@@ -12,6 +13,11 @@ class SuntoProvvigioniAgente extends StatsOverviewWidget
     protected static ?int $sort = 4;
 
     protected ?string $heading = 'Provvigioni';
+
+    public function getSectionContentComponent(): Component
+    {
+        return parent::getSectionContentComponent()->collapsible();
+    }
 
     /** @return array<int, Stat> */
     protected function getStats(): array

@@ -3,18 +3,18 @@
 namespace App\Filament\Agenti\Widgets;
 
 use App\Filament\Agenti\Resources\Pratiche\PraticaResource;
+use App\Filament\Widgets\CollapsibleTableWidget;
 use App\Models\Pratica;
 use App\Services\Agenti\AgentImpersonationService;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
-use Filament\Widgets\TableWidget;
 use Illuminate\Database\Eloquent\Builder;
 use Unico\Core\Enums\DocumentStatus;
 use Unico\Core\Models\Document;
 
 /** Documenti delle pratiche dell'agente ancora da consegnare o da correggere (mancanti, respinti, anomali, integrativi). */
-class DocumentiDaSeguireAgente extends TableWidget
+class DocumentiDaSeguireAgente extends CollapsibleTableWidget
 {
     protected static ?int $sort = 3;
 

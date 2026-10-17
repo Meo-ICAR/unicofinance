@@ -35,7 +35,7 @@ class ProvvigioneAttivaForm
                     ->placeholder('Tutti i prodotti'),
                 Select::make('clienti_id')
                     ->label('Banca')
-                    ->options(fn (): array => Cliente::query()->orderBy('name')->pluck('name', 'id')->all())
+                    ->options(fn (): array => Cliente::query()->where('is_active', true)->orderBy('name')->pluck('name', 'id')->all())
                     ->searchable()
                     ->placeholder('Tutte le banche')
                     ->visible($conBanca),

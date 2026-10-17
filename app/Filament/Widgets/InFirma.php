@@ -8,14 +8,13 @@ use App\Support\IstruttoreCorrente;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
-use Filament\Widgets\TableWidget;
 use Illuminate\Database\Eloquent\Builder;
 use Unico\Core\Models\Document;
 use Unico\Core\Models\SignatureRequest;
 use Unico\Core\Models\SignatureRequestSigner;
 
 /** Richieste di firma aperte (OTP) sui documenti delle pratiche: da quanti giorni aspettano il cliente. */
-class InFirma extends TableWidget
+class InFirma extends CollapsibleTableWidget
 {
     protected static ?int $sort = 6;
 

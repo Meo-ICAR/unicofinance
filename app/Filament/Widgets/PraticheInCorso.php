@@ -8,11 +8,10 @@ use App\Support\IstruttoreCorrente;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
-use Filament\Widgets\TableWidget;
 use Illuminate\Database\Eloquent\Builder;
 
 /** Pratiche in lavorazione: non respinte, sospese, erogate o chiuse. Di default solo quelle dell'istruttore. */
-class PraticheInCorso extends TableWidget
+class PraticheInCorso extends CollapsibleTableWidget
 {
     protected static ?int $sort = 2;
 

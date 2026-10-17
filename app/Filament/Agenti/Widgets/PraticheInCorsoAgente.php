@@ -3,17 +3,17 @@
 namespace App\Filament\Agenti\Widgets;
 
 use App\Filament\Agenti\Resources\Pratiche\PraticaResource;
+use App\Filament\Widgets\CollapsibleTableWidget;
 use App\Models\Pratica;
 use App\Services\Agenti\AgentImpersonationService;
 use App\Services\Istruttoria\CompletezzaDocumentale;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Filament\Widgets\TableWidget;
 use Illuminate\Database\Eloquent\Builder;
 use Unico\Core\Models\Document;
 
 /** Pratiche dell'agente ancora aperte. Si modificano finché nessun istruttore le ha prese in carico. */
-class PraticheInCorsoAgente extends TableWidget
+class PraticheInCorsoAgente extends CollapsibleTableWidget
 {
     protected static ?int $sort = 2;
 

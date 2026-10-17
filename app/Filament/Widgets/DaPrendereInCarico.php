@@ -14,13 +14,12 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
-use Filament\Widgets\TableWidget;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Unico\Core\Models\Document;
 
 /** Pratiche senza istruttore (`employee_id`), escluse respinte e sospese: l'istruttore le prende in carico. */
-class DaPrendereInCarico extends TableWidget
+class DaPrendereInCarico extends CollapsibleTableWidget
 {
     protected static ?int $sort = 1;
 
@@ -38,6 +37,7 @@ class DaPrendereInCarico extends TableWidget
                 ->whereDoesntHave('praticaStato', fn (Builder $stato) => $stato->where('is_suspended', true))
                 ->with(['tipoprodotto', 'fornitori']))
             ->defaultSort('data_inserimento_pratica', 'desc')
+            ->description(fn (): string => $this->getFilteredTableQuery()->count().' pratiche')
             ->paginated([10, 25])
             ->columns([
                 TextColumn::make('cognome_cliente')->label('Cliente')->searchable()->sortable()->description(fn (Pratica $record): ?string => $record->nome_cliente),

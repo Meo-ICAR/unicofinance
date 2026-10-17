@@ -105,17 +105,18 @@ class PraticaCambioStatoTest extends TestCase
             ->assertSee('Numero pratica')
             ->assertSee('Data richiesta')
             ->assertFormFieldIsVisible('rata')
-            ->assertFormFieldIsHidden('amount')
-            ->assertFormFieldIsHidden('nrate');
+            ->assertFormFieldIsVisible('nrate')
+            ->assertFormFieldIsHidden('amount');
 
+        // Rata e durata ci sono per ogni prodotto (si ricavano dalla denominazione importata); l'importo richiesto solo fuori da cessione e delega.
         $page->fillForm(['tipoprodotto_id' => $prestito->getKey()])
-            ->assertFormFieldIsHidden('rata')
+            ->assertFormFieldIsVisible('rata')
             ->assertFormFieldIsVisible('amount')
             ->assertFormFieldIsVisible('nrate');
 
         $html = $page->html();
         $sezione = (int) strpos($html, 'Prodotto richiesto');
-        $positions = array_map(fn (string $label) => strpos($html, $label, $sezione), ['Impegno di terzi', 'Tipo prodotto', 'Banca', 'Importo richiesto', 'Numero pratica', 'Data richiesta']);
+        $positions = array_map(fn (string $label) => strpos($html, $label, $sezione), ['Tipo prodotto', 'Rata', 'Durata (mesi)', 'Data richiesta', 'Numero pratica', 'Banca', 'Codice pratica banca', 'Importo richiesto', 'Impegno di terzi']);
         $this->assertNotContains(false, $positions);
         $sorted = $positions;
         sort($sorted);

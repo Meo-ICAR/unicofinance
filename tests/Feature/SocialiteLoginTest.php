@@ -30,24 +30,52 @@ class SocialiteLoginTest extends TestCase
         ];
     }
 
-    #[DataProvider('oauthProviders')]
-    public function test_login_page_offers_the_provider(string $provider): void
+    /**
+     * @return array<string, array{0: string, 1: string}>
+     */
+    public static function panelsAndProviders(): array
     {
-        $response = $this->get('/admin/login');
+        return [
+            'admin microsoft' => ['admin', 'microsoft'],
+            'admin google' => ['admin', 'google'],
+            'agenti microsoft' => ['agenti', 'microsoft'],
+            'agenti google' => ['agenti', 'google'],
+        ];
+    }
+
+    #[DataProvider('panelsAndProviders')]
+    public function test_login_page_offers_the_provider(string $panel, string $provider): void
+    {
+        $response = $this->get('/'.$panel.'/login');
 
         $response->assertOk();
         $response->assertSee(ucfirst($provider), false);
-        $response->assertSee('/admin/oauth/'.$provider, false);
+        $response->assertSee('/'.$panel.'/oauth/'.$provider, false);
     }
 
-    #[DataProvider('oauthProviders')]
-    public function test_oauth_redirect_goes_to_the_provider(string $provider): void
+    #[DataProvider('panelsAndProviders')]
+    public function test_oauth_redirect_goes_to_the_provider(string $panel, string $provider): void
     {
         Socialite::fake($provider);
 
-        $response = $this->get('/admin/oauth/'.$provider);
+        $response = $this->get('/'.$panel.'/oauth/'.$provider);
 
         $response->assertRedirect('https://socialite.fake/'.$provider.'/authorize');
+    }
+
+    #[DataProvider('oauthProviders')]
+    public function test_agenti_oauth_redirect_uses_the_panel_callback(string $provider): void
+    {
+        config([
+            "services.{$provider}.redirect" => 'https://example.test/admin/oauth/callback/'.$provider,
+        ]);
+
+        $response = $this->get('/agenti/oauth/'.$provider);
+
+        $response->assertRedirect();
+        $query = [];
+        parse_str((string) parse_url((string) $response->headers->get('Location'), PHP_URL_QUERY), $query);
+        $this->assertSame(url('/agenti/oauth/callback/'.$provider), $query['redirect_uri'] ?? null);
     }
 
     #[DataProvider('oauthProviders')]
@@ -136,6 +164,47 @@ class SocialiteLoginTest extends TestCase
         $response->assertRedirect(route('filament.admin.auth.login'));
         $this->assertGuest();
         $this->assertNull(SocialiteUser::query()->where('provider_id', 'google-unknown')->first());
+        $this->assertNull(User::query()->where('email', $email)->first());
+    }
+
+    #[DataProvider('oauthProviders')]
+    public function test_existing_user_signs_in_on_the_agenti_panel(string $provider): void
+    {
+        $user = User::factory()->create([
+            'role' => 'employee',
+            'email' => $provider.'.agenti.'.uniqid().'@example.test',
+        ]);
+        Socialite::fake($provider, OAuthUser::fake([
+            'id' => $provider.'-agenti-1',
+            'email' => $user->email,
+            'name' => $user->name,
+        ]));
+
+        $response = $this->get('/agenti/oauth/callback/'.$provider);
+
+        $response->assertRedirect('/agenti');
+        $this->assertAuthenticatedAs($user);
+        $linked = SocialiteUser::query()
+            ->where('provider', $provider)
+            ->where('provider_id', $provider.'-agenti-1')
+            ->first();
+        $this->assertNotNull($linked);
+        $this->assertTrue($linked->user->is($user));
+    }
+
+    public function test_unknown_email_is_not_registered_on_the_agenti_panel(): void
+    {
+        $email = 'sconosciuto.agenti.'.uniqid().'@example.test';
+        Socialite::fake('google', OAuthUser::fake([
+            'id' => 'google-unknown-agenti',
+            'email' => $email,
+        ]));
+
+        $response = $this->get('/agenti/oauth/callback/google');
+
+        $response->assertRedirect(route('filament.agenti.auth.login'));
+        $this->assertGuest();
+        $this->assertNull(SocialiteUser::query()->where('provider_id', 'google-unknown-agenti')->first());
         $this->assertNull(User::query()->where('email', $email)->first());
     }
 }

@@ -47,7 +47,7 @@ class FornitoriRelationManager extends RelationManager
                         $listini = (new ListinoProvvigionale)->getConnection()->getDatabaseName().'.listini_provvigionali';
 
                         // Un fornitore ha un solo listino per prodotto e ruolo.
-                        return $query->whereNotIn('fornitoris.id', fn ($sub) => $sub
+                        return $query->where('is_active', true)->whereNotIn('fornitoris.id', fn ($sub) => $sub
                             ->select('fl.fornitori_id')
                             ->from(ListinoProvvigionale::assegnazioniTable().' as fl')
                             ->join($listini.' as l', 'l.id', '=', 'fl.listino_provvigionale_id')

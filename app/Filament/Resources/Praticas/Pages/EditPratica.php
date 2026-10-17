@@ -103,6 +103,7 @@ class EditPratica extends EditRecord
                     Select::make('banca_id')
                         ->label('Nuova banca')
                         ->options(fn (): array => Cliente::query()
+                            ->where('is_active', true)
                             ->whereKeyNot($record->clienti_id)
                             ->orderBy('name')
                             ->pluck('name', 'id')

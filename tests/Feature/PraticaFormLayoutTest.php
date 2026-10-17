@@ -58,11 +58,11 @@ class PraticaFormLayoutTest extends TestCase
             ->assertSee('Numero pratica')
             ->assertSee('Data richiesta')
             ->assertFormFieldVisible('rata')
-            ->assertFormFieldHidden('amount')
-            ->assertFormFieldHidden('nrate');
+            ->assertFormFieldVisible('nrate')
+            ->assertFormFieldHidden('amount');
 
         $html = $page->html();
-        $order = ['Impegno di terzi', 'Tipo prodotto', 'Banca', 'Rata', 'Numero pratica', 'Data richiesta'];
+        $order = ['Tipo prodotto', 'Rata', 'Durata (mesi)', 'Data richiesta', 'Numero pratica', 'Banca', 'Codice pratica banca', 'Impegno di terzi'];
         $sezione = (int) strpos($html, 'Prodotto richiesto');
         $positions = array_map(fn (string $label): int|false => strpos($html, $label, $sezione), $order);
         $this->assertNotContains(false, $positions);
@@ -71,7 +71,7 @@ class PraticaFormLayoutTest extends TestCase
         $this->assertSame($sorted, $positions, 'I campi del prodotto non seguono l\'ordine richiesto.');
 
         $page->fillForm(['tipoprodotto_id' => $prestito->getKey()])
-            ->assertFormFieldHidden('rata')
+            ->assertFormFieldVisible('rata')
             ->assertFormFieldVisible('amount')
             ->assertFormFieldVisible('nrate');
     }
