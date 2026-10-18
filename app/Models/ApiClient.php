@@ -33,8 +33,8 @@ class ApiClient extends Model
         }
 
         // Un indirizzo che SendAgentEvent non userebbe farebbe sparire gli avvisi senza errori: meglio rifiutarlo subito.
-        if ($webhookUrl !== null && ! static::isUsableWebhook($webhookUrl)) {
-            throw new InvalidArgumentException("Webhook «{$webhookUrl}» non valido: serve un indirizzo https.");
+        if ($webhookUrl !== null && (strlen($webhookUrl) > 255 || ! static::isUsableWebhook($webhookUrl))) {
+            throw new InvalidArgumentException("Webhook «{$webhookUrl}» non valido: serve un indirizzo https di al massimo 255 caratteri.");
         }
 
         $token = Str::random(48);

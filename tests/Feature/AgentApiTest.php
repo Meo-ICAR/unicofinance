@@ -702,6 +702,7 @@ class AgentApiTest extends TestCase
     {
         $this->artisan('agent-api:client', ['name' => 'altra', '--webhook' => 'non-un-indirizzo'])->assertFailed();
         $this->artisan('agent-api:client', ['name' => 'altra', '--webhook' => 'ftp://agente.example.test/x'])->assertFailed();
+        $this->artisan('agent-api:client', ['name' => 'altra', '--webhook' => 'https://agente.example.test/'.str_repeat('a', 250)])->assertFailed();
         $this->assertFalse(ApiClient::query()->where('name', 'altra')->exists());
     }
 
