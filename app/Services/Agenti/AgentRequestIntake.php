@@ -170,6 +170,14 @@ class AgentRequestIntake
         $client = $this->clientOf($pratica);
 
         return DB::connection($pratica->getConnectionName())->transaction(function () use ($pratica, $client, $data): array {
+            // Lo stato si ricontrolla con la pratica bloccata: un cambio di stato arrivato intanto vince sull'aggiornamento.
+            $locked = Pratica::query()->whereKey($pratica->getKey())->lockForUpdate()->firstOrFail();
+
+            if ((filled($data['cliente'] ?? null) || filled($data['pratica'] ?? null)) && ! $this->isOpenForAgent($locked)) {
+                throw new AgentIntakeException('pratica_in_lavorazione', 'La pratica è già in lavorazione: si possono aggiornare solo i consensi.', 409);
+            }
+
+            $pratica = $locked;
             $cliente = (array) ($data['cliente'] ?? []);
             $changed = [
                 ...$this->details->fillClient($client, $cliente, overwrite: true),
@@ -200,17 +208,23 @@ class AgentRequestIntake
     public function addNote(Pratica $pratica, array $data): array
     {
         $originId = $data['id_origine'] ?? null;
-        $existing = $originId === null ? null : $this->details->findNote($pratica, $originId);
 
-        if ($existing !== null) {
-            return ['nota' => $existing, 'duplicate' => true];
-        }
+        $add = function () use ($pratica, $data, $originId): array {
+            $existing = $originId === null ? null : $this->details->findNote($pratica, $originId);
 
-        return ['nota' => $this->details->log($pratica, 'nota', (string) $data['testo'], [
-            'autore' => $data['autore'],
-            'inviata_il' => $data['inviata_il'] ?? null,
-            'id_origine' => $originId,
-        ]), 'duplicate' => false];
+            if ($existing !== null) {
+                return ['nota' => $existing, 'duplicate' => true];
+            }
+
+            return ['nota' => $this->details->log($pratica, 'nota', (string) $data['testo'], [
+                'autore' => $data['autore'],
+                'inviata_il' => $data['inviata_il'] ?? null,
+                'id_origine' => $originId,
+            ]), 'duplicate' => false];
+        };
+
+        // Due invii della stessa nota insieme (un ritentativo) non devono superare entrambi il controllo.
+        return $originId === null ? $add() : Cache::lock('agent-api-nota:'.$pratica->getKey().':'.hash('sha256', $originId), 10)->block(5, $add);
     }
 
     /**

@@ -36,6 +36,7 @@ class AgentRequestController extends Controller
             'agente.sigla' => ['nullable', 'string', 'max:20'],
             'agente.whatsapp' => ['nullable', 'string', 'max:40'],
             'documenti' => ['nullable', 'array', 'max:100'],
+            'documenti.*' => ['array'],
             'documenti.*.codice' => ['nullable', 'string', 'max:100'],
             'documenti.*.nome' => ['nullable', 'string', 'max:191'],
             'documenti.*.obbligo' => ['nullable', 'string', 'max:40'],

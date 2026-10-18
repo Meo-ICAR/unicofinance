@@ -8,6 +8,7 @@ use App\Models\Pratica;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
@@ -275,8 +276,8 @@ class AgentApiTest extends TestCase
         $this->assertSame('1980-01-01', $client->birth_date->toDateString());
         $this->assertSame('Roma', $client->birth_place);
         $this->assertSame(['Via Roma 1', 'Roma', 'RM'], [$residenza->street, $residenza->city, $residenza->province]);
-        $this->assertNotNull($client->privacy_policy_read_at);
-        $this->assertNotNull($client->general_consent_at);
+        $this->assertTrue($client->privacy_policy_read_at->equalTo(Carbon::parse('2026-10-01T10:00:00+02:00')));
+        $this->assertTrue($client->general_consent_at->equalTo(Carbon::parse('2026-10-01T11:00:00+02:00')));
         $this->assertSame(120, (int) $pratica->nrate);
 
         $richiesta = $this->activity('richiesta')->sole();
@@ -288,13 +289,21 @@ class AgentApiTest extends TestCase
     public function test_the_first_delivery_does_not_overwrite_the_registry(): void
     {
         Pratica::query()->create(['codice_pratica' => 'ZZ-OLD', 'codice_fiscale' => 'RSSMRA80A01H501U', 'partita_iva_agente' => '99900000001', 'upload_at' => now()]);
-        Client::query()->create(['is_person' => true, 'is_client' => true, 'name' => 'Rossi', 'first_name' => 'Mario', 'tax_code' => 'RSSMRA80A01H501U', 'birth_place' => 'Napoli', 'email' => 'vecchia@example.com']);
+        $existing = Client::query()->create([
+            'is_person' => true, 'is_client' => true, 'name' => 'Rossi', 'first_name' => 'Mario', 'tax_code' => 'RSSMRA80A01H501U',
+            'birth_place' => 'Napoli', 'birth_date' => '1970-05-05', 'email' => 'vecchia@example.com', 'phone' => '+390000000',
+            'privacy_policy_read_at' => '2025-01-01 09:00:00', 'general_consent_at' => '2025-01-01 10:00:00', 'privacy_consent' => true,
+        ]);
+        $existing->addresses()->create(['address_type_id' => 1, 'name' => 'Residenza', 'street' => 'Via Vecchia 2', 'city' => 'Napoli']);
 
         $this->signedJson('POST', '/api/agente/v1/richieste', $this->fullRequest())->assertCreated();
 
         $client = Client::query()->where('tax_code', 'RSSMRA80A01H501U')->sole();
-        $this->assertSame('Napoli', $client->birth_place);
-        $this->assertSame('vecchia@example.com', $client->email);
+        $residenza = $client->addresses()->where('address_type_id', 1)->sole();
+        $this->assertSame(['Napoli', '1970-05-05', 'vecchia@example.com', '+390000000'], [$client->birth_place, $client->birth_date->toDateString(), $client->email, $client->phone]);
+        $this->assertSame(['2025-01-01', '2025-01-01'], [$client->privacy_policy_read_at->toDateString(), $client->general_consent_at->toDateString()]);
+        // Della residenza si completa solo la provincia, che mancava.
+        $this->assertSame(['Via Vecchia 2', 'Napoli', 'RM'], [$residenza->street, $residenza->city, $residenza->province]);
     }
 
     public function test_the_agent_updates_data_while_the_practice_is_to_be_completed(): void
@@ -329,6 +338,11 @@ class AgentApiTest extends TestCase
         $client = Client::query()->where('tax_code', 'RSSMRA80A01H501U')->sole();
         $this->assertNull($client->general_consent_at);
         $this->assertSame('mario@example.com', $client->email);
+
+        // Consenso attivo senza data: la revoca lo toglie comunque.
+        $client->forceFill(['privacy_consent' => true])->save();
+        $this->signedJson('PATCH', '/api/agente/v1/richieste/FIN-2026-0001', ['consenso' => ['privacy_verificata_il' => null]])->assertOk();
+        $this->assertFalse((bool) $client->refresh()->privacy_consent);
     }
 
     public function test_notes_reach_the_practice_once_per_origin_id(): void
@@ -367,6 +381,7 @@ class AgentApiTest extends TestCase
     {
         $this->signedJson('POST', '/api/agente/v1/richieste', $this->request('FIN-4', ['cliente' => ['codice_fiscale' => '']]))->assertStatus(422)->assertJsonValidationErrors(['cliente.codice_fiscale']);
         $this->signedJson('POST', '/api/agente/v1/richieste', ['riferimento' => 'con spazi!'] + $this->request())->assertStatus(422)->assertJsonValidationErrors(['riferimento']);
+        $this->signedJson('POST', '/api/agente/v1/richieste', $this->request('FIN-4', ['documenti' => ['non un documento']]))->assertStatus(422)->assertJsonValidationErrors(['documenti.0']);
         $this->assertSame(0, $this->viaApi()->count());
     }
 
