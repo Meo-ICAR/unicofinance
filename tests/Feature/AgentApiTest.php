@@ -2,16 +2,21 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\SendAgentEvent;
 use App\Models\ApiClient;
 use App\Models\Client;
 use App\Models\Pratica;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request as HttpRequest;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
+use RuntimeException;
 use Tests\TestCase;
 use Unico\Core\Enums\DocumentStatus;
 use Unico\Core\Models\Document;
@@ -89,10 +94,13 @@ class AgentApiTest extends TestCase
         ], $override);
     }
 
+    private int $signed = 0;
+
     /** @return array<string, string> */
     private function signature(string $method, string $path, string $contentHash, ?int $timestamp = null, ?string $secret = null): array
     {
-        $timestamp ??= time();
+        // Ogni richiesta ha un timestamp diverso: la stessa firma ripresentata è un replay e verrebbe rifiutata.
+        $timestamp ??= time() - ($this->signed++ % 200);
         $signature = hash_hmac('sha256', implode('.', [$timestamp, $method, $path, $contentHash]), $secret ?? $this->issued['secret']);
 
         return ['X-Timestamp' => (string) $timestamp, 'X-Signature' => $signature];
@@ -530,6 +538,51 @@ class AgentApiTest extends TestCase
         $old = ApiClient::query()->where('name', 'nuova-app')->value('token_hash');
         $this->artisan('agent-api:client', ['name' => 'nuova-app', '--rotate' => true])->assertSuccessful();
         $this->assertNotSame($old, ApiClient::query()->where('name', 'nuova-app')->value('token_hash'));
+        $this->assertSame('NUOVAAPP-', ApiClient::query()->where('name', 'nuova-app')->value('pratica_prefix'));
+
+        $this->artisan('agent-api:client', ['name' => 'altra', '--prefisso' => 'WA-X-'])->assertFailed();
+    }
+
+    public function test_the_same_signed_change_is_accepted_only_once(): void
+    {
+        $body = json_encode($this->request());
+        $headers = ['Authorization' => 'Bearer '.$this->issued['token']] + $this->signature('POST', '/api/agente/v1/richieste', hash('sha256', $body), time());
+
+        $this->call('POST', '/api/agente/v1/richieste', [], [], [], $this->server($headers), $body)->assertCreated();
+        $this->call('POST', '/api/agente/v1/richieste', [], [], [], $this->server($headers), $body)->assertUnauthorized();
+
+        $read = ['Authorization' => 'Bearer '.$this->issued['token']] + $this->signature('GET', '/api/agente/v1/richieste/FIN-2026-0001', hash('sha256', ''), time());
+        $this->call('GET', '/api/agente/v1/richieste/FIN-2026-0001', [], [], [], $this->server($read))->assertOk();
+        $this->call('GET', '/api/agente/v1/richieste/FIN-2026-0001', [], [], [], $this->server($read))->assertOk();
+    }
+
+    public function test_an_app_reaches_only_the_practices_it_created(): void
+    {
+        $this->signedJson('POST', '/api/agente/v1/richieste', $this->request())->assertCreated();
+        $other = ApiClient::issue('altraapp');
+        $call = function (string $method, string $path, ?array $json = null) use ($other): TestResponse {
+            $body = $json === null ? '' : json_encode($json);
+            $headers = ['Authorization' => 'Bearer '.$other['token']] + $this->signature($method, $path, hash('sha256', $body), null, $other['secret']);
+
+            return $this->call($method, $path, [], [], [], $this->server($headers), $body);
+        };
+
+        $call('GET', '/api/agente/v1/richieste/FIN-2026-0001')->assertNotFound();
+        $call('POST', '/api/agente/v1/richieste/FIN-2026-0001/note', ['testo' => 'x', 'autore' => 'agente'])->assertNotFound();
+        $call('GET', '/api/agente/v1/richieste/FIN-2026-0001/moduli')->assertNotFound();
+
+        $call('POST', '/api/agente/v1/richieste', $this->request('FIN-2026-0001'))->assertCreated()->assertJsonPath('codice_pratica', 'ALTRAAPP-FIN-2026-0001')->assertJsonPath('riferimento', 'FIN-2026-0001');
+        $this->signedJson('GET', '/api/agente/v1/richieste/FIN-2026-0001')->assertOk()->assertJsonPath('codice_pratica', 'WA-FIN-2026-0001');
+    }
+
+    public function test_a_reference_reused_for_another_client_or_agent_is_a_conflict(): void
+    {
+        $this->signedJson('POST', '/api/agente/v1/richieste', $this->request())->assertCreated();
+
+        $this->signedJson('POST', '/api/agente/v1/richieste', $this->request('FIN-2026-0001', ['cliente' => ['codice_fiscale' => 'BNCLGU80A01H501X']]))
+            ->assertStatus(409)->assertJsonPath('codice', 'riferimento_gia_usato');
+        $this->signedJson('POST', '/api/agente/v1/richieste', $this->request('FIN-2026-0001', ['cliente' => ['codice_fiscale' => 'rssmra80a01h501u']]))
+            ->assertOk()->assertJsonPath('creata', false);
     }
 
     public function test_the_secret_is_encrypted_and_the_token_is_not_stored_in_clear(): void
@@ -539,5 +592,87 @@ class AgentApiTest extends TestCase
         $this->assertStringNotContainsString($this->issued['secret'], $row->secret);
         $this->assertNotSame($this->issued['token'], $row->token_hash);
         $this->assertSame(hash('sha256', $this->issued['token']), $row->token_hash);
+    }
+
+    private function withWebhook(): void
+    {
+        $this->issued['client']->update(['webhook_url' => 'https://agente.example.test/api/unicofinance/eventi']);
+    }
+
+    public function test_the_documents_of_the_request_do_not_notify_the_app(): void
+    {
+        Queue::fake();
+        $this->withWebhook();
+
+        $this->signedJson('POST', '/api/agente/v1/richieste', $this->request())->assertCreated();
+
+        Queue::assertNotPushed(SendAgentEvent::class);
+    }
+
+    public function test_a_rejected_client_document_notifies_the_app_of_the_practice(): void
+    {
+        $this->withWebhook();
+        $created = $this->signedJson('POST', '/api/agente/v1/richieste', $this->request())->assertCreated();
+        $id = collect($created->json('documenti'))->firstWhere('tipo', 'carta-identita-zz')['id'];
+        Queue::fake();
+
+        Document::query()->whereKey($id)->first()->update(['status' => DocumentStatus::REJECTED->value, 'rejection_note' => 'Illeggibile']);
+
+        Queue::assertPushed(SendAgentEvent::class, function (SendAgentEvent $job) use ($id): bool {
+            return $job->apiClientId === $this->issued['client']->getKey()
+                && $job->payload['evento'] === 'documento.da_rifare'
+                && $job->payload['riferimento'] === 'FIN-2026-0001'
+                && $job->payload['documento']['id'] === $id
+                && $job->payload['documento']['tipo'] === 'carta-identita-zz'
+                && $job->payload['documento']['motivo'] === 'Illeggibile';
+        });
+    }
+
+    public function test_a_document_requested_later_notifies_the_app(): void
+    {
+        $this->withWebhook();
+        $this->signedJson('POST', '/api/agente/v1/richieste', $this->request())->assertCreated();
+        $pratica = $this->viaApi()->sole();
+        Queue::fake();
+
+        Document::query()->create(['documentable_type' => 'pratica', 'documentable_id' => $pratica->getKey(), 'document_type_id' => $this->income->getKey(), 'name' => 'Busta paga di marzo', 'status' => DocumentStatus::SUPPLEMENTARY->value]);
+
+        Queue::assertPushed(SendAgentEvent::class, fn (SendAgentEvent $job): bool => $job->payload['evento'] === 'documento.richiesto'
+            && $job->payload['documento']['tipo'] === 'busta-paga-zz'
+            && ! array_key_exists('motivo', $job->payload['documento']));
+    }
+
+    public function test_without_a_webhook_nothing_is_sent(): void
+    {
+        $created = $this->signedJson('POST', '/api/agente/v1/richieste', $this->request())->assertCreated();
+        Queue::fake();
+
+        Document::query()->whereKey($created->json('documenti.0.id'))->first()->update(['status' => DocumentStatus::REJECTED->value]);
+
+        Queue::assertNotPushed(SendAgentEvent::class);
+    }
+
+    public function test_the_notice_is_signed_and_retried_only_on_temporary_errors(): void
+    {
+        $this->withWebhook();
+        $job = new SendAgentEvent($this->issued['client']->getKey(), ['event_id' => 'x:1', 'evento' => 'documento.da_rifare', 'riferimento' => 'FIN-1']);
+        Http::fake(['agente.example.test/*' => Http::sequence()->push([], 200)->push([], 503)->push([], 422)]);
+
+        $job->handle();
+
+        Http::assertSent(function (HttpRequest $request): bool {
+            $expected = hash_hmac('sha256', implode('.', [$request->header('X-Timestamp')[0], 'POST', '/api/unicofinance/eventi', hash('sha256', $request->body())]), $this->issued['secret']);
+
+            return $request->header('X-Signature')[0] === $expected && $request['riferimento'] === 'FIN-1';
+        });
+
+        try {
+            $job->handle();
+            $this->fail('Un 503 deve far ritentare.');
+        } catch (RuntimeException) {
+        }
+
+        $job->handle();
+        Http::assertSentCount(3);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Services\Agenti;
 
+use App\Models\ApiClient;
 use App\Models\Client;
 use App\Models\Pratica;
 use App\Services\CambioStatoPratica;
@@ -39,9 +40,25 @@ class AgentRequestIntake
         private AgentRequestDetails $details,
     ) {}
 
+    /**
+     * Prefisso delle pratiche dell'app che chiama: ogni app crea e raggiunge solo le proprie. Fuori da una richiesta API vale
+     * quello di unicoagent.
+     */
+    public static function prefix(): string
+    {
+        $client = request()?->attributes->get('api_client');
+
+        return $client instanceof ApiClient && filled($client->pratica_prefix) ? $client->pratica_prefix : (string) config('agent_api.pratica_prefix');
+    }
+
     public static function codiceFor(string $riferimento): string
     {
-        return config('agent_api.pratica_prefix').$riferimento;
+        return self::prefix().$riferimento;
+    }
+
+    public static function riferimentoOf(Pratica $pratica): string
+    {
+        return Str::after((string) $pratica->codice_pratica, self::prefix());
     }
 
     public function find(string $riferimento): ?Pratica
@@ -73,6 +90,12 @@ class AgentRequestIntake
         $existing = $this->find($data['riferimento']);
 
         if ($existing !== null) {
+            // Lo stesso riferimento vale solo per la stessa richiesta: cliente e agente devono coincidere.
+            if (Str::upper(trim((string) $existing->codice_fiscale)) !== Str::upper(trim((string) $data['cliente']['codice_fiscale']))
+                || trim((string) $existing->partita_iva_agente) !== trim((string) $data['agente']['partita_iva'])) {
+                throw new AgentIntakeException('riferimento_gia_usato', 'Il riferimento è già stato usato per un\'altra richiesta.', 409);
+            }
+
             return ['pratica' => $existing, 'client' => $this->clientOf($existing), 'created' => false];
         }
 
@@ -95,7 +118,7 @@ class AgentRequestIntake
 
         // Cliente, pratica, storico e documenti richiesti si creano insieme: se un passo fallisce non resta una pratica a metà
         // che un nuovo invio scambierebbe per completa.
-        return DB::connection((new Pratica)->getConnectionName())->transaction(fn (): array => $this->create($data, $agent, $tipo, $taxCode));
+        return AgentNotifications::quietly(fn (): array => DB::connection((new Pratica)->getConnectionName())->transaction(fn (): array => $this->create($data, $agent, $tipo, $taxCode)));
     }
 
     /**

@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Accesso da unicobpm (prima su unicoloan): unicobpm apre /bpm-landing/{soggetto} con un token monouso, che si verifica con
+ * Accesso da unicobpm (prima su unicoloan): unicobpm apre /bpm-landing/{soggetto} (in POST; il GET resta per compatibilità) con un token monouso, che si verifica con
  * `POST {BPM}/api/verify-token`. Se è valido e l'utente ha accesso al pannello dell'istruttoria, entra senza password.
  * Il token non finisce nei log; la verifica ha tempi massimi e richiede HTTPS; la sessione si rigenera dopo il login.
  */
@@ -55,7 +55,9 @@ class BpmBridgeController extends Controller
         $request->session()->regenerate();
         $this->logAttempt($subjectId, success: true, userId: $user->getKey());
 
-        return redirect('/admin')->with('message', 'Accesso effettuato tramite BPM');
+        // Nessun Referer con l'indirizzo di arrivo e nessuna copia in cache della risposta.
+        return redirect('/admin')->with('message', 'Accesso effettuato tramite BPM')
+            ->withHeaders(['Referrer-Policy' => 'no-referrer', 'Cache-Control' => 'no-store']);
     }
 
     private function logAttempt(string $subjectId, bool $success, mixed $userId = null): void
