@@ -42,6 +42,23 @@ class ImportAggiornamentiBancaTest extends TestCase
         $this->assertSame('TEST APPROVATA', $pratica->praticaStatusHistory()->latest('id')->value('status_to'));
     }
 
+    public function test_a_row_without_the_name_does_not_change_the_practice(): void
+    {
+        Filament::setCurrentPanel('admin');
+        $this->actingAs(User::factory()->create(['role' => 'super_admin']));
+        $vecchio = PraticaStato::query()->create(['codice' => 'TEST INVIATA', 'name' => 'TEST INVIATA']);
+        PraticaStato::query()->create(['codice' => 'TEST APPROVATA', 'name' => 'TEST APPROVATA']);
+        $pratica = Pratica::query()->create(['codice_pratica' => 'P-1', 'codice_pratica_banca' => 'B-100', 'cognome_cliente' => 'Rossi', 'upload_at' => now(), 'pratica_stato_id' => $vecchio->getKey()]);
+
+        $csv = "Codice pratica banca;Nominativo;Tipo prodotto;Stato\nB-100;;Cessione;TEST APPROVATA\n";
+
+        Livewire::test(ListPraticas::class)
+            ->callAction('importaAggiornamenti', ['file' => UploadedFile::fake()->createWithContent('aggiornamenti.csv', $csv)])
+            ->assertNotified();
+
+        $this->assertSame($vecchio->getKey(), $pratica->fresh()->pratica_stato_id);
+    }
+
     public function test_the_waiting_for_the_bank_button_sets_the_filters(): void
     {
         Filament::setCurrentPanel('admin');
