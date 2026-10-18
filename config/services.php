@@ -81,4 +81,9 @@ return [
         'redirect' => env('GOOGLE_REDIRECT_URI'),
     ],
 
+    // UnicoBPM: indirizzo per la verifica dei token SSO (/bpm-landing) e per le attività avviabili su un record.
+    'bpm' => [
+        'url' => env('BPM_API_URL', 'https://unicobpm.hassisto.com'),
+    ],
+
 ];

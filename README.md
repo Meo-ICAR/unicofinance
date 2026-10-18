@@ -133,3 +133,15 @@ php artisan migrate     # solo le tabelle di unicofinance
 | Mediafacile | preventivi | `App\Services\Preventivazione` |
 
 Ogni chiamata a un servizio esterno viene registrata in `api_calls` (`ApiCallLogger`), con il costo da `config/services.php`.
+
+### API per le altre app della suite
+
+unicofinance è l'unica app di istruttoria: le API che unicobpm e unicoagent chiamavano su unicoloan ora sono qui (`routes/api.php`).
+
+- **unicobpm**, con la chiave condivisa `X-Api-Key` (`BPM_BRIDGE_API_KEY`) e `X-Correlation-Id`:
+  - `GET /api/pratiche/{id}`: stato, documenti obbligatori presenti e mancanti, `agente_blacklistato` per la banca;
+  - `GET /api/models/{model}/fields` e `PATCH /api/models/{model}/{id}` (`{field, value}`): campi dei modelli di `config/bpm.php` e scrittura di fine processo; lo stato della pratica non si scrive da qui;
+  - `GET /api/users/lookup?email=`: se l'utente ha accesso al pannello admin;
+  - `/api/commands` del bridge di unico-core (`UNICO_CORE_BRIDGE=true`), con i comandi di `config/schedulable_commands.php`;
+  - `GET /bpm-landing/{id}?token=&user_email=`: accesso senza password, con il token verificato su `{BPM_API_URL}/api/verify-token`.
+- **unicoagent** (`/api/agente/v1`, token Bearer e firma HMAC, vedi `config/agent_api.php`): richieste di finanziamento con cliente, pratica nello stato da perfezionare e documenti della check list, upload dei file, moduli da compilare e firma OTP. Le credenziali si creano con `php artisan agent-api:client "unicoagent"`.
