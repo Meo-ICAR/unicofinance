@@ -6,6 +6,7 @@ use App\Models\ApiClient;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -48,6 +49,12 @@ class AuthenticateApiClient
             ? (string) hash_file('sha256', $file->getRealPath())
             : hash('sha256', $request->getContent());
 
-        return $signature !== '' && hash_equals($client->signatureFor($timestamp, $request->method(), $request->getPathInfo(), $contentHash), $signature);
+        if ($signature === '' || ! hash_equals($client->signatureFor($timestamp, $request->method(), $request->getPathInfo(), $contentHash), $signature)) {
+            return false;
+        }
+
+        // Una richiesta che cambia qualcosa vale una volta sola: la stessa firma ripresentata entro la finestra è un replay.
+        return $request->isMethodSafe()
+            || Cache::add('agent-api-signature:'.$client->getKey().':'.$signature, true, 2 * (int) config('agent_api.timestamp_tolerance'));
     }
 }

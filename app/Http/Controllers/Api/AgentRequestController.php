@@ -8,7 +8,6 @@ use App\Services\Agenti\AgentIntakeException;
 use App\Services\Agenti\AgentRequestIntake;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Unico\Core\Enums\DocumentStatus;
 use Unico\Core\Models\Document;
 use Unico\Core\Models\DocumentRequirement;
@@ -195,7 +194,7 @@ class AgentRequestController extends Controller
         $documents = $this->intake->documents($pratica);
 
         return [
-            'riferimento' => Str::after((string) $pratica->codice_pratica, (string) config('agent_api.pratica_prefix')),
+            'riferimento' => AgentRequestIntake::riferimentoOf($pratica),
             'codice_pratica' => $pratica->codice_pratica,
             'pratica_id' => $pratica->getKey(),
             'cliente_id' => $clientId,

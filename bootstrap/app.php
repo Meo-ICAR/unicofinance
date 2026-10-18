@@ -15,6 +15,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias(['api.client' => AuthenticateApiClient::class]);
+        // Il POST di accesso arriva da unicobpm, non da una pagina di qui: lo protegge il token monouso verificato su unicobpm.
+        $middleware->validateCsrfTokens(except: ['bpm-landing/*']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

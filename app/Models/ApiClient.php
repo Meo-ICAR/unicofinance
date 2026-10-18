@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use InvalidArgumentException;
 
 /** App esterna autorizzata a usare le API in ingresso. Token e segreto in chiaro esistono solo al momento della creazione. */
 class ApiClient extends Model
@@ -18,14 +19,27 @@ class ApiClient extends Model
     }
 
     /** @return array{client: self, token: string, secret: string} */
-    public static function issue(string $name): array
+    public static function issue(string $name, ?string $praticaPrefix = null): array
     {
+        $praticaPrefix ??= static::defaultPrefix($name);
+
+        // Lettere e cifre e un solo trattino finale: così nessun prefisso è l'inizio di un altro.
+        if (preg_match('/^[A-Z0-9]+-$/', $praticaPrefix) !== 1) {
+            throw new InvalidArgumentException("Prefisso «{$praticaPrefix}» non valido: lettere maiuscole e cifre seguite da un trattino.");
+        }
+
         $token = Str::random(48);
         $secret = Str::random(48);
 
-        $client = static::create(['name' => $name, 'token_hash' => hash('sha256', $token), 'secret' => $secret]);
+        $client = static::create(['name' => $name, 'pratica_prefix' => $praticaPrefix, 'token_hash' => hash('sha256', $token), 'secret' => $secret]);
 
         return ['client' => $client, 'token' => $token, 'secret' => $secret];
+    }
+
+    /** unicoagent tiene il prefisso storico (`agent_api.pratica_prefix`), le altre app il proprio nome in maiuscolo. */
+    public static function defaultPrefix(string $name): string
+    {
+        return $name === 'unicoagent' ? (string) config('agent_api.pratica_prefix') : Str::upper(Str::slug($name, '')).'-';
     }
 
     public static function findByToken(string $token): ?self

@@ -80,10 +80,13 @@ class AgentDocumentApiTest extends TestCase
         ];
     }
 
+    private int $signed = 0;
+
     /** @return array<string, string> */
     private function signature(string $method, string $path, string $contentHash): array
     {
-        $timestamp = time();
+        // Ogni richiesta ha un timestamp diverso: la stessa firma ripresentata è un replay e verrebbe rifiutata.
+        $timestamp = time() - ($this->signed++ % 200);
 
         return ['X-Timestamp' => (string) $timestamp, 'X-Signature' => hash_hmac('sha256', implode('.', [$timestamp, $method, $path, $contentHash]), $this->issued['secret'])];
     }
