@@ -28,12 +28,25 @@ class ApiClient extends Model
             throw new InvalidArgumentException("Prefisso «{$praticaPrefix}» non valido: lettere maiuscole e cifre seguite da un trattino.");
         }
 
+        // Un indirizzo che SendAgentEvent non userebbe farebbe sparire gli avvisi senza errori: meglio rifiutarlo subito.
+        if ($webhookUrl !== null && ! static::isUsableWebhook($webhookUrl)) {
+            throw new InvalidArgumentException("Webhook «{$webhookUrl}» non valido: serve un indirizzo https.");
+        }
+
         $token = Str::random(48);
         $secret = Str::random(48);
 
         $client = static::create(['name' => $name, 'pratica_prefix' => $praticaPrefix, 'webhook_url' => $webhookUrl, 'token_hash' => hash('sha256', $token), 'secret' => $secret]);
 
         return ['client' => $client, 'token' => $token, 'secret' => $secret];
+    }
+
+    /** Solo https; http solo in sviluppo e nei test. */
+    public static function isUsableWebhook(string $url): bool
+    {
+        $scheme = filter_var($url, FILTER_VALIDATE_URL) === false ? null : parse_url($url, PHP_URL_SCHEME);
+
+        return $scheme === 'https' || ($scheme === 'http' && app()->environment(['local', 'testing']));
     }
 
     /** unicoagent tiene il prefisso storico (`agent_api.pratica_prefix`), le altre app il proprio nome in maiuscolo. */

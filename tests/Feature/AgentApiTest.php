@@ -6,6 +6,7 @@ use App\Jobs\SendAgentEvent;
 use App\Models\ApiClient;
 use App\Models\Client;
 use App\Models\Pratica;
+use Illuminate\Contracts\Queue\ShouldBeEncrypted;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as HttpRequest;
@@ -609,7 +610,8 @@ class AgentApiTest extends TestCase
                 && $job->payload['riferimento'] === 'FIN-2026-0001'
                 && $job->payload['documento']['id'] === $id
                 && $job->payload['documento']['tipo'] === 'carta-identita-zz'
-                && $job->payload['documento']['motivo'] === 'Illeggibile';
+                && $job->payload['documento']['motivo'] === 'Illeggibile'
+                && str_starts_with($job->payload['event_id'], 'documento.da_rifare:'.$this->viaApi()->value('id').':');
         });
     }
 
@@ -659,5 +661,31 @@ class AgentApiTest extends TestCase
 
         $job->handle();
         Http::assertSentCount(3);
+    }
+
+    public function test_a_webhook_that_would_never_be_used_is_refused(): void
+    {
+        $this->artisan('agent-api:client', ['name' => 'altra', '--webhook' => 'non-un-indirizzo'])->assertFailed();
+        $this->artisan('agent-api:client', ['name' => 'altra', '--webhook' => 'ftp://agente.example.test/x'])->assertFailed();
+        $this->assertFalse(ApiClient::query()->where('name', 'altra')->exists());
+    }
+
+    public function test_a_notice_queued_before_rotating_the_credentials_goes_out_with_the_new_ones(): void
+    {
+        $this->withWebhook();
+        $job = new SendAgentEvent($this->issued['client']->getKey(), ['event_id' => 'x:1', 'evento' => 'documento.da_rifare'], 'unicoagent');
+        $this->artisan('agent-api:client', ['name' => 'unicoagent', '--rotate' => true])->assertSuccessful();
+        $rotated = ApiClient::query()->where('name', 'unicoagent')->sole();
+        Http::fake(['agente.example.test/*' => Http::response([], 200)]);
+
+        $job->handle();
+
+        $this->assertNotSame($this->issued['client']->getKey(), $rotated->getKey());
+        Http::assertSent(fn (HttpRequest $request): bool => $request->header('X-Signature')[0] === $rotated->signatureFor($request->header('X-Timestamp')[0], 'POST', '/api/unicofinance/eventi', hash('sha256', $request->body())));
+    }
+
+    public function test_the_notice_is_queued_encrypted(): void
+    {
+        $this->assertInstanceOf(ShouldBeEncrypted::class, new SendAgentEvent(1, []));
     }
 }
