@@ -148,6 +148,7 @@ class EditPratica extends EditRecord
                 ->modalHeading('Invia conto estintivo in banca')
                 ->modalDescription('Il conto estintivo verificato parte per email, con il documento in allegato.')
                 ->modalSubmitActionLabel('Invia')
+                // Il conto estintivo va alla banca associata all'impegno di terzi (`clienti` della pratica), non a quella che lo estingue.
                 ->fillForm(fn (Pratica $record): array => ['email' => $record->clienti?->email])
                 ->schema([
                     TextInput::make('email')->label('Email della banca')->email()->required()->maxLength(255),

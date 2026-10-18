@@ -9,7 +9,7 @@ use InvalidArgumentException;
 
 class CreateAgentApiClient extends Command
 {
-    protected $signature = 'agent-api:client {name : Nome dell\'app (es. unicoagent)} {--rotate : Rigenera token e segreto di un\'app esistente} {--prefisso= : Prefisso del codice delle sue pratiche (default WA- per unicoagent, altrimenti il nome)}';
+    protected $signature = 'agent-api:client {name : Nome dell\'app (es. unicoagent)} {--rotate : Rigenera token e segreto di un\'app esistente} {--webhook= : Indirizzo a cui avvisare documenti respinti o richiesti (https)} {--prefisso= : Prefisso del codice delle sue pratiche (default WA- per unicoagent, altrimenti il nome)}';
 
     protected $description = 'Crea (o rigenera) le credenziali di un\'app che usa le API in ingresso. Token e segreto si mostrano una sola volta.';
 
@@ -30,7 +30,7 @@ class CreateAgentApiClient extends Command
                 $existing?->delete();
 
                 // Rigenerando si tiene il prefisso: le pratiche già create restano raggiungibili.
-                return ApiClient::issue($name, $this->option('prefisso') ?: $existing?->pratica_prefix);
+                return ApiClient::issue($name, $this->option('prefisso') ?: $existing?->pratica_prefix, $this->option('webhook') ?: $existing?->webhook_url);
             });
         } catch (InvalidArgumentException $e) {
             $this->error($e->getMessage());

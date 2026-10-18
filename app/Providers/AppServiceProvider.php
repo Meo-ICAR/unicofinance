@@ -6,6 +6,7 @@ use App\Documents\Api\LoggedCompanyDataFetcher;
 use App\Models\BlacklistClienteFornitore;
 use App\Models\ListinoProvvigionale;
 use App\Pdf\KycModuleDataProvider;
+use App\Services\Agenti\AgentNotifications;
 use App\Services\AiCallRegistry;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
@@ -74,6 +75,10 @@ class AppServiceProvider extends ServiceProvider
         if (config('database.unico_core_migrate')) {
             $this->loadMigrationsFrom(UnicoCoreServiceProvider::migrationsPath());
         }
+
+        // Documenti respinti o richiesti sulle pratiche create da un'altra app: si avvisa l'app (unicoagent).
+        Document::created(fn (Document $document) => app(AgentNotifications::class)->created($document));
+        Document::updated(fn (Document $document) => app(AgentNotifications::class)->updated($document));
 
         Event::listen(SocialiteWasCalled::class, [MicrosoftExtendSocialite::class, 'handle']);
         Event::listen(SocialiteWasCalled::class, [GoogleExtendSocialite::class, 'handle']);

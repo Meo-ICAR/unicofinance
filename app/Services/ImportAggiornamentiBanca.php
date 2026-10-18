@@ -45,7 +45,9 @@ class ImportAggiornamentiBanca
             $pratica = $pratiche->first();
 
             if (! $this->nominativoCorrisponde($pratica, $riga['nominativo'])) {
-                $esito['anomalie'][] = "Riga {$numero}: il nominativo «{$riga['nominativo']}» non corrisponde alla pratica {$codice}";
+                $esito['anomalie'][] = $riga['nominativo'] === ''
+                    ? "Riga {$numero}: nominativo mancante, la pratica {$codice} non si può verificare"
+                    : "Riga {$numero}: il nominativo «{$riga['nominativo']}» non corrisponde alla pratica {$codice}";
 
                 continue;
             }
@@ -75,7 +77,8 @@ class ImportAggiornamentiBanca
     {
         $cognome = Str::slug((string) $pratica->cognome_cliente);
 
-        return $nominativo === '' || $cognome === '' || str_contains(Str::slug($nominativo), $cognome);
+        // Senza nominativo nel file, o senza cognome sulla pratica, il riscontro non si può fare: la riga non cambia lo stato.
+        return $nominativo !== '' && $cognome !== '' && str_contains(Str::slug($nominativo), $cognome);
     }
 
     /** Lo stato con quel nome (o codice): prima quello del tipo di finanziamento della pratica, poi del prodotto indicato dalla banca. */
