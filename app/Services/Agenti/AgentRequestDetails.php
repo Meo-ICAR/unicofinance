@@ -68,7 +68,7 @@ class AgentRequestDetails
                 $client->privacy_consent = true;
                 $changed[] = 'general_consent_at';
             }
-        } elseif ($revocable && array_key_exists('privacy_verificata_il', $consenso) && $client->general_consent_at !== null) {
+        } elseif ($revocable && array_key_exists('privacy_verificata_il', $consenso) && ($client->general_consent_at !== null || $client->privacy_consent)) {
             $client->general_consent_at = null;
             $client->privacy_consent = false;
             $changed[] = 'general_consent_at';
@@ -176,7 +176,12 @@ class AgentRequestDetails
 
         $existing = $client->addresses()->where('address_type_id', self::RESIDENZA)->first();
 
+        // Senza sovrascrittura si completano solo i campi vuoti della residenza che c'è già.
         if ($existing !== null && ! $overwrite) {
+            $values = array_filter($values, fn (string $value, string $field): bool => blank($existing->getAttribute($field)), ARRAY_FILTER_USE_BOTH);
+        }
+
+        if ($values === []) {
             return false;
         }
 
