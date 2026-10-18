@@ -14,20 +14,19 @@ use Unico\Core\Models\Fornitore;
 class ClientForPraticaCreator
 {
     /**
-     * Un cliente già in anagrafica è utilizzabile da un agente solo se tutte le pratiche con quel codice fiscale sono sue:
-     * altrimenti l'agente vedrebbe (e userebbe) dati di clienti di altri.
+     * Un codice fiscale è utilizzabile da un agente solo se tutte le pratiche con quel codice sono sue: altrimenti l'agente
+     * vedrebbe (e userebbe) dati di clienti di altri. Senza pratiche, solo se il cliente non è già in anagrafica.
      */
     public function isUsableByAgent(string $taxCode, Fornitore $agent): bool
     {
         $code = Str::upper(trim($taxCode));
-
-        if (Client::query()->where('tax_code', $code)->orWhere('vat_number', $code)->doesntExist()) {
-            return true;
-        }
-
         $pratiche = Pratica::query()->where('codice_fiscale', $code)->get(['fornitori_id', 'partita_iva_agente']);
 
-        return $pratiche->isNotEmpty() && $pratiche->every(fn (Pratica $pratica): bool => (string) $pratica->fornitori_id === (string) $agent->getKey()
+        if ($pratiche->isEmpty()) {
+            return Client::query()->where('tax_code', $code)->orWhere('vat_number', $code)->doesntExist();
+        }
+
+        return $pratiche->every(fn (Pratica $pratica): bool => (string) $pratica->fornitori_id === (string) $agent->getKey()
             || filled($agent->piva) && trim((string) $pratica->partita_iva_agente) === trim((string) $agent->piva));
     }
 
@@ -41,14 +40,18 @@ class ClientForPraticaCreator
             return $existing;
         }
 
+        // Undici cifre sono una partita IVA: il cliente è una società.
+        $isCompany = preg_match('/^\d{11}$/', $code) === 1;
+
         return Client::query()->forceCreate([
             'company_id' => $companyId,
-            'is_person' => true,
-            'is_company' => false,
+            'is_person' => ! $isCompany,
+            'is_company' => $isCompany,
             'is_client' => true,
             'name' => trim($name),
-            'first_name' => trim((string) $firstName),
+            'first_name' => $isCompany ? null : trim((string) $firstName),
             'tax_code' => $code,
+            'vat_number' => $isCompany ? $code : null,
             'email' => Str::lower(trim($email)),
             'phone' => trim($phone),
         ]);

@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\ApiClient;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 
 class CreateAgentApiClient extends Command
 {
@@ -14,16 +15,19 @@ class CreateAgentApiClient extends Command
     public function handle(): int
     {
         $name = (string) $this->argument('name');
-        $existing = ApiClient::where('name', $name)->first();
 
-        if ($existing && ! $this->option('rotate')) {
+        if (! $this->option('rotate') && ApiClient::where('name', $name)->exists()) {
             $this->error("L'app «{$name}» esiste già: usa --rotate per rigenerare le credenziali.");
 
             return self::FAILURE;
         }
 
-        $existing?->delete();
-        $issued = ApiClient::issue($name);
+        // Le vecchie credenziali spariscono solo se le nuove sono salvate.
+        $issued = DB::connection((new ApiClient)->getConnectionName())->transaction(function () use ($name): array {
+            ApiClient::where('name', $name)->lockForUpdate()->first()?->delete();
+
+            return ApiClient::issue($name);
+        });
 
         $this->info("Credenziali di «{$name}» (non verranno più mostrate):");
         $this->line('Token  : '.$issued['token']);

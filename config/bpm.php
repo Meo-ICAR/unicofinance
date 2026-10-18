@@ -27,6 +27,6 @@ return [
      */
     'campi_non_scrivibili' => [
         '*' => ['id', 'created_at', 'updated_at', 'deleted_at', 'company_id'],
-        'pratica' => ['pratica_stato_id'],
+        'pratica' => ['pratica_stato_id', 'sended_at', 'approved_at', 'erogated_at', 'rejected_at'],
     ],
 ];

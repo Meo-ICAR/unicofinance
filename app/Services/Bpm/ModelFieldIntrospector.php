@@ -128,10 +128,14 @@ class ModelFieldIntrospector
         $existingColumns = collect($this->columnsForClass($relatedClass))->pluck('name');
 
         foreach (collect([$ownerKey, 'name', 'nome', 'codice', 'code'])->unique()->filter(fn (string $column): bool => $existingColumns->contains($column)) as $column) {
-            $related = (new $relatedClass)->newQuery()->where($column, $value)->first();
+            $matches = (new $relatedClass)->newQuery()->where($column, $value)->limit(2)->get();
 
-            if ($related) {
-                return $related->{$ownerKey};
+            if ($matches->count() === 1) {
+                return $matches->first()->{$ownerKey};
+            }
+
+            if ($matches->isNotEmpty()) {
+                throw new InvalidArgumentException("Valore '{$value}' ambiguo per il campo lookup '{$field}' su {$modelType}.");
             }
         }
 

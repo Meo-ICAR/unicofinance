@@ -40,9 +40,11 @@ class AuthenticateApiClient
             return false;
         }
 
-        // Nei caricamenti (multipart) il contenuto firmato è il file: ne arriva l'hash in X-Content-Sha256 e il controller
-        // verifica che il file ricevuto lo rispetti. Altrimenti si firma il corpo grezzo.
-        $contentHash = $request->hasHeader('X-Content-Sha256') ? strtolower((string) $request->header('X-Content-Sha256')) : hash('sha256', $request->getContent());
+        // Nei caricamenti (multipart) il contenuto firmato è il file ricevuto, altrimenti il corpo grezzo: l'hash si calcola
+        // sempre qui, mai preso dall'intestazione, così il contenuto non si può cambiare dopo la firma.
+        $contentHash = $request->hasFile('file')
+            ? (string) hash_file('sha256', $request->file('file')->getRealPath())
+            : hash('sha256', $request->getContent());
 
         return $signature !== '' && hash_equals($client->signatureFor($timestamp, $request->method(), $request->getPathInfo(), $contentHash), $signature);
     }

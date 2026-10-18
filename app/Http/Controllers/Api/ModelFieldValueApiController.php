@@ -19,7 +19,7 @@ class ModelFieldValueApiController extends Controller
     {
         $validated = $request->validate([
             'field' => ['required', 'string'],
-            'value' => ['nullable'],
+            'value' => ['present', 'nullable'],
         ]);
 
         try {

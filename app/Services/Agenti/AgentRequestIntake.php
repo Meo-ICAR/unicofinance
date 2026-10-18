@@ -8,6 +8,8 @@ use App\Services\CambioStatoPratica;
 use App\Services\Preventivazione\PracticeFinalizer;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Unico\Core\Documents\PracticeDocumentIntake;
 use Unico\Core\Documents\PracticeTaskDocuments;
@@ -53,14 +55,31 @@ class AgentRequestIntake
      */
     public function intake(array $data): array
     {
+        // Due invii contemporanei dello stesso riferimento non creano due pratiche: il secondo aspetta e trova la prima.
+        return Cache::lock('agent-intake:'.self::codiceFor($data['riferimento']), 30)
+            ->block(10, fn (): array => $this->intakeUnlocked($data));
+    }
+
+    /**
+     * @param  array<string,mixed>  $data
+     * @return array{pratica: Pratica, client: Client, created: bool}
+     *
+     * @throws AgentIntakeException
+     */
+    private function intakeUnlocked(array $data): array
+    {
         $existing = $this->find($data['riferimento']);
 
         if ($existing !== null) {
             return ['pratica' => $existing, 'client' => $this->clientOf($existing), 'created' => false];
         }
 
-        $agent = Fornitore::query()->where('piva', trim((string) $data['agente']['partita_iva']))->first()
-            ?? throw new AgentIntakeException('agente_sconosciuto', 'Nessun agente con questa partita IVA.');
+        $agent = Fornitore::query()
+            ->where('piva', trim((string) $data['agente']['partita_iva']))
+            ->where('is_active', true)
+            ->where(fn ($query) => $query->whereNull('dismissed_at')->orWhere('dismissed_at', '>', today()))
+            ->first()
+            ?? throw new AgentIntakeException('agente_sconosciuto', 'Nessun agente attivo con questa partita IVA.');
 
         $tipo = $this->tipoProdotto($data)
             ?? throw new AgentIntakeException('prodotto_sconosciuto', 'Prodotto non riconosciuto e nessun tipo prodotto di ripiego.');
@@ -72,6 +91,18 @@ class AgentRequestIntake
             throw new AgentIntakeException('cliente_di_altro_agente', 'Il cliente risulta già gestito da un altro agente.', 409);
         }
 
+        // Cliente, pratica, storico e documenti richiesti si creano insieme: se un passo fallisce non resta una pratica a metà
+        // che un nuovo invio scambierebbe per completa.
+        return DB::connection((new Pratica)->getConnectionName())->transaction(fn (): array => $this->create($data, $agent, $tipo, $taxCode));
+    }
+
+    /**
+     * @param  array<string,mixed>  $data
+     * @return array{pratica: Pratica, client: Client, created: bool}
+     */
+    private function create(array $data, Fornitore $agent, TipoProdotto $tipo, string $taxCode): array
+    {
+        $cliente = $data['cliente'];
         $client = $this->clients->findOrCreate($taxCode, (string) $cliente['cognome'], $cliente['nome'] ?? null, (string) ($cliente['email'] ?? ''), (string) ($cliente['telefono'] ?? ''), $agent->company_id);
         $stato = $this->finalizer->status($tipo->name, (string) config('agent_api.stato_iniziale'));
 

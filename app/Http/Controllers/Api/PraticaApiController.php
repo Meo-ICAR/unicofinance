@@ -43,9 +43,9 @@ class PraticaApiController extends Controller
                 'is_suspended' => (bool) $stato?->is_suspended,
             ],
             'fornitori_id' => $pratica->fornitori_id,
-            'denominazione_agente' => $pratica->fornitori?->name ?? $pratica->denominazione_agente,
+            'denominazione_agente' => $pratica->denominazione_agente ?? $pratica->fornitori?->name,
             'clienti_id' => $pratica->clienti_id,
-            'denominazione_banca' => $pratica->clienti?->name ?? $pratica->denominazione_banca,
+            'denominazione_banca' => $pratica->denominazione_banca ?? $pratica->clienti?->name,
             'employee_id' => $pratica->employee_id,
             'is_notowned' => (bool) $pratica->is_notowned,
             'date' => [

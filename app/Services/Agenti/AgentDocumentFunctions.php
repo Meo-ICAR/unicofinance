@@ -98,6 +98,8 @@ class AgentDocumentFunctions
                 ->toMediaCollection(Document::COLLECTION);
         });
 
+        $document->syncResponsible();
+
         return $document->fresh('documentType');
     }
 

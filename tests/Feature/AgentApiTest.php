@@ -164,6 +164,39 @@ class AgentApiTest extends TestCase
         $this->assertSame(0, $this->viaApi()->count());
     }
 
+    public function test_a_declared_content_hash_does_not_replace_the_hash_of_the_body(): void
+    {
+        $path = '/api/agente/v1/richieste';
+        $signedHash = hash('sha256', json_encode($this->request()));
+        $headers = ['Authorization' => 'Bearer '.$this->issued['token'], 'X-Content-Sha256' => $signedHash] + $this->signature('POST', $path, $signedHash);
+
+        $this->call('POST', $path, [], [], [], $this->server($headers), json_encode($this->request('FIN-ALTRO')))->assertUnauthorized();
+        $this->assertSame(0, $this->viaApi()->count());
+    }
+
+    public function test_an_inactive_agent_is_refused(): void
+    {
+        Fornitore::query()->where('piva', '99900000001')->update(['is_active' => false]);
+
+        $this->signedJson('POST', '/api/agente/v1/richieste', $this->request())->assertStatus(422)->assertJsonPath('codice', 'agente_sconosciuto');
+    }
+
+    public function test_a_practice_of_another_agent_blocks_the_tax_code_even_without_a_client(): void
+    {
+        Pratica::query()->create(['codice_pratica' => 'ZZ-2', 'codice_fiscale' => 'RSSMRA80A01H501U', 'partita_iva_agente' => '11111111111', 'upload_at' => now()]);
+
+        $this->signedJson('POST', '/api/agente/v1/richieste', $this->request('FIN-5'))->assertStatus(409)->assertJsonPath('codice', 'cliente_di_altro_agente');
+    }
+
+    public function test_a_vat_number_creates_a_company_client(): void
+    {
+        $this->signedJson('POST', '/api/agente/v1/richieste', $this->request('FIN-6', ['cliente' => ['codice_fiscale' => '12345678903', 'cognome' => 'Acme Srl']]))->assertCreated();
+
+        $client = Client::query()->where('vat_number', '12345678903')->sole();
+        $this->assertTrue((bool) $client->is_company);
+        $this->assertFalse((bool) $client->is_person);
+    }
+
     public function test_signature_check_can_be_disabled_but_the_token_stays_required(): void
     {
         config(['agent_api.require_signature' => false]);
@@ -276,10 +309,11 @@ class AgentApiTest extends TestCase
     {
         $this->signedJson('POST', '/api/agente/v1/richieste', $this->request())->assertCreated();
         $path = '/api/agente/v1/richieste/FIN-2026-0001/documenti';
+        $file = UploadedFile::fake()->createWithContent('a.pdf', '%PDF contenuto vero');
         $declared = hash('sha256', 'altro contenuto');
-        $headers = ['Accept' => 'application/json', 'Authorization' => 'Bearer '.$this->issued['token'], 'X-Content-Sha256' => $declared] + $this->signature('POST', $path, $declared);
+        $headers = ['Accept' => 'application/json', 'Authorization' => 'Bearer '.$this->issued['token'], 'X-Content-Sha256' => $declared] + $this->signature('POST', $path, hash_file('sha256', $file->getRealPath()));
 
-        $this->post($path, ['tipo' => 'carta-identita-zz', 'file' => UploadedFile::fake()->createWithContent('a.pdf', '%PDF contenuto vero')], $headers)
+        $this->post($path, ['tipo' => 'carta-identita-zz', 'file' => $file], $headers)
             ->assertStatus(422)->assertJsonPath('codice', 'hash_non_corrispondente');
 
         $this->assertFalse(Document::query()->where('document_type_id', $this->identity->getKey())->first()->hasMedia(Document::COLLECTION));
@@ -290,8 +324,9 @@ class AgentApiTest extends TestCase
         $this->signedJson('POST', '/api/agente/v1/richieste', $this->request())->assertCreated();
         $path = '/api/agente/v1/richieste/FIN-2026-0001/documenti';
 
-        $this->post($path, ['tipo' => 'carta-identita-zz', 'file' => $this->pdf()],
-            ['Accept' => 'application/json', 'Authorization' => 'Bearer '.$this->issued['token']] + $this->signature('POST', $path, hash('sha256', '')))
+        $file = $this->pdf();
+        $this->post($path, ['tipo' => 'carta-identita-zz', 'file' => $file],
+            ['Accept' => 'application/json', 'Authorization' => 'Bearer '.$this->issued['token']] + $this->signature('POST', $path, hash_file('sha256', $file->getRealPath())))
             ->assertStatus(422)->assertJsonPath('codice', 'hash_mancante');
 
         $this->upload('FIN-2026-0001', 'carta-identita-zz', UploadedFile::fake()->createWithContent('script.php', '<?php echo 1;'))->assertStatus(422)->assertJsonValidationErrors(['file']);

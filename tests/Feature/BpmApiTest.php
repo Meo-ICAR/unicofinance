@@ -119,6 +119,8 @@ class BpmApiTest extends TestCase
         $this->patchJson('/api/models/fornitore/'.$agente->getKey(), ['field' => 'campo_inesistente', 'value' => 'x'], $this->key)->assertStatus(422);
         $this->patchJson('/api/models/pratica/'.$pratica->getKey(), ['field' => 'pratica_stato_id', 'value' => 1], $this->key)->assertStatus(422);
         $this->patchJson('/api/models/fornitore/'.$agente->getKey(), ['field' => 'id', 'value' => 1], $this->key)->assertStatus(422);
+        $this->patchJson('/api/models/pratica/'.$pratica->getKey(), ['field' => 'approved_at', 'value' => '2026-10-01'], $this->key)->assertStatus(422);
+        $this->patchJson('/api/models/fornitore/'.$agente->getKey(), ['field' => 'description'], $this->key)->assertStatus(422);
         $this->patchJson('/api/models/modello-inesistente/1', ['field' => 'name', 'value' => 'x'], $this->key)->assertNotFound();
         $this->patchJson('/api/models/fornitore/999999999', ['field' => 'description', 'value' => 'x'], $this->key)->assertNotFound()->assertJson(['message' => 'Record non trovato.']);
     }

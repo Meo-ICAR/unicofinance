@@ -8,6 +8,7 @@ use App\Services\Agenti\AgentIntakeException;
 use App\Services\Agenti\AgentRequestIntake;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Unico\Core\Enums\DocumentStatus;
 use Unico\Core\Models\Document;
 use Unico\Core\Models\DocumentRequirement;
@@ -101,7 +102,7 @@ class AgentRequestController extends Controller
             ->map(fn (DocumentType $t): array => [
                 'tipo' => $t->slug ?: $t->code,
                 'nome' => $t->name,
-                'alias' => $mapped->get($t->slug ?: $t->code, []),
+                'alias' => collect($mapped->get($t->slug, []))->merge($mapped->get($t->code, []))->unique()->values()->all(),
             ])->all()]);
     }
 
@@ -110,7 +111,7 @@ class AgentRequestController extends Controller
         $documents = $this->intake->documents($pratica);
 
         return [
-            'riferimento' => str_replace(config('agent_api.pratica_prefix'), '', $pratica->codice_pratica),
+            'riferimento' => Str::after((string) $pratica->codice_pratica, (string) config('agent_api.pratica_prefix')),
             'codice_pratica' => $pratica->codice_pratica,
             'pratica_id' => $pratica->getKey(),
             'cliente_id' => $clientId,

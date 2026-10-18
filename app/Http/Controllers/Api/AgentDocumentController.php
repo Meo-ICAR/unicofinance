@@ -60,9 +60,18 @@ class AgentDocumentController extends Controller
             $document = $this->functions->document($pratica, $documento);
             $content = $this->functions->content($document);
 
-            return $content === null
-                ? response()->json(['message' => 'Il documento non ha ancora un file.', 'codice' => 'file_mancante'], 404)
-                : $this->pdf($content, (string) $document->name);
+            if ($content === null) {
+                return response()->json(['message' => 'Il documento non ha ancora un file.', 'codice' => 'file_mancante'], 404);
+            }
+
+            // Il file con il suo tipo e nome reali: i documenti caricati possono essere anche immagini.
+            $media = $document->currentMedia();
+
+            return response($content, 200, [
+                'Content-Type' => $media?->mime_type ?: 'application/octet-stream',
+                'Content-Disposition' => 'attachment; filename="'.($media?->file_name ?: 'documento').'"',
+                'X-Content-Sha256' => hash('sha256', $content),
+            ]);
         });
     }
 
