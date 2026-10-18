@@ -133,3 +133,18 @@ php artisan migrate     # solo le tabelle di unicofinance
 | Mediafacile | preventivi | `App\Services\Preventivazione` |
 
 Ogni chiamata a un servizio esterno viene registrata in `api_calls` (`ApiCallLogger`), con il costo da `config/services.php`.
+
+### API per le altre app della suite
+
+unicofinance è l'unica app di istruttoria: le API che unicobpm e unicoagent chiamavano su unicoloan ora sono qui (`routes/api.php`).
+
+- **unicobpm**, con la chiave condivisa `X-Api-Key` (`BPM_BRIDGE_API_KEY`) e `X-Correlation-Id`:
+  - `GET /api/pratiche/{id}`: stato, documenti obbligatori presenti e mancanti, `agente_blacklistato` per la banca;
+  - `GET /api/models/{model}/fields` e `PATCH /api/models/{model}/{id}` (`{field, value}`): campi dei modelli di `config/bpm.php` e scrittura di fine processo; lo stato della pratica non si scrive da qui;
+  - `GET /api/users/lookup?email=`: se l'utente ha accesso al pannello admin;
+  - `/api/commands` del bridge di unico-core (`UNICO_CORE_BRIDGE=true`), con i comandi di `config/schedulable_commands.php`;
+  - `POST /bpm-landing/{id}` (`token`, `user_email`; il GET con gli stessi parametri resta per compatibilità): accesso senza password, con il token monouso verificato su `{BPM_API_URL}/api/verify-token`.
+- **unicoagent** (`/api/agente/v1`, token Bearer e firma HMAC-SHA256 di `timestamp.METODO.percorso.sha256-del-contenuto` nelle intestazioni `X-Timestamp` e `X-Signature`, vedi `config/agent_api.php`; il contenuto è il corpo JSON o, negli upload, il file, il cui hash va anche in `X-Content-Sha256`): richieste di finanziamento con cliente, pratica nello stato da perfezionare e documenti della check list, upload dei file, moduli da compilare e firma OTP. Le credenziali si creano con `php artisan agent-api:client "unicoagent"`. Ogni app ha un prefisso del codice pratica (`WA-` per unicoagent, `--prefisso=` per sceglierlo) e raggiunge solo le pratiche che ha creato; una richiesta che cambia qualcosa (POST, PATCH) con la stessa firma vale una volta sola, quindi ogni invio ha il suo timestamp; un `riferimento` già usato con un altro codice fiscale o un altro agente risponde 409 `riferimento_gia_usato`. Con `--webhook=https://…` (anche con `--rotate`) unicofinance avvisa l'app quando l'istruttoria respinge un documento di una sua pratica (`documento.da_rifare`, con il motivo) o ne chiede uno nuovo (`documento.richiesto`): POST JSON `{event_id, evento, riferimento, documento{id, tipo, alias, nome, stato, motivo}, avvenuto_il}` firmato allo stesso modo con il segreto dell'app, in coda con ritentativi su rete, 5xx e 408/425/429. I documenti creati con la richiesta non si avvisano.
+  - `POST /richieste` accetta il formato unico di unicoagent: oltre ai minimi salva nascita, residenza, consensi privacy (ricevuta = informativa letta, verificata = consenso generale) e durata (`nrate`), solo dove l'anagrafica è vuota; risposte, fascia d'importo, agente e contatto diretto finiscono nella scheda **Da unicoagent** della pratica.
+  - `PATCH /richieste/{riferimento}`: l'agente corregge cliente e pratica finché la pratica è da perfezionare (poi 409 `pratica_in_lavorazione`); i consensi si aggiornano sempre e `consenso.privacy_verificata_il: null` revoca il consenso. La risposta elenca i `campi_aggiornati`.
+  - `POST /richieste/{riferimento}/note` (`testo`, `autore` agente|cliente|assistente|istruttore, `inviata_il`, `id_origine`): nota per l'istruttore nella scheda **Da unicoagent**; con lo stesso `id_origine` non si duplica (200 `duplicato`).
