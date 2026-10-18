@@ -19,7 +19,7 @@ class ApiClient extends Model
     }
 
     /** @return array{client: self, token: string, secret: string} */
-    public static function issue(string $name, ?string $praticaPrefix = null): array
+    public static function issue(string $name, ?string $praticaPrefix = null, ?string $webhookUrl = null): array
     {
         $praticaPrefix ??= static::defaultPrefix($name);
 
@@ -31,7 +31,7 @@ class ApiClient extends Model
         $token = Str::random(48);
         $secret = Str::random(48);
 
-        $client = static::create(['name' => $name, 'pratica_prefix' => $praticaPrefix, 'token_hash' => hash('sha256', $token), 'secret' => $secret]);
+        $client = static::create(['name' => $name, 'pratica_prefix' => $praticaPrefix, 'webhook_url' => $webhookUrl, 'token_hash' => hash('sha256', $token), 'secret' => $secret]);
 
         return ['client' => $client, 'token' => $token, 'secret' => $secret];
     }

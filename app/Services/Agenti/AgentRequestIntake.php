@@ -118,7 +118,7 @@ class AgentRequestIntake
 
         // Cliente, pratica, storico e documenti richiesti si creano insieme: se un passo fallisce non resta una pratica a metà
         // che un nuovo invio scambierebbe per completa.
-        return DB::connection((new Pratica)->getConnectionName())->transaction(fn (): array => $this->create($data, $agent, $tipo, $taxCode));
+        return AgentNotifications::quietly(fn (): array => DB::connection((new Pratica)->getConnectionName())->transaction(fn (): array => $this->create($data, $agent, $tipo, $taxCode)));
     }
 
     /**

@@ -2,15 +2,20 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\SendAgentEvent;
 use App\Models\ApiClient;
 use App\Models\Client;
 use App\Models\Pratica;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request as HttpRequest;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
+use RuntimeException;
 use Tests\TestCase;
 use Unico\Core\Enums\DocumentStatus;
 use Unico\Core\Models\Document;
@@ -572,5 +577,87 @@ class AgentApiTest extends TestCase
         $this->assertStringNotContainsString($this->issued['secret'], $row->secret);
         $this->assertNotSame($this->issued['token'], $row->token_hash);
         $this->assertSame(hash('sha256', $this->issued['token']), $row->token_hash);
+    }
+
+    private function withWebhook(): void
+    {
+        $this->issued['client']->update(['webhook_url' => 'https://agente.example.test/api/unicofinance/eventi']);
+    }
+
+    public function test_the_documents_of_the_request_do_not_notify_the_app(): void
+    {
+        Queue::fake();
+        $this->withWebhook();
+
+        $this->signedJson('POST', '/api/agente/v1/richieste', $this->request())->assertCreated();
+
+        Queue::assertNotPushed(SendAgentEvent::class);
+    }
+
+    public function test_a_rejected_client_document_notifies_the_app_of_the_practice(): void
+    {
+        $this->withWebhook();
+        $created = $this->signedJson('POST', '/api/agente/v1/richieste', $this->request())->assertCreated();
+        $id = collect($created->json('documenti'))->firstWhere('tipo', 'carta-identita-zz')['id'];
+        Queue::fake();
+
+        Document::query()->whereKey($id)->first()->update(['status' => DocumentStatus::REJECTED->value, 'rejection_note' => 'Illeggibile']);
+
+        Queue::assertPushed(SendAgentEvent::class, function (SendAgentEvent $job) use ($id): bool {
+            return $job->apiClientId === $this->issued['client']->getKey()
+                && $job->payload['evento'] === 'documento.da_rifare'
+                && $job->payload['riferimento'] === 'FIN-2026-0001'
+                && $job->payload['documento']['id'] === $id
+                && $job->payload['documento']['tipo'] === 'carta-identita-zz'
+                && $job->payload['documento']['motivo'] === 'Illeggibile';
+        });
+    }
+
+    public function test_a_document_requested_later_notifies_the_app(): void
+    {
+        $this->withWebhook();
+        $this->signedJson('POST', '/api/agente/v1/richieste', $this->request())->assertCreated();
+        $pratica = $this->viaApi()->sole();
+        Queue::fake();
+
+        Document::query()->create(['documentable_type' => 'pratica', 'documentable_id' => $pratica->getKey(), 'document_type_id' => $this->income->getKey(), 'name' => 'Busta paga di marzo', 'status' => DocumentStatus::SUPPLEMENTARY->value]);
+
+        Queue::assertPushed(SendAgentEvent::class, fn (SendAgentEvent $job): bool => $job->payload['evento'] === 'documento.richiesto'
+            && $job->payload['documento']['tipo'] === 'busta-paga-zz'
+            && ! array_key_exists('motivo', $job->payload['documento']));
+    }
+
+    public function test_without_a_webhook_nothing_is_sent(): void
+    {
+        $created = $this->signedJson('POST', '/api/agente/v1/richieste', $this->request())->assertCreated();
+        Queue::fake();
+
+        Document::query()->whereKey($created->json('documenti.0.id'))->first()->update(['status' => DocumentStatus::REJECTED->value]);
+
+        Queue::assertNotPushed(SendAgentEvent::class);
+    }
+
+    public function test_the_notice_is_signed_and_retried_only_on_temporary_errors(): void
+    {
+        $this->withWebhook();
+        $job = new SendAgentEvent($this->issued['client']->getKey(), ['event_id' => 'x:1', 'evento' => 'documento.da_rifare', 'riferimento' => 'FIN-1']);
+        Http::fake(['agente.example.test/*' => Http::sequence()->push([], 200)->push([], 503)->push([], 422)]);
+
+        $job->handle();
+
+        Http::assertSent(function (HttpRequest $request): bool {
+            $expected = hash_hmac('sha256', implode('.', [$request->header('X-Timestamp')[0], 'POST', '/api/unicofinance/eventi', hash('sha256', $request->body())]), $this->issued['secret']);
+
+            return $request->header('X-Signature')[0] === $expected && $request['riferimento'] === 'FIN-1';
+        });
+
+        try {
+            $job->handle();
+            $this->fail('Un 503 deve far ritentare.');
+        } catch (RuntimeException) {
+        }
+
+        $job->handle();
+        Http::assertSentCount(3);
     }
 }
