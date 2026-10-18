@@ -160,7 +160,7 @@ class BpmApiTest extends TestCase
         $this->assertAuthenticatedAs($user);
     }
 
-    public function test_the_landing_accepts_the_token_in_a_post_without_csrf_and_leaves_no_referrer(): void
+    public function test_the_landing_accepts_the_token_in_a_post_and_leaves_no_referrer_nor_cache(): void
     {
         config(['services.bpm.url' => 'https://bpm.example.com']);
         $user = User::factory()->create(['email' => 'istruttore@example.com', 'role' => 'super_admin']);
@@ -168,7 +168,8 @@ class BpmApiTest extends TestCase
 
         $this->post('/bpm-landing/dashboard', ['token' => 'valido', 'user_email' => 'istruttore@example.com'])
             ->assertRedirect('/admin')
-            ->assertHeader('Referrer-Policy', 'no-referrer');
+            ->assertHeader('Referrer-Policy', 'no-referrer')
+            ->assertHeaderContains('Cache-Control', 'no-store');
 
         $this->assertAuthenticatedAs($user);
         Http::assertSent(fn ($request) => $request['token'] === 'valido');
