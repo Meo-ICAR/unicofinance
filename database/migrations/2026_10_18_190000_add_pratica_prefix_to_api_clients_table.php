@@ -19,11 +19,11 @@ return new class extends Migration
         });
 
         // Stesso schema delle app nuove (ApiClient::defaultPrefix): il nome in maiuscolo; se due nomi danno lo stesso prefisso,
-        // il secondo prende l'id.
-        $used = [];
+        // il secondo prende l'id. WA- resta riservato a unicoagent.
+        $used = ['WA-' => true];
         DB::table('api_clients')->orderBy('id')->get(['id', 'name'])->each(function (object $client) use (&$used): void {
             $prefix = $client->name === 'unicoagent' ? 'WA-' : substr(strtoupper((string) preg_replace('/[^A-Za-z0-9]/', '', (string) $client->name)), 0, 19).'-';
-            if ($prefix === '-' || isset($used[$prefix])) {
+            if ($client->name !== 'unicoagent' && ($prefix === '-' || isset($used[$prefix]))) {
                 $prefix = "API{$client->id}-";
             }
             $used[$prefix] = true;
