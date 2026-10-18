@@ -57,6 +57,15 @@ class AppServiceProvider extends ServiceProvider
         Fornitore::resolveRelationUsing('documents', fn (Fornitore $fornitore) => $fornitore
             ->morphMany(Document::class, 'documentable'));
 
+        // Ogni produttore attivo ha di default il ruolo «fornitore», che dà i permessi del pannello agenti.
+        Fornitore::saving(function (Fornitore $fornitore): void {
+            $ruoli = $fornitore->employee_roles ?? [];
+
+            if ($fornitore->is_active && ! in_array('fornitore', $ruoli, true)) {
+                $fornitore->employee_roles = [...$ruoli, 'fornitore'];
+            }
+        });
+
         Fornitore::resolveRelationUsing('branches', fn (Fornitore $fornitore) => $fornitore
             ->morphMany(Branch::class, 'branchable'));
 

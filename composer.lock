@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "83e820c7a8b3c91f00d574bdcf0a5fb6",
+    "content-hash": "6a049a27fa28911ea85222f305d48bd8",
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
@@ -2437,16 +2437,16 @@
         },
         {
             "name": "guzzlehttp/psr7",
-            "version": "3.1.0",
+            "version": "3.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/guzzle/psr7.git",
-                "reference": "a3059ba1a84c9139c4ae03cf0f45bea276c97c74"
+                "reference": "cdc139396207a5eba10c242d241fb014cb098390"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/guzzle/psr7/zipball/a3059ba1a84c9139c4ae03cf0f45bea276c97c74",
-                "reference": "a3059ba1a84c9139c4ae03cf0f45bea276c97c74",
+                "url": "https://api.github.com/repos/guzzle/psr7/zipball/cdc139396207a5eba10c242d241fb014cb098390",
+                "reference": "cdc139396207a5eba10c242d241fb014cb098390",
                 "shasum": ""
             },
             "require": {
@@ -2536,7 +2536,7 @@
             ],
             "support": {
                 "issues": "https://github.com/guzzle/psr7/issues",
-                "source": "https://github.com/guzzle/psr7/tree/3.1.0"
+                "source": "https://github.com/guzzle/psr7/tree/3.2.0"
             },
             "funding": [
                 {
@@ -2552,7 +2552,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-08-24T11:02:13+00:00"
+            "time": "2026-10-17T23:57:19+00:00"
         },
         {
             "name": "guzzlehttp/uri-template",
@@ -2639,6 +2639,68 @@
                 }
             ],
             "time": "2026-08-24T17:13:02+00:00"
+        },
+        {
+            "name": "inspector-apm/inspector-php",
+            "version": "3.19.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/inspector-apm/inspector-php.git",
+                "reference": "27d5133dd47e96dabc6fa4f80e7328e5d74848a7"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/inspector-apm/inspector-php/zipball/27d5133dd47e96dabc6fa4f80e7328e5d74848a7",
+                "reference": "27d5133dd47e96dabc6fa4f80e7328e5d74848a7",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.1"
+            },
+            "require-dev": {
+                "ext-curl": "*",
+                "friendsofphp/php-cs-fixer": "^3.75",
+                "neuron-core/neuron-ai": "^4.0",
+                "phpstan/phpstan": "^2.1",
+                "phpunit/phpunit": "^9.0",
+                "rector/rector": "^2.2",
+                "tomasvotruba/type-coverage": "^2.0"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-main": "3.17.x-dev",
+                    "dev-develop": "3.17.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Inspector\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Valerio Barbera",
+                    "email": "valerio@inspector.dev"
+                }
+            ],
+            "description": "Inspector monitoring for PHP applications.",
+            "keywords": [
+                "inspector",
+                "monitoring",
+                "observability",
+                "php",
+                "telemetry"
+            ],
+            "support": {
+                "issues": "https://github.com/inspector-apm/inspector-php/issues",
+                "source": "https://github.com/inspector-apm/inspector-php/tree/3.19.1"
+            },
+            "time": "2026-09-30T10:34:47+00:00"
         },
         {
             "name": "kirschbaum-development/eloquent-power-joins",
@@ -4164,7 +4226,7 @@
             "dist": {
                 "type": "path",
                 "url": "../unico-core",
-                "reference": "980dc069bb3a56cf7da212260f967c78bcd01313"
+                "reference": "0b2d7ab0a6f2d9bc00f30d112c9308be17716982"
             },
             "require": {
                 "filament/filament": "^5.10",
@@ -4815,6 +4877,78 @@
                 "source": "https://github.com/nette/utils/tree/v4.1.5"
             },
             "time": "2026-07-17T23:02:45+00:00"
+        },
+        {
+            "name": "neuron-core/neuron-ai",
+            "version": "3.17.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/neuron-core/neuron-ai.git",
+                "reference": "3d46ba80472d6c59b6e6d60730ed146e76590e34"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/neuron-core/neuron-ai/zipball/3d46ba80472d6c59b6e6d60730ed146e76590e34",
+                "reference": "3d46ba80472d6c59b6e6d60730ed146e76590e34",
+                "shasum": ""
+            },
+            "require": {
+                "guzzlehttp/guzzle": "^7.0 || ^8.0",
+                "inspector-apm/inspector-php": "^3.18",
+                "php": "^8.1",
+                "psr/http-message": "^1.0|^2.0"
+            },
+            "require-dev": {
+                "amphp/amp": "^3.1.1",
+                "amphp/http-client": "^5.3",
+                "aws/aws-sdk-php": "^3.209",
+                "elasticsearch/elasticsearch": "^8.0|^9.0",
+                "ext-pdo": "*",
+                "friendsofphp/php-cs-fixer": "^3.75",
+                "google/auth": "^1.49",
+                "html2text/html2text": "^4.3",
+                "illuminate/database": "^10.0|^11.0|^12.0",
+                "laudis/neo4j-php-client": "^3.4",
+                "opensearch-project/opensearch-php": "^2.5",
+                "phpstan/phpstan": "^2.1",
+                "phpunit/phpunit": "^10.0",
+                "rector/rector": "^2.0",
+                "spatie/fork": "^1.2",
+                "tomasvotruba/type-coverage": "^2.0",
+                "typesense/typesense-php": "^5.0",
+                "vlucas/phpdotenv": "^5.6"
+            },
+            "bin": [
+                "bin/neuron"
+            ],
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "NeuronAI\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Valerio Barbera",
+                    "email": "valerio@inspector.dev"
+                }
+            ],
+            "description": "The PHP Agentic Framework.",
+            "support": {
+                "issues": "https://github.com/neuron-core/neuron-ai/issues",
+                "source": "https://github.com/neuron-core/neuron-ai/tree/3.17.2"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/neuron-core",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-10-08T07:18:33+00:00"
         },
         {
             "name": "nikic/php-parser",

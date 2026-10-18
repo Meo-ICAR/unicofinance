@@ -35,8 +35,9 @@ class PannelloProduttoriPraticheTest extends TestCase
             'Listini provvigionali',
             'Istituti',
             'Provvigioni attive',
-            'Registro chiamate API',
             'Istruttori',
+            'Registro chiamate API',
+            'Ruoli e permessi',
         ], collect($configurazione->getItems())->map(fn ($item) => $item->getLabel())->values()->all());
 
     }

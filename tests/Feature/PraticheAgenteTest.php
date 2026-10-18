@@ -94,7 +94,7 @@ class PraticheAgenteTest extends TestCase
 
         Livewire::test(EditPratica::class, ['record' => $own->getKey()])
             ->assertOk()
-            ->assertSee('Estremi')
+            ->assertSee('Estremi richiedente')
             ->assertDontSee('Mediazione richiesta al cliente')
             ->assertSee('Prodotto richiesto')
             ->assertSee('Dettagli')

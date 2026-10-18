@@ -6,6 +6,7 @@ use App\Filament\Resources\ApiCalls\Pages\ListApiCalls;
 use App\Filament\Resources\ApiCalls\Pages\ViewApiCall;
 use App\Filament\Resources\Clients\ClientResource;
 use App\Filament\Resources\Praticas\PraticaResource;
+use App\Filament\Traits\HasPlanAccess;
 use App\Models\ApiCall;
 use App\Models\User;
 use BackedEnum;
@@ -24,6 +25,8 @@ use UnitEnum;
 /** Registro delle chiamate ai web service esterni (AI, Cerved, Openapi, sanzioni), in sola lettura. */
 class ApiCallResource extends Resource
 {
+    use HasPlanAccess;
+
     protected static ?string $model = ApiCall::class;
 
     protected static ?string $slug = 'chiamate-api';
@@ -36,7 +39,7 @@ class ApiCallResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Chiamate API';
 
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 6;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedServerStack;
 
@@ -44,7 +47,7 @@ class ApiCallResource extends Resource
     {
         $user = auth()->user();
 
-        return $user instanceof User && $user->isStaff();
+        return $user instanceof User && $user->isStaff() && static::hasPlanFeatureAccess();
     }
 
     public static function canCreate(): bool

@@ -66,4 +66,16 @@ class Pratica extends CorePratica
     {
         return $this->praticheRichiedente()->where('is_notowned', true);
     }
+
+    /** La pratica che estingue questo impegno di terzi (`estingued_by`). */
+    public function estintaDa(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'estingued_by');
+    }
+
+    /** Gli impegni di terzi che questa pratica estingue. */
+    public function impegniEstinti(): HasMany
+    {
+        return $this->hasMany(self::class, 'estingued_by');
+    }
 }

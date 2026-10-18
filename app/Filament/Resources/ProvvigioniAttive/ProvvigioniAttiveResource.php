@@ -7,6 +7,7 @@ use App\Filament\Resources\ProvvigioniAttive\Pages\EditProvvigioneAttiva;
 use App\Filament\Resources\ProvvigioniAttive\Pages\ListProvvigioniAttive;
 use App\Filament\Resources\ProvvigioniAttive\Schemas\ProvvigioneAttivaForm;
 use App\Filament\Resources\ProvvigioniAttive\Tables\ProvvigioniAttiveTable;
+use App\Filament\Traits\HasPlanAccess;
 use App\Models\User;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -19,6 +20,8 @@ use Unico\Core\Models\ProvvigioniRule;
 /** Provvigioni attive: quanto riconosce la banca per tipo prodotto (le regole senza agente né livello di `provvigioni_rules`). */
 class ProvvigioniAttiveResource extends Resource
 {
+    use HasPlanAccess;
+
     protected static ?string $model = ProvvigioniRule::class;
 
     protected static ?string $slug = 'provvigioni-attive';
@@ -39,7 +42,7 @@ class ProvvigioniAttiveResource extends Resource
     {
         $user = auth()->user();
 
-        return $user instanceof User && $user->isStaff();
+        return $user instanceof User && $user->isStaff() && static::hasPlanFeatureAccess();
     }
 
     /** Le regole per agente o livello della rete sono un'altra cosa: qui solo quelle della banca. */

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\SocialiteUser;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\User as OAuthUser;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -206,5 +207,35 @@ class SocialiteLoginTest extends TestCase
         $this->assertGuest();
         $this->assertNull(SocialiteUser::query()->where('provider_id', 'google-unknown-agenti')->first());
         $this->assertNull(User::query()->where('email', $email)->first());
+    }
+
+    public function test_the_microsoft_photo_is_stored_as_a_file_and_shown_as_the_user_avatar(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->create(['role' => 'employee', 'email' => 'microsoft.foto.'.uniqid().'@example.test']);
+        $png = base64_encode("\x89PNG\r\n\x1a\nfinta");
+        Socialite::fake('microsoft', OAuthUser::fake([
+            'id' => 'microsoft-foto',
+            'email' => $user->email,
+            'name' => $user->name,
+            'avatar' => 'data:image/png;base64,'.$png,
+        ]));
+
+        $this->get('/admin/oauth/callback/microsoft')->assertRedirect('/admin');
+
+        Storage::disk('public')->assertExists('avatars/'.$user->getKey().'.png');
+        $this->assertStringContainsString('/storage/avatars/'.$user->getKey().'.png', (string) $user->fresh()->getFilamentAvatarUrl());
+    }
+
+    public function test_without_a_stored_photo_the_avatar_is_the_provider_address(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->create(['role' => 'employee', 'email' => 'google.avatar.'.uniqid().'@example.test']);
+        $this->assertNull($user->getFilamentAvatarUrl());
+        Socialite::fake('google', OAuthUser::fake(['id' => 'google-avatar-url', 'email' => $user->email, 'name' => $user->name, 'avatar' => 'https://example.com/foto.jpg']));
+
+        $this->get('/admin/oauth/callback/google')->assertRedirect('/admin');
+
+        $this->assertSame('https://example.com/foto.jpg', $user->fresh()->getFilamentAvatarUrl());
     }
 }

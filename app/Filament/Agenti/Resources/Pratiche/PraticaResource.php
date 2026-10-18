@@ -14,6 +14,7 @@ use App\Filament\RelationManagers\ImmobileRelationManager;
 use App\Filament\RelationManagers\PraticheRelationManager;
 use App\Filament\RelationManagers\ProvvigioniRelationManager;
 use App\Filament\RelationManagers\WebsitesRelationManager;
+use App\Filament\Traits\HasPlanAccess;
 use App\Models\Pratica;
 use App\Models\Provvigione;
 use App\Services\Agenti\AgentImpersonationService;
@@ -48,6 +49,8 @@ use Unico\Core\Models\TipoProdotto;
 
 class PraticaResource extends Resource
 {
+    use HasPlanAccess;
+
     protected static ?string $model = Pratica::class;
 
     protected static ?string $slug = 'pratiche';
@@ -72,7 +75,7 @@ class PraticaResource extends Resource
     /** Una pratica presa in carico da un istruttore (`employee_id`) non si modifica più dall'agente. */
     public static function canEdit(Model $record): bool
     {
-        return blank($record->employee_id);
+        return blank($record->employee_id) && static::hasPlanFeatureAccess(write: true);
     }
 
     public static function canDelete(Model $record): bool
@@ -134,7 +137,7 @@ class PraticaResource extends Resource
                 ->schema([
                     Placeholder::make('intestazione_prodotto')
                         ->label('Prodotto')
-                        ->content(fn (Get $get): string => TipoProdotto::query()->whereKey($get('tipoprodotto_id'))->value('name') ?? '—'),
+                        ->content(fn (Get $get): string => filled($get('denominazione_prodotto')) ? (string) $get('denominazione_prodotto') : (TipoProdotto::query()->whereKey($get('tipoprodotto_id'))->value('name') ?? '—')),
                     Placeholder::make('intestazione_banca')
                         ->label('Banca')
                         ->content(function (Get $get): HtmlString|string {
@@ -148,10 +151,10 @@ class PraticaResource extends Resource
                             return $url === null ? $nome : new HtmlString('<a href="'.e($url).'" target="_blank" rel="noopener" class="text-primary-600 underline">'.e($nome).' ↗</a>');
                         }),
                     Placeholder::make('intestazione_estremi')
-                        ->label('Estremi')
+                        ->label('Estremi richiedente')
                         ->content(fn (Get $get): string => collect([trim(($get('cognome_cliente') ?? '').' '.($get('nome_cliente') ?? '')), $get('codice_fiscale')])->filter()->implode(' · ') ?: '—'),
                 ]),
-            Section::make('Estremi')
+            Section::make('Estremi richiedente')
                 ->icon('heroicon-o-user')
                 ->collapsed()
                 ->columns(['default' => 1, 'md' => 3])
@@ -221,6 +224,7 @@ class PraticaResource extends Resource
                         ->searchable()
                         ->preload()
                         ->live(),
+                    Toggle::make('is_notowned')->label('Impegno di terzi')->inline(false)->live(),
                     TextInput::make('rata')
                         ->label('Rata')
                         ->numeric()
@@ -261,7 +265,6 @@ class PraticaResource extends Resource
                         ->numeric()
                         ->prefix('€')
                         ->visible(fn (Get $get): bool => ! $sulla_rata($get) && ! $impegnoDiTerzi($get)),
-                    Toggle::make('is_notowned')->label('Impegno di terzi')->inline(false)->live(),
                 ]),
             Tabs::make('Altri dati')
                 ->columnSpanFull()

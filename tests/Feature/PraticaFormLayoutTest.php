@@ -62,7 +62,7 @@ class PraticaFormLayoutTest extends TestCase
             ->assertFormFieldHidden('amount');
 
         $html = $page->html();
-        $order = ['Tipo prodotto', 'Rata', 'Durata (mesi)', 'Data richiesta', 'Numero pratica', 'Banca', 'Codice pratica banca', 'Impegno di terzi'];
+        $order = ['Tipo prodotto', 'Impegno di terzi', 'Rata', 'Durata (mesi)', 'Data richiesta', 'Numero pratica', 'Banca', 'Codice pratica banca'];
         $sezione = (int) strpos($html, 'Prodotto richiesto');
         $positions = array_map(fn (string $label): int|false => strpos($html, $label, $sezione), $order);
         $this->assertNotContains(false, $positions);

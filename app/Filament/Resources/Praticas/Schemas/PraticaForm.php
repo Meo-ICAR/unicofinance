@@ -7,7 +7,6 @@ use App\Models\Client;
 use App\Models\Pratica;
 use App\Services\Istruttoria\RichiedentePratica;
 use App\Services\PortaleBanca;
-use App\Support\CompensoMediazione;
 use App\Support\ControlloRichiedente;
 use Closure;
 use Filament\Actions\Action;
@@ -46,7 +45,7 @@ class PraticaForm
                     ->schema([
                         Placeholder::make('intestazione_prodotto')
                             ->label('Prodotto')
-                            ->content(fn (Get $get): string => TipoProdotto::query()->whereKey($get('tipoprodotto_id'))->value('name') ?? '—'),
+                            ->content(fn (Get $get): string => filled($get('denominazione_prodotto')) ? (string) $get('denominazione_prodotto') : (TipoProdotto::query()->whereKey($get('tipoprodotto_id'))->value('name') ?? '—')),
                         Placeholder::make('intestazione_banca')
                             ->label('Banca')
                             ->content(function (Get $get): HtmlString|string {
@@ -63,7 +62,7 @@ class PraticaForm
                             ->label('Agente')
                             ->content(fn (Get $get): string => Fornitore::query()->whereKey($get('fornitori_id'))->value('name') ?? '—'),
                         Placeholder::make('intestazione_estremi')
-                            ->label('Estremi')
+                            ->label('Estremi richiedente')
                             ->content(fn (Get $get): string => collect([
                                 trim(($get('cognome_cliente') ?? '').' '.($get('richiedente_persona_fisica') ? ($get('nome_cliente') ?? '') : '')),
                                 $get('codice_fiscale'),
@@ -76,7 +75,7 @@ class PraticaForm
                         Tab::make('Dati della richiesta')
                             ->icon(Heroicon::OutlinedUser)
                             ->schema([
-                                Section::make('Estremi')
+                                Section::make('Estremi richiedente')
                                     ->collapsed()
                                     ->columns(['default' => 1, 'md' => 3])
                                     ->schema([
@@ -85,6 +84,7 @@ class PraticaForm
                                             ->hidden(fn (Get $get): bool => self::soloPersoneFisiche($get))
                                             ->inline(false)
                                             ->live()
+                                            ->disabled(fn (?Pratica $record): bool => self::anagrafato($record))
                                             ->dehydrated(false)
                                             ->default(true)
                                             ->afterStateHydrated(fn (Toggle $component, ?Pratica $record) => $component->state(
@@ -92,14 +92,18 @@ class PraticaForm
                                             )),
                                         TextInput::make('cognome_cliente')
                                             ->label(fn (Get $get): string => $get('richiedente_persona_fisica') ? 'Cognome' : 'Ragione sociale')
+                                            ->readOnly(fn (?Pratica $record): bool => self::anagrafato($record))
                                             ->live(onBlur: true)
                                             ->columnSpan(fn (Get $get): int => $get('richiedente_persona_fisica') ? 1 : 2),
                                         TextInput::make('nome_cliente')
                                             ->label('Nome')
+                                            ->readOnly(fn (?Pratica $record): bool => self::anagrafato($record))
                                             ->live(onBlur: true)
                                             ->visible(fn (Get $get): bool => (bool) $get('richiedente_persona_fisica')),
                                         TextInput::make('codice_fiscale')
                                             ->label(fn (Get $get): string => $get('richiedente_persona_fisica') ? 'Codice fiscale' : 'Partita IVA')
+                                            ->readOnly(fn (?Pratica $record): bool => self::anagrafato($record))
+                                            ->helperText(fn (?Pratica $record): ?string => self::anagrafato($record) ? 'Il richiedente è anagrafato: le variazioni si fanno dalla scheda cliente.' : null)
                                             ->maxLength(16)
                                             ->live(onBlur: true)
                                             ->rule(fn (Get $get): Closure => function (string $attribute, mixed $value, Closure $fail) use ($get): void {
@@ -131,14 +135,16 @@ class PraticaForm
                                                     $set('richiedente_persona_fisica', true);
                                                 }
                                             }),
+                                        Toggle::make('is_notowned')->label('Impegno di terzi')->inline(false)->live(),
                                         TextInput::make('rata')->label('Rata')->numeric()->prefix('€'),
                                         TextInput::make('nrate')->label('Durata (mesi)')->numeric()->integer()->hidden(fn (Get $get): bool => self::impegnoDiTerzi($get)),
                                         DatePicker::make('data_inserimento_pratica')->label('Data richiesta')->hidden(fn (Get $get): bool => self::impegnoDiTerzi($get)),
                                         DatePicker::make('scadenza')->label('Scadenza')->helperText('Fine del finanziamento, dell\'assegno di mantenimento o della ritenuta.')->visible(fn (Get $get): bool => self::impegnoDiTerzi($get)),
                                         TextInput::make('codice_pratica')->label('Numero pratica'),
                                         Select::make('clienti_id')
-                                            ->label('Banca')
-                                            ->relationship('clienti', 'name', fn (Builder $query) => $query->where('is_active', true))
+                                            ->label(fn (Get $get): string => self::impegnoDiTerzi($get) ? 'Istituto' : 'Banca')
+                                            ->helperText(fn (Get $get): ?string => self::impegnoDiTerzi($get) ? 'Facoltativo; può essere anche un istituto non attivo. Con una filiale Estinzioni si richiede il conto estintivo.' : null)
+                                            ->relationship('clienti', 'name', fn (Builder $query, Get $get) => self::impegnoDiTerzi($get) ? $query : $query->where('is_active', true))
                                             ->searchable()
                                             ->preload()
                                             ->live()
@@ -155,11 +161,6 @@ class PraticaForm
                                         TextInput::make('codice_pratica_banca')->label('Codice pratica banca')->helperText('Assegnato dalla banca sul suo portale')->maxLength(100)->hidden(fn (Get $get): bool => self::impegnoDiTerzi($get)),
                                         // Cessione e delega si calcolano sulla rata; gli altri prodotti anche sull'importo richiesto.
                                         TextInput::make('amount')->label('Importo richiesto')->numeric()->prefix('€')->live(onBlur: true)->visible(fn (Get $get): bool => ! self::sullaRata($get) && ! self::impegnoDiTerzi($get)),
-                                        Placeholder::make('mediazione_dovuta')
-                                            ->label('Mediazione richiesta al cliente')
-                                            ->hidden(fn (Get $get): bool => self::prodottoDiTerzi($get))
-                                            ->content(fn (Get $get): string => CompensoMediazione::formatta($get('mediation_fee_amount'), $get('mediation_fee_percent'), $get('amount'))),
-                                        Toggle::make('is_notowned')->label('Impegno di terzi')->inline(false)->live(),
                                     ]),
                             ]),
                         Tab::make('Dati di lavorazione')
@@ -219,7 +220,7 @@ class PraticaForm
                             ->schema([
                                 Section::make('Dati finanziari')
                                     ->columnSpanFull()
-                                    ->columns(['default' => 1, 'md' => 2, 'xl' => 4])
+                                    ->columns(['default' => 3])
                                     ->schema([
                                         TextInput::make('net')->label('Importo netto')->numeric()->prefix('€'),
                                         TextInput::make('erogato')->label('Erogato')->numeric()->prefix('€'),
@@ -288,6 +289,12 @@ class PraticaForm
 
                 $livewire->redirect(ClientResource::getUrl('edit', ['record' => $client]));
             });
+    }
+
+    /** Pratica già salvata il cui richiedente ha la scheda cliente: gli estremi si cambiano solo da lì. */
+    private static function anagrafato(?Pratica $pratica): bool
+    {
+        return $pratica?->exists === true && self::schedaEsiste($pratica);
     }
 
     private static function schedaEsiste(Pratica $pratica): bool

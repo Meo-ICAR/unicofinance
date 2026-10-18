@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Manuale utente — UnicoFinance</title>
+    <style>
+        :root { color-scheme: light; }
+        body { margin: 0 auto; max-width: 52rem; padding: 2rem 1.25rem 4rem; color: #1c1917; background: #fff; font: 1.05rem/1.55 Georgia, "Times New Roman", serif; }
+        h1, h2, h3, h4 { font-family: "Segoe UI", system-ui, sans-serif; line-height: 1.25; color: #1c1917; }
+        h1 { font-size: 1.85rem; margin-bottom: 0.25rem; }
+        h2 { font-size: 1.35rem; margin-top: 2.25rem; border-bottom: 1px solid #e7e5e4; padding-bottom: 0.3rem; }
+        h3 { font-size: 1.1rem; margin-top: 1.5rem; }
+        p, li { orphans: 3; widows: 3; }
+        .sottotitolo { margin-top: 0; color: #57534e; }
+        nav ol { padding-left: 1.2rem; }
+        table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.95rem; }
+        th, td { border: 1px solid #d6d3d1; padding: 0.4rem 0.55rem; vertical-align: top; text-align: left; }
+        th { background: #f5f5f4; font-family: "Segoe UI", system-ui, sans-serif; }
+        code { font-family: ui-monospace, "Cascadia Code", monospace; font-size: 0.88em; }
+        .box { background: #fafaf9; border-left: 4px solid #a8a29e; padding: 0.75rem 1rem; margin: 1rem 0; }
+        .attenzione { background: #fffbeb; border-left: 4px solid #d97706; padding: 0.75rem 1rem; margin: 1rem 0; }
+        a { color: #9a3412; }
+        @media print {
+            body { max-width: none; padding: 0; }
+            a { color: inherit; text-decoration: none; }
+            h2 { break-after: avoid; }
+            table, .box, .attenzione { break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+    <h1>Manuale utente</h1>
+    <p class="sottotitolo">UnicoFinance — istruttoria delle pratiche di finanziamento per il mediatore creditizio.</p>
+    <p>Il gestionale raccoglie la documentazione, fa firmare la modulistica e tiene la pratica fino all’esito della banca. La valutazione del credito e la perizia restano della banca: l’app conserva i dati che servono al preventivo e al portale, il resto sta nei documenti.</p>
+
+    <nav>
+        <h2>Indice</h2>
+        <ol>
+            <li><a href="#portali">I due portali</a></li>
+            <li><a href="#produttore">Lavoro del produttore</a></li>
+            <li><a href="#documenti-cq">Documenti di cessione e delega</a></li>
+            <li><a href="#ai">Cosa fa l’intelligenza artificiale al caricamento</a></li>
+            <li><a href="#qav">Adeguata verifica e firma</a></li>
+            <li><a href="#istruttore">Lavoro dell’istruttore</a></li>
+            <li><a href="#portale">Portale della banca e stati</a></li>
+            <li><a href="#benestare">Benestare del datore di lavoro</a></li>
+            <li><a href="#integrativi">Documenti integrativi e solleciti</a></li>
+        </ol>
+    </nav>
+
+    <h2 id="portali">I due portali</h2>
+    <table>
+        <thead>
+            <tr><th>Portale</th><th>Indirizzo</th><th>Chi entra</th><th>Voci di menu</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Portale agenti</td>
+                <td><code>/agenti</code></td>
+                <td>Produttore (agente)</td>
+                <td>Simulazione, Pratiche, Clienti, Datori di lavoro, Scadenziario, Manuali → Manuale utente</td>
+            </tr>
+            <tr>
+                <td>UnicoFinance</td>
+                <td><code>/admin</code></td>
+                <td>Istruttori e back office</td>
+                <td>Pratiche (Pratiche, Clienti, Datori di lavoro, Solleciti) e Configurazione. Manuali → Manuale utente e Manuale tecnico</td>
+            </tr>
+        </tbody>
+    </table>
+    <p>Nella home del portale agenti ci sono le tabelle <strong>Preventivi da perfezionare</strong>, <strong>Le mie pratiche in corso</strong>, <strong>Documenti da consegnare</strong> e il riepilogo delle provvigioni. Nella home admin: <strong>Da prendere in carico</strong>, <strong>Pratiche in corso</strong>, <strong>Documenti da seguire</strong>, <strong>Documenti in scadenza</strong>, <strong>In attesa della banca</strong>, <strong>Documenti in firma</strong>.</p>
+    <p>Quando un istruttore ha preso in carico la pratica, nel portale agenti sparisce l’azione <strong>Perfeziona</strong> e la scheda non è più modificabile.</p>
+
+    <h2 id="produttore">Lavoro del produttore</h2>
+    <p>Tutto il percorso di raccolta sta nella pagina <strong>Simulazione</strong>. Un preventivo già salvato si riprende dalla home, tabella <strong>Preventivi da perfezionare</strong>, azione <strong>Perfeziona</strong>, oppure dall’elenco <strong>Pratiche</strong> con la stessa azione.</p>
+
+    <h3>1. Simulazione, senza nominativo</h3>
+    <p>La pagina è un percorso a due passi.</p>
+    <ol>
+        <li><strong>Dati del cliente.</strong> Tipo contratto (per il quinto: <em>Cessione del quinto</em> o <em>Delegazione di pagamento</em>), sesso, data di nascita, <strong>Tipo amministrazione</strong> e, se non è un pensionato, data di assunzione. La delega è solo per i dipendenti: i pensionati non sono selezionabili. Non si chiede nome, cognome né codice fiscale.</li>
+        <li><strong>Dati del finanziamento.</strong> Durata. Per cessione e delega si inserisce la <strong>Quota cedibile</strong> (non c’è un campo chiamato caricamento). Per gli altri prodotti si inserisce l’<strong>Importo richiesto</strong>. Data decorrenza, proposta a tre mesi.</li>
+    </ol>
+    <p>Il pulsante <strong>Preventiva</strong> mostra la sezione <strong>Esito preventivazione</strong> con la fascia di importo erogato, se il preventivatore è configurato. Altrimenti compare l’avviso che il preventivo si salva senza importo erogato. <strong>Salva preventivo</strong> crea la pratica in stato <strong>PREVENTIVO</strong>: resta nell’elenco <strong>Preventivi da perfezionare</strong> finché non si perfeziona, non si sospende o non si elimina.</p>
+
+    <h3>2. Informativa privacy</h3>
+    <p>Il pulsante <strong>Perfeziona</strong> apre la sezione <strong>Informativa privacy</strong>. Si scarica il modulo <strong>Informativa privacy</strong> (link <em>Scarica il modulo</em>, se il back office ha indicato l’indirizzo del file), il cliente lo firma a mano nello spazio «Per presa visione» e il produttore carica foto o PDF con <strong>Carica l'informativa firmata</strong>.</p>
+    <p>Al caricamento i controlli automatici verificano che sia quel modulo, che sia leggibile e che la firma si veda. Se un controllo non passa, la sezione <strong>Informativa da verificare</strong> elenca il problema: il percorso non si ferma, il back office ricontrollerà. <strong>Carica più tardi</strong> rimanda il file all’elenco dei documenti da caricare.</p>
+    <p>Questa informativa è distinta da <strong>Informativa Privacy Compass</strong>, che si stampa solo sulle pratiche della banca Compass e fa parte della modulistica da firmare con OTP del prestito personale, non della check list di cessione e delega.</p>
+
+    <h3>3. Contatti del cliente</h3>
+    <p>La sezione <strong>Contatti del cliente</strong> chiede <strong>Email del cliente</strong> e <strong>Cellulare del cliente</strong>, entrambi obbligatori. Il pulsante è <strong>Conferma e perfeziona</strong>. Da qui la pratica passa allo stato di perfezionamento e compare l’elenco dei documenti del prodotto.</p>
+
+    <h3>4. Caricamento dei documenti</h3>
+    <p>La sezione si chiama <strong>Documenti da caricare</strong>. C’è l’elenco <strong>Documenti richiesti</strong> (le caselle si spuntano da sole quando il file è riconosciuto) e un unico campo <strong>Carica i documenti</strong>: si possono caricare più file insieme, anche uno ZIP o un PDF che contiene più documenti uno dopo l’altro.</p>
+    <p>Sotto resta il testo dei file già visti, nella sezione <strong>Documenti della pratica</strong> («riconosciuto come …» oppure «tipo non riconosciuto, da verificare»).</p>
+    <p>Se manca qualcosa si può usare <strong>Chiedi i documenti al cliente per email</strong>. L’email parte all’indirizzo del cliente, con il produttore in copia, e nell’oggetto c’è il codice pratica. Il cliente risponde allegando i file: la casella dell’app li acquisisce e li tratta come un caricamento.</p>
+    <div class="box">
+        <p>La scheda cliente, con l’adeguata verifica, si apre quando sono arrivati i documenti d’identità obbligatori letti in automatico (<strong>Carta d'Identità</strong> e <strong>Codice fiscale / Tessera sanitaria</strong>). Buste paga, CU e gli altri documenti della check list si possono caricare anche dopo, o chiedere al cliente con l’email.</p>
+    </div>
+
+    <h2 id="documenti-cq">Documenti di cessione e delega</h2>
+    <p>I nomi sono quelli della check list del prodotto, divisa per gruppo di tipologia lavorativa. «Obbligatorio» è il requisito della check list: un documento facoltativo non blocca la completezza.</p>
+    <p>Per tutti i gruppi, oltre all’<strong>Informativa privacy</strong> del passo precedente:</p>
+    <table>
+        <thead>
+            <tr><th>Gruppo</th><th>Prodotti</th><th>Obbligatori</th><th>Facoltativi</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Pensionati</td>
+                <td>Solo cessione (la delega non ammette pensionati)</td>
+                <td>Carta d'Identità; Codice fiscale / Tessera sanitaria; IBAN (coordinate bancarie); Certificazione Unica (CU)</td>
+                <td>Modello OBIS/M; Cedolino Pensione</td>
+            </tr>
+            <tr>
+                <td>Privati</td>
+                <td>Cessione e delega</td>
+                <td>Carta d'Identità; Codice fiscale / Tessera sanitaria; IBAN (coordinate bancarie); Busta paga 1; Busta paga 2; Certificazione Unica (CU)</td>
+                <td>Certificato di stipendio e quota cedibile; Delega richiesta allegati statali; Estratto conto fondo pensione</td>
+            </tr>
+            <tr>
+                <td>Pubblici e parapubblici</td>
+                <td>Cessione e delega</td>
+                <td>Carta d'Identità; Codice fiscale / Tessera sanitaria; Busta paga 1; Busta paga 2; Certificazione Unica (CU)</td>
+                <td>Nessuno in questa check list</td>
+            </tr>
+        </tbody>
+    </table>
+    <p>La terza busta paga (Busta paga 3) e i cedolini numerati non fanno parte della check list di cessione e delega: servono ai mutui. Non c’è un gruppo «autonomi» per cessione e delega.</p>
+    <p>La modulistica da firmare dopo, nello stato <strong>FASCICOLO COMPLETO</strong>, è un altro elenco e dipende dalla banca scelta:</p>
+    <table>
+        <thead>
+            <tr><th>Prodotto</th><th>Moduli</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Cessione</td>
+                <td><strong>Races VERS. 03_2026 - Fascicolo completo retail CQ compilabile</strong> (obbligatorio). In più, solo se la banca della pratica è quella indicata: <strong>Allegato B per CQS (IBL Banca)</strong> per IBL BANCA SPA; <strong>Allegato B per CQS (Banca del Fucino)</strong> per BANCA DEL FUCINO. Le altre banche, tra cui Capital Fin, non hanno questo allegato.</td>
+            </tr>
+            <tr>
+                <td>Delega</td>
+                <td>Lo stesso fascicolo CQ (obbligatorio), <strong>Allegato B (delega)</strong> (obbligatorio) e <strong>Allegato E (delega)</strong> (facoltativo).</td>
+            </tr>
+        </tbody>
+    </table>
+    <p>Il modulo stampabile chiamato <strong>QAV Persona fisica</strong> non è nella check list né nel fascicolo di cessione e delega. Sta nel fascicolo del prestito personale, insieme a <strong>Informativa Privacy Compass</strong> e al fascicolo retail dei prestiti.</p>
+
+    <h2 id="ai">Cosa fa l’intelligenza artificiale al caricamento</h2>
+    <p>Ogni file passa da controlli tecnici (file presente, duplicato, scadenza, firma digitale già nel PDF) e, se il documento è di un tipo che si legge in automatico, da una lettura del contenuto.</p>
+    <ul>
+        <li>Il tipo si riconosce prima dal nome del file, poi dal contenuto, solo tra i documenti attesi di quella pratica. Se non c’è una corrispondenza sicura, il file resta sulla pratica come <strong>da verificare</strong>. Non viene cancellato.</li>
+        <li>Da <strong>Carta d'Identità</strong> e da <strong>Codice fiscale / Tessera sanitaria</strong> si compilano i campi ancora vuoti dell’anagrafica (cognome, nome, codice fiscale, nascita) e, per la carta, numero, ente e date del documento. Un dato già presente non viene sovrascritto. Le buste paga non compilano l’anagrafica.</li>
+        <li>Se il file non è il tipo atteso, o non è leggibile, compare un avviso sul momento (per l’informativa anche la sezione <strong>Informativa da verificare</strong>). Una foto illeggibile porta il documento in stato <strong>Illeggibile</strong>.</li>
+    </ul>
+    <div class="attenzione">
+        <p>L’intelligenza artificiale non respinge il documento e non manda un’email al produttore. Lo stato <strong>Respinto</strong> lo assegna l’istruttore, con una nota, dall’azione <strong>Esito</strong> sulla scheda <strong>Documenti</strong>. Il produttore lo vede poi in <strong>Documenti da consegnare</strong>.</p>
+    </div>
+
+    <h2 id="qav">Adeguata verifica e firma</h2>
+    <h3>Scheda Cliente</h3>
+    <p>Quando identità e codice fiscale obbligatori sono arrivati, si apre la sezione <strong>Cliente</strong>. Per cessione e delega i campi sono nome, cognome, codice fiscale, data e luogo di nascita, sesso, cittadinanza, data di assunzione (non per i pensionati), reddito netto mensile, <strong>Datore di lavoro</strong> e <strong>Quota cedibile</strong>, più la residenza. I dati già letti dai documenti sono precompilati; data, luogo di nascita e sesso si ricavano dal codice fiscale.</p>
+    <p>Nella stessa scheda c’è la sezione <strong>Adeguata verifica (KYC)</strong>: è il questionario di adeguata verifica che il produttore compila qui (persona politicamente esposta, scopo del finanziamento e le altre voci del questionario). Non è un passo dell’intelligenza artificiale e non è la stampa del modulo «QAV Persona fisica». Sotto, per le persone fisiche, ci sono i <strong>Consensi privacy del cliente</strong>. Il pulsante è <strong>Salva cliente</strong>.</p>
+    <p>Al salvataggio la pratica passa allo stato <strong>FASCICOLO COMPLETO</strong>.</p>
+
+    <h3>Modulistica da firmare</h3>
+    <p>La sezione <strong>Modulistica da firmare</strong> elenca i moduli del prodotto. Il campo <strong>Banca / istituto</strong> decide quali moduli di una sola banca entrano nell’elenco (gli allegati B della cessione, l’informativa Compass sul prestito).</p>
+    <p><strong>Stampa e invia per la firma OTP</strong> compila i PDF con i dati della pratica e li manda al cliente, e al collaboratore dove il modulo lo prevede, con un unico codice OTP via SMS. <strong>Aggiorna stato</strong> riallinea l’elenco. In modalità dimostrazione non parte alcun SMS: a video è indicato il codice da digitare con <strong>Simula firma OTP del cliente</strong>.</p>
+    <p>Quando ogni modulo è firmato (o non ha un PDF da stampare in questa pagina) compare <strong>Invio in istruttoria</strong> e il pulsante <strong>Crea il plico e invia in istruttoria</strong>. Si crea il plico con i documenti e la modulistica firmata, lo stato diventa <strong>INVIO IN ISTRUTTORIA</strong> e parte un avviso agli istruttori (funzione Back Office). In dimostrazione l’avviso va solo all’indirizzo di prova, se è configurato. La sezione <strong>Pratica in istruttoria</strong> conferma plico e destinatari. Da quel momento la pratica è tra quelle <strong>Da prendere in carico</strong>.</p>
+
+    <h2 id="istruttore">Lavoro dell’istruttore</h2>
+    <p>Si entra nel pannello <strong>UnicoFinance</strong> (<code>/admin</code>). Le pratiche senza istruttore sono nella tabella <strong>Da prendere in carico</strong> (di norma quelle inserite negli ultimi 30 giorni): l’azione di presa in carico assegna la pratica all’istruttore collegato all’utente. Le proprie pratiche aperte sono in <strong>Pratiche in corso</strong> e nell’elenco <strong>Pratiche</strong>.</p>
+    <p>La scheda della pratica ha la linguetta <strong>Documenti</strong> per prima, poi <strong>Dati della richiesta</strong>, <strong>Dati di lavorazione</strong> e <strong>Dati finanziari</strong>. Sopra la tabella documenti c’è l’avanzamento della check list (obbligatori presenti, da firmare, da correggere, mancanti). Il filtro <strong>Da completare</strong> elenca mancanti, respinti, anomali e integrativi.</p>
+    <h3>Che cosa è già stato controllato</h3>
+    <p>Al caricamento, in automatico, risultano già fatti:</p>
+    <ul>
+        <li>la verifica tecnica del file (leggibilità del file, duplicato, scadenza, firma digitale già presente);</li>
+        <li>il riconoscimento del tipo, se il nome o il contenuto bastano;</li>
+        <li>la lettura dei dati e i controlli del tipo: documento leggibile, tipo coerente con quello atteso, dati coerenti con quanto già in anagrafica, documento non scaduto, e per l’informativa la corrispondenza al modulo e la firma nello spazio «Per presa visione».</li>
+    </ul>
+    <p>L’esito di questi controlli è visibile sulle icone della scheda <strong>Documenti</strong>. Non sostituisce la decisione dell’istruttore.</p>
+    <h3>Che cosa fa l’istruttore</h3>
+    <p>Sulla riga del documento, o su una selezione, l’azione <strong>Esito</strong> (in blocco: <strong>Esito dell'istruttoria</strong>) assegna <strong>OK</strong>, <strong>Respinto</strong>, <strong>Anomalo</strong>, <strong>N/A</strong> o <strong>Integrativo</strong>. Per respinto, anomalo e integrativo la nota è obbligatoria. Restano registrati chi ha deciso e quando. Anomalo e integrativo continuano a essere seguiti nelle tabelle <strong>Documenti da seguire</strong> (admin) e <strong>Documenti da consegnare</strong> (portale agenti).</p>
+    <p>L’intelligenza artificiale non sceglie questi esiti. Può portare un documento a <strong>OK</strong> solo se quel tipo documento è abilitato all’approvazione automatica e tutti i controlli sono superati: sulle check list di cessione e delega questa abilitazione non è impostata, quindi l’OK resta una scelta dell’istruttore.</p>
+    <p>Il cambio di stato della pratica (azione <strong>Cambia stato</strong>, sull’elenco o nella scheda) chiede sempre una motivazione e scrive lo storico. Per gli stati <strong>FASCICOLO COMPLETO</strong>, <strong>INVIO IN ISTRUTTORIA</strong>, <strong>INVIO IN BANCA</strong> e <strong>Caricata Banca</strong> l’app segnala i documenti obbligatori che mancano. Oggi il passaggio non è bloccato: la pratica cambia stato e compare l’avviso. Il blocco si attiva solo se in configurazione la documentazione è dichiarata bloccante.</p>
+
+    <h2 id="portale">Portale della banca e stati</h2>
+    <p>Nella scheda, linguetta <strong>Dati della richiesta</strong>, accanto alla banca c’è il pulsante <strong>Portale della banca</strong>. Apre l’indirizzo del portale di caricamento dell’istituto (se manca, l’indirizzo portale già presente in anagrafica, altrimenti il sito). L’app non inserisce la pratica nel portale: prepara il link e i dati già in scheda (richiedente, prodotto, rata o importo, durata, documenti). L’istruttore trascrive la pratica sul portale e riporta in <strong>Codice pratica banca</strong> il numero assegnato dalla banca.</p>
+    <p>Lo stato che la banca comunica non si legge da solo dal portale. Si aggiorna in due modi, entrambi manuali:</p>
+    <ul>
+        <li>azione <strong>Cambia stato</strong> sulla pratica, dopo aver visto il portale. La tabella <strong>In attesa della banca</strong> (e il pulsante omonimo sull’elenco <strong>Pratiche</strong>) elenca le pratiche inviate e ancora senza approvazione, rifiuto o erogazione;</li>
+        <li>pulsante <strong>Importa aggiornamenti</strong> sull’elenco <strong>Pratiche</strong>: si carica un file CSV o Excel della banca con le colonne codice pratica banca, nominativo, tipo di prodotto e stato. La pratica si trova dal codice banca; il nominativo deve contenere il cognome, altrimenti la riga si salta. Lo storico riporta «Aggiornamento da file della banca».</li>
+    </ul>
+    <p>Se il nuovo stato è marcato come inviato, approvato, erogato o respinto, e la data corrispondente è ancora vuota, si valorizza con la data del giorno.</p>
+
+    <h2 id="benestare">Benestare del datore di lavoro</h2>
+    <p>Il benestare non parte in automatico, nemmeno quando è indicato un indirizzo. Non c’è un invio, né un controllo «c’è l’indirizzo, quindi spedisci».</p>
+    <p>Sulla scheda del datore di lavoro (menu <strong>Datori di lavoro</strong>, oppure la scheda cliente quando quel soggetto è datore di almeno un dipendente) la sezione <strong>Benestare del datore</strong> ha tre testi liberi: <strong>Richiesta benestare</strong>, <strong>Ritiro benestare</strong> e <strong>Notifica</strong>. Descrivono come si chiede, come si ritira e come si notifica. Il produttore li vede in sola lettura, nello stesso menu del portale agenti.</p>
+    <p>Se quei testi sono vuoti, nell’app non c’è la destinazione: la richiesta la predispone l’istruttore, fuori da un automatismo. L’elenco admin segnala con un’icona i datori per i quali la richiesta è già descritta.</p>
+
+    <h2 id="integrativi">Documenti integrativi e solleciti</h2>
+    <p>Un documento chiesto in più dalla banca si aggiunge dalla scheda <strong>Documenti</strong> con esito <strong>Integrativo</strong> e nota obbligatoria (che cosa manca). Lo stesso vale per un documento <strong>Respinto</strong> o <strong>Anomalo</strong>: la nota dice perché, e il file corretto si carica come nuova versione.</p>
+    <p>Chi risulta «in carico» del documento, e quindi chi deve procurarlo, si decide così:</p>
+    <ul>
+        <li>di norma il <strong>produttore</strong>, perché il flag <strong>Richieste dirette al cliente</strong> sulla scheda <strong>Produttori</strong> nasce spento («preferisce fornirli lui»);</li>
+        <li>il <strong>cliente</strong> (il richiedente) se quel flag è acceso, oppure se sulla pratica, linguetta <strong>Dati di lavorazione</strong>, il campo <strong>Richieste dirette di documenti</strong> è impostato su <em>Abilitate</em>. <em>Non abilitate</em> forza il produttore. <em>Come il produttore</em> (campo vuoto) segue il flag del produttore;</li>
+        <li>se il tipo documento è configurato come emesso dal datore di lavoro, e la pratica è di cessione o delega e il richiedente ha un datore collegato, l’in carico è il datore; se è configurato come emesso dall’istituto, l’in carico è la banca della pratica.</li>
+    </ul>
+    <p>L’email non parte da sola nel momento in cui si salva l’esito. Il documento compare subito in <strong>Documenti da seguire</strong> e, per il produttore, in <strong>Documenti da consegnare</strong>. L’invio si fa a mano:</p>
+    <ul>
+        <li>dalla scheda <strong>Documenti</strong>, azione <strong>Invia sollecito</strong>, al soggetto in carico;</li>
+        <li>dal menu <strong>Solleciti</strong>, che elenca solo i documenti in stato <strong>Richiesto</strong> (non ancora caricati) delle pratiche prese in carico dal 1° ottobre 2026, non inviate in banca, non respinte e non sospese. L’azione <strong>Invia sollecito</strong> manda un’email per pratica e destinatario, con l’istruttore in copia. Un integrativo, che non è in stato Richiesto, non entra in questo elenco: si sollecita dalla scheda documenti.</li>
+    </ul>
+    <p>Durante la raccolta, prima dell’istruttoria, il pulsante <strong>Chiedi i documenti al cliente per email</strong> della Simulazione scrive invece sempre al cliente, con il produttore in copia, indipendentemente dal flag delle richieste dirette.</p>
+</body>
+</html>

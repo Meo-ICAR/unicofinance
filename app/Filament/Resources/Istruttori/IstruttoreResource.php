@@ -2,8 +2,10 @@
 
 namespace App\Filament\Resources\Istruttori;
 
+use App\Filament\Actions\CreaUtenteIstruttoreAction;
 use App\Filament\Actions\ImpersonateIstruttoreAction;
 use App\Filament\Resources\Istruttori\Pages\ListIstruttori;
+use App\Filament\Traits\HasPlanAccess;
 use App\Models\User;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -18,6 +20,8 @@ use Unico\Core\Models\Employee;
 /** Dipendenti dell'istruttoria (e degli altri uffici) con l'accesso al pannello; da qui un amministratore può impersonificarli. */
 class IstruttoreResource extends Resource
 {
+    use HasPlanAccess;
+
     protected static ?string $model = Employee::class;
 
     protected static ?string $slug = 'istruttori';
@@ -34,13 +38,13 @@ class IstruttoreResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'name';
 
-    protected static ?int $navigationSort = 6;
+    protected static ?int $navigationSort = 5;
 
     public static function canViewAny(): bool
     {
         $utente = auth()->user();
 
-        return $utente instanceof User && in_array($utente->role, ['admin', 'super_admin'], true);
+        return $utente instanceof User && in_array($utente->role, ['admin', 'super_admin'], true) && static::hasPlanFeatureAccess();
     }
 
     public static function canCreate(): bool
@@ -82,6 +86,7 @@ class IstruttoreResource extends Resource
             ])
             ->recordActions([
                 ImpersonateIstruttoreAction::make(),
+                CreaUtenteIstruttoreAction::make(),
             ]);
     }
 

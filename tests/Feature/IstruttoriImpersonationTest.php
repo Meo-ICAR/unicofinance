@@ -57,6 +57,25 @@ class IstruttoriImpersonationTest extends TestCase
         $this->assertFalse(app(IstruttoreImpersonationService::class)->isImpersonating());
     }
 
+    public function test_an_instructor_without_a_user_gets_one_created_instead_of_the_impersonate_button(): void
+    {
+        Filament::setCurrentPanel('admin');
+        $this->actingAs(User::factory()->create(['role' => 'super_admin']));
+        $conUtente = $this->istruttore('Istruttore Uno');
+        $senzaUtente = $this->istruttore('Istruttore Due', false);
+        $senzaUtente->update(['email' => 'Due@Races.it']);
+
+        Livewire::test(ListIstruttori::class)
+            ->assertActionHidden(TestAction::make('creaUtenteIstruttore')->table($conUtente))
+            ->assertActionVisible(TestAction::make('creaUtenteIstruttore')->table($senzaUtente))
+            ->callAction(TestAction::make('creaUtenteIstruttore')->table($senzaUtente));
+
+        $utente = User::query()->where('email', 'due@races.it')->firstOrFail();
+        $this->assertSame($utente->id, $senzaUtente->fresh()->user_id);
+        $this->assertSame('employee', $utente->role);
+        $this->assertTrue(app(IstruttoreImpersonationService::class)->canImpersonate(auth()->user(), $senzaUtente->fresh()));
+    }
+
     public function test_only_administrators_can_impersonate_and_not_themselves(): void
     {
         $istruttore = $this->istruttore('Istruttore Uno');

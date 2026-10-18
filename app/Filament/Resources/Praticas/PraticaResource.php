@@ -11,6 +11,7 @@ use App\Filament\Resources\Praticas\Pages\EditPratica;
 use App\Filament\Resources\Praticas\Pages\ListPraticas;
 use App\Filament\Resources\Praticas\Schemas\PraticaForm;
 use App\Filament\Resources\Praticas\Tables\PraticasTable;
+use App\Filament\Traits\HasPlanAccess;
 use App\Models\Pratica;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -24,6 +25,8 @@ use UnitEnum;
 
 class PraticaResource extends Resource
 {
+    use HasPlanAccess;
+
     protected static ?string $model = Pratica::class;
 
     protected static ?string $slug = 'pratiche';

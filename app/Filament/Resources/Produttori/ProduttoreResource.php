@@ -8,6 +8,7 @@ use App\Filament\Resources\Produttori\Pages\ListProduttori;
 use App\Filament\Resources\Produttori\Pages\ViewProduttore;
 use App\Filament\Resources\Produttori\RelationManagers\IstitutiBloccatiRelationManager;
 use App\Filament\Resources\Produttori\RelationManagers\ListiniProvvigionaliRelationManager;
+use App\Filament\Traits\HasPlanAccess;
 use App\Models\User;
 use BackedEnum;
 use Filament\Actions\Action;
@@ -26,6 +27,8 @@ use Unico\Core\Models\Fornitore;
 
 class ProduttoreResource extends Resource
 {
+    use HasPlanAccess;
+
     protected static ?string $model = Fornitore::class;
 
     protected static ?string $slug = 'produttori';
@@ -46,7 +49,7 @@ class ProduttoreResource extends Resource
     {
         $user = auth()->user();
 
-        return $user instanceof User && $user->isStaff();
+        return $user instanceof User && $user->isStaff() && static::hasPlanFeatureAccess();
     }
 
     public static function canCreate(): bool

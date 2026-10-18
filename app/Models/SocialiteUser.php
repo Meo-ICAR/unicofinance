@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\AvatarSocialite;
 use DutchCodingCompany\FilamentSocialite\Models\Contracts\FilamentSocialiteUser as FilamentSocialiteUserContract;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -28,10 +29,17 @@ class SocialiteUser extends CoreSocialiteUser implements FilamentSocialiteUserCo
 
     public static function findForProvider(string $provider, SocialiteUserContract $oauthUser): ?self
     {
-        return self::query()
+        $collegato = self::query()
             ->where('provider', $provider)
             ->where('provider_id', $oauthUser->getId())
             ->first();
+
+        // A ogni accesso l'avatar si allinea a quello del provider.
+        if ($collegato !== null && filled($oauthUser->getAvatar())) {
+            $collegato->forceFill(['avatar' => app(AvatarSocialite::class)->indirizzo($oauthUser->getAvatar(), $collegato->user_id)])->save();
+        }
+
+        return $collegato;
     }
 
     public static function createForProvider(string $provider, SocialiteUserContract $oauthUser, Authenticatable $user): self
@@ -41,7 +49,7 @@ class SocialiteUser extends CoreSocialiteUser implements FilamentSocialiteUserCo
             'provider' => $provider,
             'provider_id' => $oauthUser->getId(),
             'email' => $oauthUser->getEmail(),
-            'avatar' => $oauthUser->getAvatar(),
+            'avatar' => app(AvatarSocialite::class)->indirizzo($oauthUser->getAvatar(), $user->getKey()),
             'token' => $oauthUser instanceof OAuthTwoUser ? $oauthUser->token : null,
             'refresh_token' => $oauthUser instanceof OAuthTwoUser ? $oauthUser->refreshToken : null,
             'expires_at' => $oauthUser instanceof OAuthTwoUser && $oauthUser->expiresIn

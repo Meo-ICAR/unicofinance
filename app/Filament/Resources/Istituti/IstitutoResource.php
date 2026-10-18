@@ -9,6 +9,7 @@ use App\Filament\Resources\Istituti\RelationManagers\PortaliIstitutoRelationMana
 use App\Filament\Resources\Istituti\RelationManagers\ProduttoriBloccatiRelationManager;
 use App\Filament\Resources\Istituti\RelationManagers\ProvvigioniAttiveRelationManager;
 use App\Filament\Resources\Istituti\Tables\IstitutiTable;
+use App\Filament\Traits\HasPlanAccess;
 use App\Models\User;
 use BackedEnum;
 use Filament\Forms\Components\TextInput;
@@ -24,6 +25,8 @@ use Unico\Core\Models\Cliente;
 /** Banche e istituti finanziari (clienti del mediatore), in sola lettura. */
 class IstitutoResource extends Resource
 {
+    use HasPlanAccess;
+
     protected static ?string $model = Cliente::class;
 
     protected static ?string $slug = 'istituti';
@@ -46,7 +49,7 @@ class IstitutoResource extends Resource
     {
         $user = auth()->user();
 
-        return $user instanceof User && $user->isStaff();
+        return $user instanceof User && $user->isStaff() && static::hasPlanFeatureAccess();
     }
 
     public static function canCreate(): bool
@@ -57,7 +60,7 @@ class IstitutoResource extends Resource
     /** Dell'istituto si modificano solo i riferimenti web; il resto è anagrafica condivisa. */
     public static function canEdit(Model $record): bool
     {
-        return static::canViewAny();
+        return static::canViewAny() && static::hasPlanFeatureAccess(write: true);
     }
 
     public static function canDelete(Model $record): bool

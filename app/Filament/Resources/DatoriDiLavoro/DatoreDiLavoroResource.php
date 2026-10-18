@@ -8,6 +8,7 @@ use App\Filament\Resources\Clients\Schemas\ClientForm;
 use App\Filament\Resources\DatoriDiLavoro\Pages\EditDatoreDiLavoro;
 use App\Filament\Resources\DatoriDiLavoro\Pages\ListDatoriDiLavoro;
 use App\Filament\Resources\DatoriDiLavoro\RelationManagers\OrganigrammaRelationManager;
+use App\Filament\Traits\HasPlanAccess;
 use App\Models\Client;
 use App\Models\ClientRelation;
 use BackedEnum;
@@ -30,6 +31,8 @@ use UnitEnum;
  */
 class DatoreDiLavoroResource extends Resource
 {
+    use HasPlanAccess;
+
     protected static ?string $model = Client::class;
 
     protected static ?string $slug = 'datori-di-lavoro';

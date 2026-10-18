@@ -9,6 +9,7 @@ use App\Filament\Resources\ListinoProvvigionales\RelationManagers\FornitoriRelat
 use App\Filament\Resources\ListinoProvvigionales\RelationManagers\VociRelationManager;
 use App\Filament\Resources\ListinoProvvigionales\Schemas\ListinoProvvigionaleForm;
 use App\Filament\Resources\ListinoProvvigionales\Tables\ListinoProvvigionalesTable;
+use App\Filament\Traits\HasPlanAccess;
 use App\Models\ListinoProvvigionale;
 use App\Models\User;
 use BackedEnum;
@@ -19,6 +20,8 @@ use Filament\Tables\Table;
 
 class ListinoProvvigionaleResource extends Resource
 {
+    use HasPlanAccess;
+
     protected static ?string $model = ListinoProvvigionale::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
@@ -41,7 +44,7 @@ class ListinoProvvigionaleResource extends Resource
     {
         $user = auth()->user();
 
-        return $user instanceof User && $user->isStaff();
+        return $user instanceof User && $user->isStaff() && static::hasPlanFeatureAccess();
     }
 
     public static function form(Schema $schema): Schema

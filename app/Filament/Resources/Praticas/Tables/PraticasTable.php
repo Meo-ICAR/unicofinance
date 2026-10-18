@@ -102,6 +102,19 @@ class PraticasTable
                         ->pluck('denominazione_banca', 'denominazione_banca')
                         ->all())
                     ->searchable(),
+                SelectFilter::make('employee_id')
+                    ->label('Istruttore')
+                    ->relationship('employee', 'name', fn (Builder $query) => $query->where('employee_types', 'istruttore'))
+                    ->searchable()
+                    ->preload(),
+                Filter::make('inviate_in_banca')
+                    ->label('Con data di invio in banca')
+                    ->toggle()
+                    ->query(fn (Builder $query): Builder => $query->whereNotNull('sended_at')),
+                Filter::make('non_perfezionate')
+                    ->label('Non perfezionate')
+                    ->toggle()
+                    ->query(fn (Builder $query): Builder => $query->whereNull('erogated_at')),
                 SelectFilter::make('fornitori_id')
                     ->label('Agente')
                     ->relationship('fornitori', 'name', fn (Builder $query) => $query->where('is_active', true))

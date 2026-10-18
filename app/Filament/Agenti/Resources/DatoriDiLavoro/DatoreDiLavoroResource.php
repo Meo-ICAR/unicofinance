@@ -5,6 +5,7 @@ namespace App\Filament\Agenti\Resources\DatoriDiLavoro;
 use App\Filament\Agenti\Resources\DatoriDiLavoro\Pages\ListDatoriDiLavoro;
 use App\Filament\Agenti\Resources\DatoriDiLavoro\Pages\ViewDatoreDiLavoro;
 use App\Filament\Agenti\Resources\DatoriDiLavoro\RelationManagers\DipendentiRelationManager;
+use App\Filament\Traits\HasPlanAccess;
 use App\Models\Client;
 use App\Models\ClientRelation;
 use App\Services\Agenti\ClientiDellAgente;
@@ -24,6 +25,8 @@ use Illuminate\Database\Eloquent\Model;
  */
 class DatoreDiLavoroResource extends Resource
 {
+    use HasPlanAccess;
+
     protected static ?string $model = Client::class;
 
     protected static ?string $slug = 'datori-di-lavoro';

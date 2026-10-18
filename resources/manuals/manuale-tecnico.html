@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Manuale tecnico — UnicoFinance</title>
+    <style>
+        :root { color-scheme: light; }
+        body { margin: 0 auto; max-width: 54rem; padding: 2rem 1.25rem 4rem; color: #1c1917; background: #fff; font: 1.02rem/1.55 Georgia, "Times New Roman", serif; }
+        h1, h2, h3 { font-family: "Segoe UI", system-ui, sans-serif; line-height: 1.25; }
+        h1 { font-size: 1.85rem; margin-bottom: 0.25rem; }
+        h2 { font-size: 1.3rem; margin-top: 2.2rem; border-bottom: 1px solid #e7e5e4; padding-bottom: 0.3rem; }
+        h3 { font-size: 1.08rem; margin-top: 1.4rem; }
+        .sottotitolo { margin-top: 0; color: #57534e; }
+        table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.92rem; }
+        th, td { border: 1px solid #d6d3d1; padding: 0.4rem 0.55rem; vertical-align: top; text-align: left; }
+        th { background: #f5f5f4; font-family: "Segoe UI", system-ui, sans-serif; }
+        code, pre { font-family: ui-monospace, "Cascadia Code", monospace; font-size: 0.86em; }
+        pre { background: #fafaf9; border: 1px solid #e7e5e4; padding: 0.75rem 1rem; overflow-x: auto; }
+        .gap { background: #fffbeb; border-left: 4px solid #d97706; padding: 0.75rem 1rem; margin: 1rem 0; }
+        a { color: #9a3412; }
+        @media print {
+            body { max-width: none; padding: 0; }
+            a { color: inherit; text-decoration: none; }
+            h2, h3 { break-after: avoid; }
+            table, pre, .gap { break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+    <h1>Manuale tecnico</h1>
+    <p class="sottotitolo">UnicoFinance — Laravel 13, Filament 5, pacchetto <code>meo-icar/unico-core</code> in <code>/var/www/html/unico-core</code>.</p>
+    <p>Questo manuale descrive le classi presenti nel codice. Una funzione citata nel processo di lavoro ma assente dall’implementazione è nel paragrafo <a href="#non-automatico">Non ancora automatico</a>, non nelle sezioni che descrivono il comportamento attuale.</p>
+
+    <h2>Pannelli</h2>
+    <table>
+        <thead>
+            <tr><th>Pannello</th><th>Provider</th><th>Percorso</th><th>Accesso</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>admin</code></td>
+                <td><code>app/Providers/Filament/AdminPanelProvider.php</code></td>
+                <td><code>/admin</code></td>
+                <td><code>User::isStaff()</code>: ruoli <code>admin</code>, <code>super_admin</code>, <code>employee</code>, <code>inspector</code>, <code>user</code></td>
+            </tr>
+            <tr>
+                <td><code>agenti</code></td>
+                <td><code>app/Providers/Filament/AgentiPanelProvider.php</code></td>
+                <td><code>/agenti</code></td>
+                <td>Esiste un <code>Fornitore</code> collegato all’utente (<code>User::canAccessPanel</code>)</td>
+            </tr>
+        </tbody>
+    </table>
+    <p>Gruppi di navigazione admin: <strong>Pratiche</strong> e <strong>Configurazione</strong> (chiuso). I manuali stanno nel gruppo <strong>Manuali</strong> (chiuso): <em>Manuale utente</em> su entrambi i pannelli (<code>App\Filament\Pages\ManualeUtente</code>, <code>App\Filament\Agenti\Pages\ManualeUtente</code>), <em>Manuale tecnico</em> solo admin (<code>App\Filament\Pages\ManualeTecnico</code>). I file HTML sono <code>resources/manuals/manuale-utente.html</code> e <code>resources/manuals/manuale-tecnico.html</code>, serviti da <code>App\Http\Controllers\ManualeController</code> (rotte <code>manuali.utente</code> e <code>manuali.tecnico</code>).</p>
+    <p>Lo staff entra nel portale agenti come un produttore con <code>App\Filament\Actions\ImpersonateFornitoreAction</code> e <code>App\Services\Agenti\AgentImpersonationService</code>. Da <strong>Configurazione → Istruttori</strong> si impersona un istruttore (<code>App\Services\Istruttoria\IstruttoreImpersonationService</code>).</p>
+
+    <h2>Database e modelli</h2>
+    <table>
+        <thead>
+            <tr><th>Connessione</th><th>Database</th><th>Contenuto</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>mysql</code> (default)</td>
+                <td><code>unicofinance</code></td>
+                <td>Utenti, listini provvigionali, blacklist istituto–produttore, <code>client_relations</code>, questionari KYC (<code>kyc_questionnaires</code>), preventivi (<code>financing_quotes</code>), registro <code>api_calls</code></td>
+            </tr>
+            <tr>
+                <td><code>core</code></td>
+                <td><code>unico_core_test</code> (condiviso)</td>
+                <td>Clienti, pratiche, documenti, stati, task, istituti (<code>clientis</code>), produttori (<code>fornitoris</code>), firma, mail. Modelli <code>Unico\Core\Models\*</code> con <code>UsesCoreConnection</code></td>
+            </tr>
+        </tbody>
+    </table>
+    <p>Una relazione eredita la connessione del modello di partenza. Un modello dell’app raggiunto dal core ridefinisce <code>getConnectionName()</code> (esempio <code>App\Models\ClientRelation</code>). <code>App\Models\Pratica</code> e <code>App\Models\User</code> estendono i modelli del core, non li duplicano. Le migrazioni del core stanno in <code>/var/www/html/unico-core/database/migrations</code> e si applicano con <code>--database=core</code>.</p>
+    <p>Check list documentali: seeder <code>Unico\Core\Seeders\ChecklistPerfezionamentoSeeder</code> (task per prodotto e <code>employment_document_group</code>, fase firma <code>FASCICOLO COMPLETO</code>). Informativa e <code>ai_kind</code> di identità e codice fiscale: <code>Unico\Core\Seeders\PerfezionamentoDocumentiSeeder</code>. Lettura dei requisiti: <code>Unico\Core\Documents\PracticeTaskDocuments</code>. Completezza in elenco: <code>App\Services\Istruttoria\CompletezzaDocumentale</code>. Requisiti di una sola banca: <code>Unico\Core\Documents\BankDocumentRequirements</code> (<code>document_types.clienti_id</code>).</p>
+
+    <h2>Percorso della pratica</h2>
+    <h3>Simulazione e perfezionamento</h3>
+    <p>Pagina <code>App\Filament\Agenti\Pages\Simulazione</code> (slug <code>simulazione</code>), vista <code>resources/views/filament/agenti/pages/simulazione.blade.php</code>. Le fasi interne sono <code>preventivo</code>, <code>informativa</code>, <code>contatti</code>, <code>perfezionare</code>, <code>cliente</code>, <code>firma</code>, <code>istruttoria</code>.</p>
+    <table>
+        <thead>
+            <tr><th>Passo a video</th><th>Classe</th><th>Effetto</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Preventiva / Salva preventivo</td>
+                <td><code>App\Services\Preventivazione\QuotationService</code>, <code>PracticeFinalizer</code>, <code>FinancingQuoteRecorder</code></td>
+                <td>Preventivo anonimo. Per cessione e delega l’input economico è <code>quota_cedibile</code> (<code>SimulationContractType::asksQuotaCedibile</code>). Non esiste un campo «caricamento». Stato pratica <code>PREVENTIVO</code>.</td>
+            </tr>
+            <tr>
+                <td>Informativa privacy</td>
+                <td><code>PracticeTaskDocuments::privacy()</code> (task <code>Informativa privacy</code>, tipo <code>Informativa privacy</code>), <code>PracticeDocumentIntake::storeTyped</code></td>
+                <td>Upload tipizzato. I controlli non bloccano <code>perfeziona</code>: gli avvisi restano in <code>$avvisiInformativa</code>. <code>posticipaInformativa</code> salta al passo contatti.</td>
+            </tr>
+            <tr>
+                <td>Contatti del cliente</td>
+                <td><code>Simulazione::confermaContatti</code>, <code>PracticeFinalizer::perfect</code></td>
+                <td>Email e cellulare obbligatori. Carica la check list con <code>PracticeTaskDocuments::forProduct</code> filtrata sul gruppo lavorativo.</td>
+            </tr>
+            <tr>
+                <td>Documenti da caricare</td>
+                <td><code>Unico\Core\Filament\Schemas\PracticeDocumentsUpload</code>, <code>PracticeDocumentIntake::intakeAll</code></td>
+                <td>ZIP e PDF multipagina (<code>UploadExpander</code>), poi pipeline. Il passaggio alla scheda cliente non aspetta tutta la check list: <code>Simulazione::tipiMancanti</code> guarda solo i tipi obbligatori con <code>ai_kind</code> <code>identita</code> o <code>codice_fiscale</code>.</td>
+            </tr>
+            <tr>
+                <td>Chiedi i documenti al cliente per email</td>
+                <td><code>PracticeDocumentRequestMailer::send</code></td>
+                <td>Destinatario: email del cliente. Copia: email del produttore. Template <code>unico-core.practice_intake.request_template</code> (codice <code>PRATICA_DOCUMENTI_RICHIESTI</code>, gradi regular / warning / alert, testi in <code>PerfezionamentoDocumentiSeeder</code>). Le risposte: comando schedulato <code>unico-core:mail-fetch --type=sollecito</code> e <code>PracticeMailReplyHandler</code>.</td>
+            </tr>
+            <tr>
+                <td>Cliente / Adeguata verifica (KYC)</td>
+                <td><code>Simulazione::salvaCliente</code>, <code>App\Models\KycQuestionnaire</code>, <code>KycQuestionnaireForm</code></td>
+                <td>Form, non un prompt. Crea il questionario con <code>KycStatus::Complete</code>. Poi <code>PracticeFinalizer::advance(..., 'FASCICOLO COMPLETO')</code>.</td>
+            </tr>
+            <tr>
+                <td>Modulistica da firmare</td>
+                <td><code>PracticeSignaturePackage</code>, <code>PracticeSignaturePackageForm</code>, provider Yousign (<code>SignatureProviderManager</code>)</td>
+                <td>Stampa PDF (<code>ModulePrinter</code>) e invio OTP. Sync: <code>signature:sync</code> ogni cinque minuti, <code>signature:check</code> giornaliero (<code>routes/console.php</code>). In demo <code>SignatureDemo</code> non invia SMS.</td>
+            </tr>
+            <tr>
+                <td>Crea il plico e invia in istruttoria</td>
+                <td><code>App\Services\Istruttoria\InvioInIstruttoria</code></td>
+                <td><code>PracticeDossier::crea</code>, stato <code>INVIO IN ISTRUTTORIA</code> via <code>CambioStatoPratica</code>, mailable <code>App\Mail\PraticaInIstruttoria</code> ai membri della funzione <code>BUS-BO</code> oppure a <code>config('istruttoria.email')</code>. In demo solo <code>istruttoria.email_demo</code>.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>Analisi del documento</h3>
+    <p>Job <code>Unico\Core\Documents\Jobs\AnalyzeDocument</code> (coda <code>unico-core.documents.analysis.queue</code>, default <code>documents</code>), in ascolto di <code>AnalyzeUploadedDocument</code> sull’evento media. In simulazione l’analisi è lanciata in modo sincrono da <code>PracticeDocumentIntake</code>, con i candidati del task (<code>AnalyzeUploadedDocument::suspendedWhile</code> evita il doppio giro).</p>
+    <p>Pipeline <code>Unico\Core\Documents\DocumentPipeline</code>:</p>
+    <ol>
+        <li><code>verification</code> — <code>TechnicalVerifier</code>, senza AI.</li>
+        <li><code>classification</code> — <code>DocumentClassifier</code>: regex di <code>document_types.regex</code>, poi <code>AnthropicDocumentReader::classify</code> se <code>is_ai_check</code> e la confidenza raggiunge <code>min_confidence</code> (default 70).</li>
+        <li><code>extraction</code> — <code>AnthropicDocumentReader::read</code> sul <code>ai_kind</code>, poi i check di <code>document_types.checks</code> o <code>unico-core.documents.default_checks</code> (<code>leggibile</code>, <code>tipo_documento</code>, <code>dati_coerenti</code>, <code>non_scaduto</code>, <code>informativa_firmata</code>).</li>
+    </ol>
+    <p>Il commento della pipeline è vincolante: l’AI non respinge da sola. L’esito <code>failed</code> resta in <code>document_analyses</code>. Lo stato diventa <code>Illeggibile</code> solo se ci sono problemi e <code>legible</code> è falso. L’approvazione automatica (<code>DocumentStatus::APPROVED</code>) scatta solo con <code>document_types.allow_auto_verification</code> e ogni passo superato. <code>PracticeClientPopulator::apply</code> scrive l’anagrafica solo per <code>ai_kind</code> <code>identita</code> e <code>codice_fiscale</code>, e solo nei campi vuoti.</p>
+    <p>Il lettore è <code>AnthropicDocumentReader</code> se <code>services.anthropic</code> ha la chiave, altrimenti <code>NullDocumentReader</code> (<code>UnicoCoreServiceProvider</code>). Ogni chiamata fallita è registrata da <code>App\Services\AiCallRegistry</code> in <code>api_calls</code>. I testi dei prompt stanno in <code>resources/prompts/</code> e sono copiati dalle costanti <code>SYSTEM_READ</code>, <code>SYSTEM_CLASSIFY</code> e <code>SYSTEM_SEGMENT</code>.</p>
+    <p>Notifiche a video, non email: <code>PracticeDocumentsUpload::notify</code> (riconosciuto, problemi, oppure «resta da verificare»).</p>
+
+    <h3>Istruttoria, esito, portale, solleciti</h3>
+    <table>
+        <thead>
+            <tr><th>Operazione</th><th>Dove</th><th>Comportamento reale</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Presa in carico</td>
+                <td><code>App\Filament\Widgets\DaPrendereInCarico</code></td>
+                <td>Imposta <code>pratiches.employee_id</code>. Da quel momento l’agente non modifica più la pratica.</td>
+            </tr>
+            <tr>
+                <td>Esito documento</td>
+                <td><code>Unico\Core\Filament\Actions\DocumentOutcomeAction</code> nella scheda <code>DocumentsRelationManager</code> (titolo <strong>Documenti</strong>)</td>
+                <td>Valori di <code>DocumentStatus::istruttoria()</code>: OK, Respinto, Anomalo, N/A, Integrativo. Nota obbligatoria per respinto, anomalo, integrativo (<code>rejection_note</code>, <code>verified_by</code>, <code>verified_at</code>). Nessuna email nel <code>save</code>.</td>
+            </tr>
+            <tr>
+                <td>In carico del documento</td>
+                <td><code>Document::saving</code> chiama <code>DocumentResponsibleResolver</code></td>
+                <td>Per richiesto, respinto, anomalo, integrativo, illeggibile, scaduto, provvisorio: <code>issuer_model</code> <code>employer</code> (solo se il prodotto è Cessione o Delega e il richiedente ha un datore), <code>institute</code> (banca della pratica), altrimenti il richiedente se <code>pratiches.allows_direct_requests</code> è vero, se nullo se lo è <code>fornitoris.allows_direct_requests</code>; se il flag è falso, il produttore. Il default del produttore in anagrafica è spento.</td>
+            </tr>
+            <tr>
+                <td>Sollecito</td>
+                <td><code>DocumentsRelationManager</code> azione <strong>Invia sollecito</strong>; menu <strong>Solleciti</strong> <code>App\Filament\Resources\Solleciti\SollecitoResource</code></td>
+                <td>L’azione di scheda usa <code>DocumentReminderService</code> verso <code>responsible</code>. Il menu Solleciti elenca solo <code>status = richiesto</code> (pratiche con <code>presa_in_carico_at</code> dal 2026-10-01, senza <code>sended_at</code>, non respinte, non sospese) e invia con <code>PracticeDocumentRequestMailer</code> al responsible, istruttore in copia, severity <code>warning</code>. Un integrativo non è in quello stato, quindi non compare in Solleciti.</td>
+            </tr>
+            <tr>
+                <td>Portale banca</td>
+                <td><code>App\Services\PortaleBanca::url</code>, azione <code>portaleBanca</code> in <code>PraticaForm</code></td>
+                <td>Restituisce l’URL (<code>Website::PORTAL_CARICAMENTO</code>, poi <code>portal_url</code>, poi <code>website</code>) e basta. Nessuna trascrizione.</td>
+            </tr>
+            <tr>
+                <td>Stato dal file banca</td>
+                <td><code>ListPraticas::importaAggiornamenti</code>, <code>App\Services\ImportAggiornamentiBanca</code></td>
+                <td>CSV/XLSX caricato a mano. Non è un comando Artisan e non interroga il portale. Il cambio passa da <code>CambioStatoPratica::cambia</code> con origine <code>import</code>.</td>
+            </tr>
+            <tr>
+                <td>Cambio stato</td>
+                <td><code>App\Services\CambioStatoPratica</code>, trait <code>RegistraCambioStato</code>, azioni in <code>PraticasTable</code></td>
+                <td>Motivazione obbligatoria, storico <code>pratica_status_history</code>. Date <code>rejected_at</code>, <code>sended_at</code>, <code>approved_at</code>, <code>erogated_at</code> se il flag dello stato è acceso e la data è vuota. Stati controllati in <code>config/istruttoria.php</code>; <code>documentazione_bloccante</code> è false salvo <code>ISTRUTTORIA_DOCUMENTAZIONE_BLOCCANTE</code>.</td>
+            </tr>
+            <tr>
+                <td>Benestare</td>
+                <td>Campi <code>richiesta_benestare</code>, <code>ritiro_benestare</code>, <code>notifica</code> su <code>Client</code>, sezione <strong>Benestare del datore</strong> in <code>ClientForm</code></td>
+                <td>Testi descrittivi. Nessun mailer, nessun job, nessun uso di un indirizzo per spedire.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>Comandi e schedulazione</h2>
+    <p>Schedulati in <code>routes/console.php</code>:</p>
+    <ul>
+        <li><code>unico-core:mail-fetch --type=sollecito --sync</code> ogni cinque minuti;</li>
+        <li><code>unico-core:documents-print-refresh</code> ogni dieci minuti;</li>
+        <li><code>signature:sync</code> ogni cinque minuti;</li>
+        <li><code>signature:check</code> ogni giorno.</li>
+    </ul>
+    <p>Comandi dell’app, non schedulati: <code>pratiche:import-api</code> (<code>App\Console\Commands\ImportPraticheFromApi</code>, Mediafacile), <code>provvigioni:import-api</code>. Del core, utili ma non nello scheduler di questa app: <code>unico-core:documents-remind</code>, <code>unico-core:documents-schedule-sync</code>, <code>unico-core:pdf-slots</code>.</p>
+
+    <h2 id="non-automatico">Non ancora automatico</h2>
+    <div class="gap">
+        <p>Queste parti del processo descritto a voce non hanno un’implementazione che le esegua da sola. I prompt in <code>resources/prompts/</code> che le riguardano sono stub: non vanno usati come prompt di produzione.</p>
+    </div>
+    <table>
+        <thead>
+            <tr><th>Atteso</th><th>Cosa fa il codice oggi</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Respingere un documento non pertinente e scrivere al produttore</td>
+                <td><code>KindCheck</code> registra il problema. Lo stato non diventa Respinto. Nessuna email parte dal pipeline. L’email al cliente (produttore in copia) è un’azione volontaria in Simulazione, non la notifica di un respingimento.</td>
+            </tr>
+            <tr>
+                <td>Compilare il QAV con l’AI e, per la cessione, firmarlo come modulo a sé</td>
+                <td>Il questionario è il form <strong>Adeguata verifica (KYC)</strong>. Il tipo documento <code>QAV Persona fisica</code> è nel fascicolo del prodotto Prestito, non in Cessione né in Delega. Il fascicolo CQ si stampa e si firma con OTP, senza un prompt.</td>
+            </tr>
+            <tr>
+                <td>L’istruttore (o l’AI) verifica la pratica oltre i controlli sul singolo file</td>
+                <td>Non c’è un servizio di verifica istruttoria. L’istruttore assegna l’esito documento per documento.</td>
+            </tr>
+            <tr>
+                <td>Trascrivere la pratica nel portale della banca</td>
+                <td><code>PortaleBanca</code> apre un URL. Nessun client HTTP verso la banca, nessun mapping dei campi del portale.</td>
+            </tr>
+            <tr>
+                <td>Inviare il benestare se esiste l’indirizzo, e chiamare l’istruttore solo se manca</td>
+                <td>I tre testi sul datore di lavoro non generano un invio. Non c’è un campo indirizzo di destinazione usato da un job.</td>
+            </tr>
+            <tr>
+                <td>Aggiornare in automatico lo stato dal portale</td>
+                <td>Nessuno scraper e nessuno schedule. L’aggiornamento è il file importato a mano o il cambio stato dell’istruttore. Il widget <strong>In attesa della banca</strong> elenca le pratiche, non le sincronizza.</td>
+            </tr>
+            <tr>
+                <td>Alla richiesta di un integrativo, inoltrare da soli l’email al produttore o al cliente</td>
+                <td>Cambiare lo stato aggiorna il responsible secondo <code>allows_direct_requests</code>. L’email parte solo se qualcuno preme <strong>Invia sollecito</strong>. <code>unico-core:documents-remind</code> non è schedulato. Il menu Solleciti non include lo stato Integrativo.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>Prompt riutilizzabili</h2>
+    <p>Directory <code>resources/prompts/</code>. I tre file con il testo del modello sono l’unica istruzione AI presente nel PHP (<code>unico-core/src/Documents/AnthropicDocumentReader.php</code>). Gli altri file nominano la funzione richiesta e dichiarano che un prompt di produzione non c’è.</p>
+</body>
+</html>

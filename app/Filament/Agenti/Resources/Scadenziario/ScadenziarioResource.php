@@ -4,6 +4,7 @@ namespace App\Filament\Agenti\Resources\Scadenziario;
 
 use App\Filament\Agenti\Resources\Scadenziario\Pages\ListScadenziario;
 use App\Filament\Agenti\Widgets\ProvvigioniAgente;
+use App\Filament\Traits\HasPlanAccess;
 use App\Models\Pratica;
 use App\Services\Agenti\AgentImpersonationService;
 use BackedEnum;
@@ -24,6 +25,8 @@ use Unico\Core\Models\Document;
  */
 class ScadenziarioResource extends Resource
 {
+    use HasPlanAccess;
+
     protected static ?string $model = Document::class;
 
     protected static ?string $slug = 'scadenziario';

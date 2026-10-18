@@ -99,7 +99,7 @@ class PraticaCambioStatoTest extends TestCase
 
         $page = Livewire::test(EditPratica::class, ['record' => $pratica->getKey()])
             ->assertDontSee('Offerta valida fino al')
-            ->assertSee('Estremi')
+            ->assertSee('Estremi richiedente')
             ->assertSee('Prodotto richiesto')
             ->assertFormFieldIsHidden('richiedente_persona_fisica')
             ->assertSee('Numero pratica')
@@ -116,7 +116,7 @@ class PraticaCambioStatoTest extends TestCase
 
         $html = $page->html();
         $sezione = (int) strpos($html, 'Prodotto richiesto');
-        $positions = array_map(fn (string $label) => strpos($html, $label, $sezione), ['Tipo prodotto', 'Rata', 'Durata (mesi)', 'Data richiesta', 'Numero pratica', 'Banca', 'Codice pratica banca', 'Importo richiesto', 'Impegno di terzi']);
+        $positions = array_map(fn (string $label) => strpos($html, $label, $sezione), ['Tipo prodotto', 'Impegno di terzi', 'Rata', 'Durata (mesi)', 'Data richiesta', 'Numero pratica', 'Banca', 'Codice pratica banca', 'Importo richiesto']);
         $this->assertNotContains(false, $positions);
         $sorted = $positions;
         sort($sorted);
@@ -157,6 +157,20 @@ class PraticaCambioStatoTest extends TestCase
             ->assertFormFieldIsHidden('nrate')
             ->assertFormFieldIsHidden('data_inserimento_pratica')
             ->assertFormFieldIsHidden('mediation_fee_percent');
+    }
+
+    public function test_the_header_shows_the_product_description_and_the_product_section_has_no_mediation(): void
+    {
+        Filament::setCurrentPanel('admin');
+        $this->actingAs(User::factory()->create(['role' => 'super_admin']));
+        $cessione = TipoProdotto::query()->where('name', 'Cessione')->firstOrFail();
+        $pratica = Pratica::query()->create(['codice_pratica' => 'ZZHDR-'.Str::upper(Str::random(4)), 'cognome_cliente' => 'Rossi', 'tipoprodotto_id' => $cessione->getKey(), 'denominazione_prodotto' => 'Cessione - BANCA DEL FUCINO - 270 x 120 (QT00029)', 'upload_at' => now()]);
+
+        Livewire::test(EditPratica::class, ['record' => $pratica->getKey()])
+            ->assertSee('Cessione - BANCA DEL FUCINO - 270 x 120 (QT00029)')
+            ->assertSee('Estremi richiedente')
+            ->assertDontSee('Mediazione richiesta al cliente')
+            ->assertFormFieldExists('mediation_fee_percent');
     }
 
     public function test_the_tax_code_link_opens_the_client_card_of_the_admin_panel(): void

@@ -7,6 +7,7 @@ use App\Filament\Agenti\Resources\Clients\Pages\ListClients;
 use App\Filament\Agenti\Resources\Clients\Schemas\ClientForm;
 use App\Filament\RelationManagers\AddressesRelationManager;
 use App\Filament\RelationManagers\BranchesRelationManager;
+use App\Filament\Traits\HasPlanAccess;
 use App\Models\Client;
 use App\Models\Pratica;
 use App\Services\Agenti\AgentImpersonationService;
@@ -30,6 +31,8 @@ use Unico\Core\Models\PraticaClient;
  */
 class ClientResource extends Resource
 {
+    use HasPlanAccess;
+
     protected static ?string $model = Client::class;
 
     protected static ?string $slug = 'clienti';

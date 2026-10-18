@@ -4,6 +4,8 @@ namespace App\Filament\Resources\Praticas\Pages;
 
 use App\Filament\Resources\Praticas\PraticaResource;
 use App\Services\Istruttoria\RichiedentePratica;
+use App\Services\Istruttoria\RichiestaContoEstintivo;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreatePratica extends CreateRecord
@@ -13,5 +15,11 @@ class CreatePratica extends CreateRecord
     protected function afterCreate(): void
     {
         app(RichiedentePratica::class)->ensureClient($this->getRecord());
+
+        $avviso = app(RichiestaContoEstintivo::class)->sincronizza($this->getRecord());
+
+        if ($avviso !== null) {
+            Notification::make()->title('Conto estintivo')->body($avviso)->warning()->persistent()->send();
+        }
     }
 }
