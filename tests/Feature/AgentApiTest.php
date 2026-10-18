@@ -244,6 +244,108 @@ class AgentApiTest extends TestCase
         $this->assertSame($documents, $this->documentiDellaRichiesta()->count());
     }
 
+    /** @return array<string, mixed> */
+    private function fullRequest(string $reference = 'FIN-2026-0001'): array
+    {
+        return $this->request($reference, [
+            'risposte' => ['importo' => 'i20', 'durata' => 'm120', 'rapporto' => 'Pubblico'],
+            'pratica' => ['importo_fascia' => '15-20 mila', 'durata_mesi' => 120],
+            'cliente' => ['data_nascita' => '1980-01-01', 'luogo_nascita' => 'Roma', 'residenza' => ['indirizzo' => 'Via Roma 1', 'citta' => 'Roma', 'provincia' => 'rm']],
+            'agente' => ['nome' => 'ZZ AGENTE UNO', 'whatsapp' => '+393330000001'],
+            'consenso' => ['privacy_ricevuta_il' => '2026-10-01T10:00:00+02:00', 'privacy_verificata_il' => '2026-10-01T11:00:00+02:00', 'contatto_diretto' => true],
+            'documenti' => [['codice' => 'documento_identita', 'nome' => 'Documento', 'obbligo' => 'obbligatorio', 'stato' => 'ok']],
+        ]);
+    }
+
+    private function activity(string $event): Builder
+    {
+        $pratica = Pratica::query()->where('codice_pratica', 'WA-FIN-2026-0001')->sole();
+
+        return $pratica->attivitaAgente()->where('event', $event)->getQuery();
+    }
+
+    public function test_the_whole_request_reaches_client_practice_and_register(): void
+    {
+        $this->signedJson('POST', '/api/agente/v1/richieste', $this->fullRequest())->assertCreated();
+
+        $client = Client::query()->where('tax_code', 'RSSMRA80A01H501U')->sole();
+        $pratica = Pratica::query()->where('codice_pratica', 'WA-FIN-2026-0001')->sole();
+        $residenza = $client->addresses()->where('address_type_id', 1)->sole();
+
+        $this->assertSame('1980-01-01', $client->birth_date->toDateString());
+        $this->assertSame('Roma', $client->birth_place);
+        $this->assertSame(['Via Roma 1', 'Roma', 'RM'], [$residenza->street, $residenza->city, $residenza->province]);
+        $this->assertNotNull($client->privacy_policy_read_at);
+        $this->assertNotNull($client->general_consent_at);
+        $this->assertSame(120, (int) $pratica->nrate);
+
+        $richiesta = $this->activity('richiesta')->sole();
+        $this->assertSame('m120', $richiesta->properties['risposte']['durata']);
+        $this->assertSame('+393330000001', $richiesta->properties['agente']['whatsapp']);
+        $this->assertTrue($richiesta->properties['contatto_diretto']);
+    }
+
+    public function test_the_first_delivery_does_not_overwrite_the_registry(): void
+    {
+        Pratica::query()->create(['codice_pratica' => 'ZZ-OLD', 'codice_fiscale' => 'RSSMRA80A01H501U', 'partita_iva_agente' => '99900000001', 'upload_at' => now()]);
+        Client::query()->create(['is_person' => true, 'is_client' => true, 'name' => 'Rossi', 'first_name' => 'Mario', 'tax_code' => 'RSSMRA80A01H501U', 'birth_place' => 'Napoli', 'email' => 'vecchia@example.com']);
+
+        $this->signedJson('POST', '/api/agente/v1/richieste', $this->fullRequest())->assertCreated();
+
+        $client = Client::query()->where('tax_code', 'RSSMRA80A01H501U')->sole();
+        $this->assertSame('Napoli', $client->birth_place);
+        $this->assertSame('vecchia@example.com', $client->email);
+    }
+
+    public function test_the_agent_updates_data_while_the_practice_is_to_be_completed(): void
+    {
+        $this->signedJson('POST', '/api/agente/v1/richieste', $this->request())->assertCreated();
+
+        $this->signedJson('PATCH', '/api/agente/v1/richieste/FIN-2026-0001', [
+            'cliente' => ['cognome' => 'Rossini', 'email' => 'nuova@example.com', 'luogo_nascita' => 'Milano'],
+            'pratica' => ['durata_mesi' => 96],
+        ])->assertOk()->assertJsonPath('riferimento', 'FIN-2026-0001');
+
+        $client = Client::query()->where('tax_code', 'RSSMRA80A01H501U')->sole();
+        $pratica = Pratica::query()->where('codice_pratica', 'WA-FIN-2026-0001')->sole();
+        $this->assertSame(['Rossini', 'nuova@example.com', 'Milano'], [$client->name, $client->email, $client->birth_place]);
+        $this->assertSame(['Rossini', 96], [$pratica->cognome_cliente, (int) $pratica->nrate]);
+        $this->assertEqualsCanonicalizing(['name', 'email', 'birth_place', 'nrate'], $this->activity('aggiornamento')->sole()->properties['campi']);
+    }
+
+    public function test_once_in_progress_only_the_consent_can_change_and_it_can_be_revoked(): void
+    {
+        $this->signedJson('POST', '/api/agente/v1/richieste', $this->fullRequest())->assertCreated();
+        $pratica = Pratica::query()->where('codice_pratica', 'WA-FIN-2026-0001')->sole();
+        $altro = PraticaStato::query()->create(['codice' => 'ISTRUTTORIA-ZZ', 'name' => 'Istruttoria ZZ', 'tipo_finanziamento' => self::PRODOTTO, 'ordine' => 1]);
+        $pratica->forceFill(['pratica_stato_id' => $altro->getKey()])->save();
+
+        $this->signedJson('PATCH', '/api/agente/v1/richieste/FIN-2026-0001', ['cliente' => ['email' => 'tardi@example.com']])
+            ->assertStatus(409)->assertJsonPath('codice', 'pratica_in_lavorazione');
+
+        $this->signedJson('PATCH', '/api/agente/v1/richieste/FIN-2026-0001', ['consenso' => ['privacy_verificata_il' => null]])
+            ->assertOk()->assertJsonPath('campi_aggiornati', ['general_consent_at']);
+
+        $client = Client::query()->where('tax_code', 'RSSMRA80A01H501U')->sole();
+        $this->assertNull($client->general_consent_at);
+        $this->assertSame('mario@example.com', $client->email);
+    }
+
+    public function test_notes_reach_the_practice_once_per_origin_id(): void
+    {
+        $this->signedJson('POST', '/api/agente/v1/richieste', $this->request())->assertCreated();
+        $nota = ['testo' => 'Il cliente preferisce essere chiamato dopo le 18.', 'autore' => 'agente', 'inviata_il' => '2026-10-18T10:00:00+02:00', 'id_origine' => 'wamid.1'];
+
+        $first = $this->signedJson('POST', '/api/agente/v1/richieste/FIN-2026-0001/note', $nota)->assertCreated()->assertJsonPath('duplicato', false);
+        $this->signedJson('POST', '/api/agente/v1/richieste/FIN-2026-0001/note', $nota)->assertOk()->assertJsonPath('duplicato', true)->assertJsonPath('id', $first->json('id'));
+        $this->signedJson('POST', '/api/agente/v1/richieste/FIN-2026-0001/note', ['testo' => 'x', 'autore' => 'chiunque'])->assertStatus(422)->assertJsonValidationErrors(['autore']);
+        $this->signedJson('POST', '/api/agente/v1/richieste/FIN-INESISTENTE/note', $nota)->assertNotFound();
+
+        $saved = $this->activity('nota')->sole();
+        $this->assertSame('Il cliente preferisce essere chiamato dopo le 18.', $saved->description);
+        $this->assertSame('agente', $saved->properties['autore']);
+    }
+
     public function test_an_unknown_agent_is_refused(): void
     {
         $this->signedJson('POST', '/api/agente/v1/richieste', $this->request('FIN-2', ['agente' => ['partita_iva' => '00000000000']]))

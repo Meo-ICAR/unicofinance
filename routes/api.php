@@ -28,6 +28,8 @@ Route::middleware([CorrelationId::class, VerifyBridgeKey::class, 'throttle:300,1
 Route::prefix('agente/v1')->middleware(['api.client', 'throttle:120,1'])->group(function () {
     Route::post('/richieste', [AgentRequestController::class, 'store'])->name('api.agente.richieste.store');
     Route::get('/richieste/{riferimento}', [AgentRequestController::class, 'show'])->name('api.agente.richieste.show');
+    Route::patch('/richieste/{riferimento}', [AgentRequestController::class, 'update'])->name('api.agente.richieste.update');
+    Route::post('/richieste/{riferimento}/note', [AgentRequestController::class, 'note'])->name('api.agente.richieste.note');
     Route::post('/richieste/{riferimento}/documenti', [AgentRequestController::class, 'upload'])->name('api.agente.richieste.documenti');
     Route::get('/tipi-documento', [AgentRequestController::class, 'documentTypes'])->name('api.agente.tipi-documento');
 

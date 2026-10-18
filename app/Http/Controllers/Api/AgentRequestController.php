@@ -28,13 +28,19 @@ class AgentRequestController extends Controller
             'riferimento' => ['required', 'string', 'max:60', 'regex:/^[A-Za-z0-9._-]+$/'],
             'prodotto' => ['nullable', 'string', 'max:60'],
             'prodotto_etichetta' => ['nullable', 'string', 'max:120'],
-            'pratica.importo_richiesto' => ['nullable', 'numeric', 'min:0'],
+            'risposte' => ['nullable', 'array'],
             'cliente.cognome' => ['required', 'string', 'max:191'],
-            'cliente.nome' => ['nullable', 'string', 'max:191'],
             'cliente.codice_fiscale' => ['required', 'string', 'regex:/^[A-Za-z0-9]{11,16}$/'],
-            'cliente.email' => ['nullable', 'email', 'max:191'],
-            'cliente.telefono' => ['nullable', 'string', 'max:40'],
             'agente.partita_iva' => ['required', 'string', 'max:20'],
+            'agente.nome' => ['nullable', 'string', 'max:191'],
+            'agente.sigla' => ['nullable', 'string', 'max:20'],
+            'agente.whatsapp' => ['nullable', 'string', 'max:40'],
+            'documenti' => ['nullable', 'array', 'max:100'],
+            'documenti.*.codice' => ['nullable', 'string', 'max:100'],
+            'documenti.*.nome' => ['nullable', 'string', 'max:191'],
+            'documenti.*.obbligo' => ['nullable', 'string', 'max:40'],
+            'documenti.*.stato' => ['nullable', 'string', 'max:40'],
+            ...$this->detailRules(),
         ]);
 
         try {
@@ -44,6 +50,56 @@ class AgentRequestController extends Controller
         }
 
         return response()->json($this->resource($result['pratica'], $result['client']->getKey(), $result['created']), $result['created'] ? 201 : 200);
+    }
+
+    /**
+     * Aggiornamento dall'agente (dati corretti in conversazione, informativa verificata o rifiutata). Tutto facoltativo: si
+     * cambia solo ciò che arriva; `consenso.privacy_verificata_il` a null revoca il consenso.
+     */
+    public function update(Request $request, string $riferimento): JsonResponse
+    {
+        $pratica = $this->intake->find($riferimento);
+
+        if ($pratica === null) {
+            return response()->json(['message' => 'Richiesta non trovata.'], 404);
+        }
+
+        $data = $request->validate([
+            'cliente.cognome' => ['sometimes', 'required', 'string', 'max:191'],
+            ...$this->detailRules(),
+        ]);
+
+        try {
+            $changed = $this->intake->update($pratica, $data);
+        } catch (AgentIntakeException $e) {
+            return $this->error($e);
+        }
+
+        return response()->json($this->resource($pratica->fresh()) + ['campi_aggiornati' => $changed]);
+    }
+
+    /** Nota per l'istruttore: compare sulla pratica, nella scheda «Da unicoagent». */
+    public function note(Request $request, string $riferimento): JsonResponse
+    {
+        $pratica = $this->intake->find($riferimento);
+
+        if ($pratica === null) {
+            return response()->json(['message' => 'Richiesta non trovata.'], 404);
+        }
+
+        $data = $request->validate([
+            'testo' => ['required', 'string', 'max:5000'],
+            'autore' => ['required', 'in:agente,cliente,assistente,istruttore'],
+            'inviata_il' => ['nullable', 'date'],
+            'id_origine' => ['nullable', 'string', 'max:100'],
+        ]);
+
+        $result = $this->intake->addNote($pratica, $data);
+
+        return response()->json([
+            'id' => $result['nota']->getKey(),
+            'duplicato' => $result['duplicate'],
+        ], $result['duplicate'] ? 200 : 201);
     }
 
     public function show(string $riferimento): JsonResponse
@@ -104,6 +160,34 @@ class AgentRequestController extends Controller
                 'nome' => $t->name,
                 'alias' => collect($mapped->get($t->slug, []))->merge($mapped->get($t->code, []))->unique()->values()->all(),
             ])->all()]);
+    }
+
+    /**
+     * Regole comuni a consegna e aggiornamento: dati del cliente oltre a cognome e codice fiscale, pratica, consensi.
+     *
+     * @return array<string, list<string>>
+     */
+    private function detailRules(): array
+    {
+        return [
+            'cliente.nome' => ['nullable', 'string', 'max:191'],
+            'cliente.email' => ['nullable', 'email', 'max:191'],
+            'cliente.telefono' => ['nullable', 'string', 'max:40'],
+            'cliente.data_nascita' => ['nullable', 'date_format:Y-m-d', 'before:today'],
+            'cliente.luogo_nascita' => ['nullable', 'string', 'max:191'],
+            'cliente.residenza' => ['nullable', 'array'],
+            'cliente.residenza.indirizzo' => ['nullable', 'string', 'max:191'],
+            'cliente.residenza.citta' => ['nullable', 'string', 'max:191'],
+            'cliente.residenza.provincia' => ['nullable', 'string', 'max:4'],
+            'pratica' => ['nullable', 'array'],
+            'pratica.importo_richiesto' => ['nullable', 'numeric', 'min:0'],
+            'pratica.importo_fascia' => ['nullable', 'string', 'max:60'],
+            'pratica.durata_mesi' => ['nullable', 'integer', 'min:1', 'max:600'],
+            'consenso' => ['nullable', 'array'],
+            'consenso.privacy_ricevuta_il' => ['nullable', 'date'],
+            'consenso.privacy_verificata_il' => ['nullable', 'date'],
+            'consenso.contatto_diretto' => ['nullable', 'boolean'],
+        ];
     }
 
     private function resource(Pratica $pratica, mixed $clientId = null, bool $created = false): array

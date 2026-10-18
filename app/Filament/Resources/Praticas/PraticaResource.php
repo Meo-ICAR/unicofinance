@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Praticas;
 
+use App\Filament\RelationManagers\AttivitaAgenteRelationManager;
 use App\Filament\RelationManagers\CointestatariGarantiRelationManager;
 use App\Filament\RelationManagers\ImmobileRelationManager;
 use App\Filament\RelationManagers\ImpegniTerziRelationManager;
@@ -69,6 +70,7 @@ class PraticaResource extends Resource
             ImpegniTerziRelationManager::class,
             CointestatariGarantiRelationManager::class,
             ImmobileRelationManager::class,
+            AttivitaAgenteRelationManager::class,
         ];
     }
 

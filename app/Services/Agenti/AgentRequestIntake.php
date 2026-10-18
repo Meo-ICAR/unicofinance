@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Unico\Core\Documents\PracticeDocumentIntake;
 use Unico\Core\Documents\PracticeTaskDocuments;
+use Unico\Core\Models\ActivityLog;
 use Unico\Core\Models\Document;
 use Unico\Core\Models\DocumentType;
 use Unico\Core\Models\Fornitore;
@@ -35,6 +36,7 @@ class AgentRequestIntake
         private PracticeTaskDocuments $checklist,
         private PracticeDocumentIntake $documentIntake,
         private CambioStatoPratica $stati,
+        private AgentRequestDetails $details,
     ) {}
 
     public static function codiceFor(string $riferimento): string
@@ -131,11 +133,84 @@ class AgentRequestIntake
 
         $this->stati->registra($pratica, null, $stato->getKey(), 'Richiesta consegnata da unicoagent', self::ORIGINE);
 
+        // Nascita, residenza, consensi e durata: solo dove l'anagrafica è vuota. Il resto della richiesta va nel registro.
+        $this->details->fillClient($client, $cliente, overwrite: false);
+        $this->details->applyConsent($client, (array) ($data['consenso'] ?? []), revocable: false);
+        $this->details->fillPratica($pratica, (array) ($data['pratica'] ?? []), overwrite: false);
+        $this->details->log($pratica, 'richiesta', 'Richiesta consegnata da unicoagent', $this->details->requestSummary($data));
+
         // Documenti richiesti: check list del prodotto per il gruppo lavorativo del cliente e documenti dello stato iniziale.
         $this->checklist->attachChecklist($pratica, $this->gruppoDocumentale($client), $pratica->clienti_id);
         $this->checklist->attachToPractice($pratica);
 
         return ['pratica' => $pratica, 'client' => $client, 'created' => true];
+    }
+
+    /** L'agente può ancora cambiare i dati finché la pratica è nello stato iniziale (da perfezionare). */
+    public function isOpenForAgent(Pratica $pratica): bool
+    {
+        return $pratica->praticaStato?->codice === (string) config('agent_api.stato_iniziale');
+    }
+
+    /**
+     * Aggiornamento dall'agente: dati del cliente e della pratica solo finché è da perfezionare, i consensi sempre (anche la
+     * revoca). I valori inviati sostituiscono quelli presenti.
+     *
+     * @param  array<string,mixed>  $data  aggiornamento già validato
+     * @return list<string> campi cambiati
+     *
+     * @throws AgentIntakeException
+     */
+    public function update(Pratica $pratica, array $data): array
+    {
+        if ((filled($data['cliente'] ?? null) || filled($data['pratica'] ?? null)) && ! $this->isOpenForAgent($pratica)) {
+            throw new AgentIntakeException('pratica_in_lavorazione', 'La pratica è già in lavorazione: si possono aggiornare solo i consensi.', 409);
+        }
+
+        $client = $this->clientOf($pratica);
+
+        return DB::connection($pratica->getConnectionName())->transaction(function () use ($pratica, $client, $data): array {
+            $cliente = (array) ($data['cliente'] ?? []);
+            $changed = [
+                ...$this->details->fillClient($client, $cliente, overwrite: true),
+                ...$this->details->fillPratica($pratica, (array) ($data['pratica'] ?? []), overwrite: true),
+                ...$this->details->applyConsent($client, (array) ($data['consenso'] ?? []), revocable: true),
+            ];
+
+            // Nome e cognome sono copiati anche sulla pratica.
+            $pratica->forceFill(array_filter([
+                'cognome_cliente' => in_array('name', $changed, true) ? $client->name : null,
+                'nome_cliente' => in_array('first_name', $changed, true) ? $client->first_name : null,
+            ]))->save();
+
+            if ($changed !== []) {
+                $this->details->log($pratica, 'aggiornamento', 'Dati aggiornati da unicoagent', ['campi' => array_values(array_unique($changed))]);
+            }
+
+            return array_values(array_unique($changed));
+        });
+    }
+
+    /**
+     * Nota per l'istruttore (un messaggio della conversazione, una richiesta dell'agente). Con `id_origine` è idempotente.
+     *
+     * @param  array<string,mixed>  $data  nota già validata
+     * @return array{nota: ActivityLog, duplicate: bool}
+     */
+    public function addNote(Pratica $pratica, array $data): array
+    {
+        $originId = $data['id_origine'] ?? null;
+        $existing = $originId === null ? null : $this->details->findNote($pratica, $originId);
+
+        if ($existing !== null) {
+            return ['nota' => $existing, 'duplicate' => true];
+        }
+
+        return ['nota' => $this->details->log($pratica, 'nota', (string) $data['testo'], [
+            'autore' => $data['autore'],
+            'inviata_il' => $data['inviata_il'] ?? null,
+            'id_origine' => $originId,
+        ]), 'duplicate' => false];
     }
 
     /**

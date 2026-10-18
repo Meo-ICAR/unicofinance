@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use App\Services\Agenti\AgentRequestDetails;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Unico\Core\Models\ActivityLog;
 use Unico\Core\Models\Address;
 use Unico\Core\Models\Branch;
 use Unico\Core\Models\Document;
@@ -47,6 +49,12 @@ class Pratica extends CorePratica
     public function addresses(): MorphMany
     {
         return $this->morphMany(Address::class, 'addressable');
+    }
+
+    /** Richiesta, aggiornamenti e note arrivati da unicoagent (registro delle attività del core). */
+    public function attivitaAgente(): MorphMany
+    {
+        return $this->morphMany(ActivityLog::class, 'subject')->where('log_name', AgentRequestDetails::LOG);
     }
 
     /** Altre pratiche dello stesso richiedente. */
