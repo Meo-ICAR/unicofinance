@@ -19,7 +19,8 @@ class AuthenticateApiClient
     {
         $client = filled($request->bearerToken()) ? ApiClient::findByToken($request->bearerToken()) : null;
 
-        if ($client === null || ! $this->signatureIsValid($request, $client)) {
+        // Senza prefisso un'app non saprebbe quali pratiche sono sue: si rifiuta invece di darle quelle di unicoagent.
+        if ($client === null || blank($client->pratica_prefix) || ! $this->signatureIsValid($request, $client)) {
             return response()->json(['message' => 'Non autorizzato.'], 401);
         }
 
@@ -55,6 +56,6 @@ class AuthenticateApiClient
 
         // Una richiesta che cambia qualcosa vale una volta sola: la stessa firma ripresentata entro la finestra è un replay.
         return $request->isMethodSafe()
-            || Cache::add('agent-api-signature:'.$client->getKey().':'.$signature, true, 2 * (int) config('agent_api.timestamp_tolerance'));
+            || Cache::add('agent-api-signature:'.$client->getKey().':'.$signature, true, max(1, 2 * (int) config('agent_api.timestamp_tolerance')));
     }
 }

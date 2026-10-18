@@ -96,11 +96,14 @@ class AgentApiTest extends TestCase
 
     private int $signed = 0;
 
+    /** Ora di partenza dei timestamp firmati: fissa per tutto il test, così due firme non coincidono mai. */
+    private ?int $signedAt = null;
+
     /** @return array<string, string> */
     private function signature(string $method, string $path, string $contentHash, ?int $timestamp = null, ?string $secret = null): array
     {
         // Ogni richiesta ha un timestamp diverso: la stessa firma ripresentata è un replay e verrebbe rifiutata.
-        $timestamp ??= time() - ($this->signed++ % 200);
+        $timestamp ??= ($this->signedAt ??= time()) - $this->signed++;
         $signature = hash_hmac('sha256', implode('.', [$timestamp, $method, $path, $contentHash]), $secret ?? $this->issued['secret']);
 
         return ['X-Timestamp' => (string) $timestamp, 'X-Signature' => $signature];
@@ -155,6 +158,13 @@ class AgentApiTest extends TestCase
         $this->getJson($path, $auth + $this->signature('GET', $path, hash('sha256', ''), time() - 3600))->assertUnauthorized();
         $this->getJson($path, $auth + $this->signature('GET', '/api/agente/v1/altro', hash('sha256', '')))->assertUnauthorized();
         $this->signedJson('GET', $path)->assertOk();
+    }
+
+    public function test_a_client_without_prefix_is_refused(): void
+    {
+        $this->issued['client']->forceFill(['pratica_prefix' => null])->save();
+
+        $this->signedJson('GET', '/api/agente/v1/tipi-documento')->assertUnauthorized();
     }
 
     public function test_a_disabled_client_is_refused(): void
@@ -540,7 +550,19 @@ class AgentApiTest extends TestCase
         $this->assertNotSame($old, ApiClient::query()->where('name', 'nuova-app')->value('token_hash'));
         $this->assertSame('NUOVAAPP-', ApiClient::query()->where('name', 'nuova-app')->value('pratica_prefix'));
 
+        $this->artisan('agent-api:client', ['name' => 'personalizzata', '--prefisso' => 'CUSTOM-'])->assertSuccessful();
+        $this->artisan('agent-api:client', ['name' => 'personalizzata', '--rotate' => true])->assertSuccessful();
+        $this->assertSame('CUSTOM-', ApiClient::query()->where('name', 'personalizzata')->value('pratica_prefix'));
+
+        $this->artisan('agent-api:client', ['name' => 'doppione', '--prefisso' => 'CUSTOM-'])->assertFailed();
+        $this->artisan('agent-api:client', ['name' => 'lunga', '--prefisso' => str_repeat('A', 20).'-'])->assertFailed();
+        $this->artisan('agent-api:client', ['name' => 'a capo', '--prefisso' => "WB-\n"])->assertFailed();
+        $this->artisan('agent-api:client', ['name' => str_repeat('nome', 8)])->assertSuccessful();
+        $this->assertSame(20, strlen((string) ApiClient::query()->where('name', str_repeat('nome', 8))->value('pratica_prefix')));
+
         $this->artisan('agent-api:client', ['name' => 'altra', '--prefisso' => 'WA-X-'])->assertFailed();
+        $this->artisan('agent-api:client', ['name' => 'wa'])->expectsOutputToContain('riservato a unicoagent')->assertFailed();
+        $this->artisan('agent-api:client', ['name' => 'altra', '--prefisso' => 'WA-'])->expectsOutputToContain('riservato a unicoagent')->assertFailed();
     }
 
     public function test_the_same_signed_change_is_accepted_only_once(): void
