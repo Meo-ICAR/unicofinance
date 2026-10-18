@@ -28,6 +28,10 @@ class ApiClient extends Model
             throw new InvalidArgumentException("Prefisso «{$praticaPrefix}» non valido: da 1 a 19 lettere maiuscole o cifre seguite da un trattino.");
         }
 
+        if ($name !== 'unicoagent' && $praticaPrefix === config('agent_api.pratica_prefix')) {
+            throw new InvalidArgumentException("Prefisso «{$praticaPrefix}» riservato a unicoagent: scegline un altro con --prefisso.");
+        }
+
         if (static::query()->where('pratica_prefix', $praticaPrefix)->exists()) {
             throw new InvalidArgumentException("Prefisso «{$praticaPrefix}» già usato da un'altra app: scegline un altro con --prefisso.");
         }

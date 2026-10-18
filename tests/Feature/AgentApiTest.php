@@ -562,6 +562,8 @@ class AgentApiTest extends TestCase
         $this->assertSame(20, strlen((string) ApiClient::query()->where('name', str_repeat('nome', 8))->value('pratica_prefix')));
 
         $this->artisan('agent-api:client', ['name' => 'altra', '--prefisso' => 'WA-X-'])->assertFailed();
+        $this->artisan('agent-api:client', ['name' => 'wa'])->expectsOutputToContain('riservato a unicoagent')->assertFailed();
+        $this->artisan('agent-api:client', ['name' => 'altra', '--prefisso' => 'WA-'])->expectsOutputToContain('riservato a unicoagent')->assertFailed();
     }
 
     public function test_the_same_signed_change_is_accepted_only_once(): void
