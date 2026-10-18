@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\ApiClient;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -42,8 +43,9 @@ class AuthenticateApiClient
 
         // Nei caricamenti (multipart) il contenuto firmato è il file ricevuto, altrimenti il corpo grezzo: l'hash si calcola
         // sempre qui, mai preso dall'intestazione, così il contenuto non si può cambiare dopo la firma.
-        $contentHash = $request->hasFile('file')
-            ? (string) hash_file('sha256', $request->file('file')->getRealPath())
+        $file = $request->file('file');
+        $contentHash = $file instanceof UploadedFile
+            ? (string) hash_file('sha256', $file->getRealPath())
             : hash('sha256', $request->getContent());
 
         return $signature !== '' && hash_equals($client->signatureFor($timestamp, $request->method(), $request->getPathInfo(), $contentHash), $signature);

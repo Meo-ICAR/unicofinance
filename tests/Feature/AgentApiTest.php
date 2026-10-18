@@ -332,6 +332,28 @@ class AgentApiTest extends TestCase
         $this->upload('FIN-2026-0001', 'carta-identita-zz', UploadedFile::fake()->createWithContent('script.php', '<?php echo 1;'))->assertStatus(422)->assertJsonValidationErrors(['file']);
     }
 
+    public function test_a_list_of_files_gets_the_validation_answer(): void
+    {
+        $this->signedJson('POST', '/api/agente/v1/richieste', $this->request())->assertCreated();
+        $path = '/api/agente/v1/richieste/FIN-2026-0001/documenti';
+        $file = $this->pdf();
+        $hash = hash_file('sha256', $file->getRealPath());
+
+        $this->post($path, ['tipo' => 'carta-identita-zz', 'file' => [$file]], ['Accept' => 'application/json', 'Authorization' => 'Bearer '.$this->issued['token'], 'X-Content-Sha256' => $hash] + $this->signature('POST', $path, hash('sha256', '')))
+            ->assertStatus(422)->assertJsonValidationErrors(['file']);
+    }
+
+    public function test_a_file_name_with_quotes_is_downloaded_with_a_valid_header(): void
+    {
+        $this->signedJson('POST', '/api/agente/v1/richieste', $this->request())->assertCreated();
+        $id = $this->upload('FIN-2026-0001', 'carta-identita-zz', $this->pdf('carta "Mario".pdf'))->assertCreated()->json('id');
+
+        $disposition = $this->signedJson('GET', "/api/agente/v1/richieste/FIN-2026-0001/documenti/{$id}/file")->assertOk()->headers->get('Content-Disposition');
+
+        $this->assertStringContainsString('filename=carta-_Mario_.pdf;', $disposition);
+        $this->assertStringContainsString("filename*=utf-8''carta-%22Mario%22.pdf", $disposition);
+    }
+
     public function test_an_unknown_type_or_request_is_refused(): void
     {
         $this->signedJson('POST', '/api/agente/v1/richieste', $this->request())->assertCreated();

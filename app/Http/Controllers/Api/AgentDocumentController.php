@@ -10,6 +10,8 @@ use App\Services\Agenti\AgentRequestIntake;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\HeaderUtils;
 use Unico\Core\Enums\SignatureRequestStatus;
 use Unico\Core\Models\Document;
 use Unico\Core\Models\PdfModule;
@@ -66,10 +68,12 @@ class AgentDocumentController extends Controller
 
             // Il file con il suo tipo e nome reali: i documenti caricati possono essere anche immagini.
             $media = $document->currentMedia();
+            $fileName = str_replace(['/', '\\'], '_', $media?->file_name ?: 'documento');
+            $asciiName = preg_replace('/[^A-Za-z0-9._-]/', '_', Str::ascii($fileName)) ?: 'documento';
 
             return response($content, 200, [
                 'Content-Type' => $media?->mime_type ?: 'application/octet-stream',
-                'Content-Disposition' => 'attachment; filename="'.($media?->file_name ?: 'documento').'"',
+                'Content-Disposition' => HeaderUtils::makeDisposition(HeaderUtils::DISPOSITION_ATTACHMENT, $fileName, $asciiName),
                 'X-Content-Sha256' => hash('sha256', $content),
             ]);
         });
