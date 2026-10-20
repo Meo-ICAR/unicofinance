@@ -34,7 +34,7 @@ class AgentiPanelProvider extends PanelProvider
     {
         return $panel
             ->brandLogo(asset('brand/logos/unico-finance.jpg'))
-            ->brandLogoHeight('2.75rem')
+            ->brandLogoHeight('5rem')
             ->favicon(asset('brand/icons/unico-finance-64.png'))
             ->maxContentWidth(Width::Full)
             ->id('agenti')
