@@ -8,6 +8,11 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // Le migration di core creano già la tabella (database di prova, o database già popolato).
+        if (Schema::hasTable('client_relations')) {
+            return;
+        }
+
         if (Schema::hasTable('client_relations')) {
             return;
         }

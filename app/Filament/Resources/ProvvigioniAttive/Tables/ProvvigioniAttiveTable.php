@@ -3,8 +3,11 @@
 namespace App\Filament\Resources\ProvvigioniAttive\Tables;
 
 use App\Filament\Resources\ProvvigioniAttive\Schemas\ProvvigioneAttivaForm;
+use App\Jobs\ImportaDaMediafacile;
+use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
+use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -49,6 +52,21 @@ class ProvvigioniAttiveTable
                     ->searchable() : null,
             ])))
             ->defaultSort('tipoprodotto_id')
+            ->headerActions([
+                Action::make('importaMediafacile')
+                    ->label('Importa da Mediafacile')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->visible($conBanca)
+                    ->requiresConfirmation()
+                    ->modalHeading('Importa pratiche e provvigioni da Mediafacile')
+                    ->modalDescription('Importa gli ultimi '.ImportaDaMediafacile::GIORNI.' giorni di pratiche e compensi. Parte in background: a fine importazione ricevi una notifica con le righe importate e modificate.')
+                    ->modalSubmitActionLabel('Avvia importazione')
+                    ->action(function (): void {
+                        ImportaDaMediafacile::dispatch((int) auth()->id());
+
+                        Notification::make()->title('Importazione avviata')->body('Riceverai una notifica al termine.')->info()->send();
+                    }),
+            ])
             ->recordActions([
                 EditAction::make(),
                 DeleteAction::make(),

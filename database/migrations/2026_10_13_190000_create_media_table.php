@@ -8,6 +8,11 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // Le migration di core creano già la tabella (database di prova, o database già popolato).
+        if (Schema::hasTable('media')) {
+            return;
+        }
+
         Schema::create('media', function (Blueprint $table) {
             $table->id();
 

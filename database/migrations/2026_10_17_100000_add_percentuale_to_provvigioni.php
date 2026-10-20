@@ -9,7 +9,8 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (Schema::connection('proforma')->hasColumn('provvigioni', 'percentuale')) {
+        // La tabella è di Proforma: se in questo database non c'è (database di prova) non c'è nulla da aggiungere.
+        if (! Schema::connection('proforma')->hasTable('provvigioni') || Schema::connection('proforma')->hasColumn('provvigioni', 'percentuale')) {
             return;
         }
 

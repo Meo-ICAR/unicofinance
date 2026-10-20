@@ -17,7 +17,7 @@ return [
     |
     */
 
-    'default' => env('DB_CONNECTION', 'sqlite'),
+    'default' => env('DB_CONNECTION', 'mysql'),
 
     /*
     |--------------------------------------------------------------------------
@@ -31,18 +31,6 @@ return [
     */
 
     'connections' => [
-
-        'sqlite' => [
-            'driver' => 'sqlite',
-            'url' => env('DB_URL'),
-            'database' => env('DB_DATABASE', database_path('database.sqlite')),
-            'prefix' => '',
-            'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
-            'busy_timeout' => null,
-            'journal_mode' => null,
-            'synchronous' => null,
-            'transaction_mode' => 'DEFERRED',
-        ],
 
         'mysql' => [
             'driver' => 'mysql',
@@ -87,7 +75,7 @@ return [
             'driver' => 'mysql',
             'host' => env('PROFORMA_DB_HOST', env('CORE_DB_HOST', '127.0.0.1')),
             'port' => env('PROFORMA_DB_PORT', env('CORE_DB_PORT', '3306')),
-            'database' => env('PROFORMA_DB_DATABASE', 'proforma_core'),
+            'database' => env('PROFORMA_DB_DATABASE', 'unicosuite'),
             'username' => env('PROFORMA_DB_USERNAME', env('CORE_DB_USERNAME', env('DB_USERNAME', 'root'))),
             'password' => env('PROFORMA_DB_PASSWORD', env('CORE_DB_PASSWORD', env('DB_PASSWORD', ''))),
             'unix_socket' => env('DB_SOCKET', ''),

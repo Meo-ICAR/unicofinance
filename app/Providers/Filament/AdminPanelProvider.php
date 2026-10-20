@@ -30,12 +30,16 @@ class AdminPanelProvider extends PanelProvider
     public function panel(Panel $panel): Panel
     {
         return $panel
+            ->brandLogo(asset('brand/logos/unico-finance.jpg'))
+            ->brandLogoHeight('2.75rem')
+            ->favicon(asset('brand/icons/unico-finance-64.png'))
             ->maxContentWidth(Width::Full)
             ->default()
             ->id('admin')
             ->path('admin')
             ->brandName('UnicoFinance')
             ->login()
+            ->databaseNotifications()
             ->colors([
                 'primary' => Color::Amber,
             ])

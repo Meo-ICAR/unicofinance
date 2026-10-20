@@ -6,9 +6,14 @@ use App\Filament\Resources\Istituti\Pages\EditIstituto;
 use App\Filament\Resources\Istituti\RelationManagers\ProvvigioniAttiveRelationManager;
 use App\Filament\Resources\ProvvigioniAttive\Pages\CreateProvvigioneAttiva;
 use App\Filament\Resources\ProvvigioniAttive\Pages\ListProvvigioniAttive;
+use App\Jobs\ImportaDaMediafacile;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Schema;
 use Livewire\Livewire;
 use Tests\TestCase;
 use Unico\Core\Models\Cliente;
@@ -98,5 +103,38 @@ class ProvvigioniAttiveResourceTest extends TestCase
             ->assertCanSeeTableRecords([$prestitoPrima, $mutuoPrima])
             ->assertCanNotSeeTableRecords([$prestitoSeconda])
             ->assertTableColumnHidden('clienti.name');
+    }
+
+    public function test_the_import_action_queues_the_sixty_day_import(): void
+    {
+        $this->regole();
+        Queue::fake();
+
+        Livewire::test(ListProvvigioniAttive::class)
+            ->callTableAction('importaMediafacile')
+            ->assertNotified('Importazione avviata');
+
+        Queue::assertPushed(ImportaDaMediafacile::class, fn (ImportaDaMediafacile $job): bool => $job->userId === auth()->id());
+    }
+
+    public function test_the_import_job_notifies_the_user_with_new_and_changed_rows(): void
+    {
+        if (! Schema::connection('proforma')->hasTable('provvigioni')) {
+            $this->markTestSkipped('Le tabelle dei compensi sono di Proforma: servono nel database di prova.');
+        }
+
+        $this->regole();
+        config(['services.mediafacile.base_url' => 'https://mediafacile.test/ws', 'services.mediafacile.header_key' => 'chiave']);
+        $pratiche = "ID Pratica\tDenominazione Agente\tDenominazione Banca\tPratica_terzi\nQT91001\tAGENTE AZIONE\tBANCA AZIONE\tNO";
+        $compensi = "ID Compenso\tData Inserimento\tDescrizione\tTipo\tImporto\tImporto Effettivo\tStato\tData Pagamento\tN. Fattura\tData Fattura\tData Status\tStatus Compenso\tDenominazione Riferimento\tEntrata Uscita\tID Pratica\tAgente\tIstituto finanziario\tPartita IVA Agente\tCodice Fiscale Agente\tANNULLATA";
+        Http::fake(fn (Request $request) => Http::response(str_contains($request->url(), 'table=compensi') ? $compensi : $pratiche));
+
+        ImportaDaMediafacile::dispatchSync(auth()->id());
+
+        $notifica = auth()->user()->notifications()->first();
+
+        // Le tabelle dei compensi sono di Proforma e nel database di prova non ci sono: l'esito dei compensi qui non conta.
+        $this->assertStringContainsString('Pratiche: 1 nuove, 0 modificate', $notifica->data['body']);
+        $this->assertDatabaseHas('pratiches', ['codice_pratica' => 'QT91001']);
     }
 }
