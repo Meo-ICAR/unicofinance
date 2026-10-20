@@ -102,6 +102,38 @@ class Client extends CoreClient
             ->orderByDesc('id');
     }
 
+    /**
+     * Pratica da mostrare per il cliente: la sua ultima; se non ne ha come referente (es. cointestatario del mutuo) l'ultima
+     * dei clienti legati a lui in `client_relations`, in un verso o nell'altro.
+     */
+    public function praticaDiRiferimento(): ?Pratica
+    {
+        return $this->ultimaPratica ?? $this->ultimaPraticaDaRelazioni();
+    }
+
+    private function ultimaPraticaDaRelazioni(): ?Pratica
+    {
+        $collegati = ClientRelation::query()->where('client_id', $this->getKey())->pluck('company_id')
+            ->merge(ClientRelation::query()->where('company_id', $this->getKey())->pluck('client_id'))
+            ->unique();
+
+        if ($collegati->isEmpty()) {
+            return null;
+        }
+
+        $codiciFiscali = static::query()->whereIn('id', $collegati)->whereNotNull('tax_code')->where('tax_code', '!=', '')->pluck('tax_code');
+
+        if ($codiciFiscali->isEmpty()) {
+            return null;
+        }
+
+        return Pratica::query()->with('fornitori')->whereIn('codice_fiscale', $codiciFiscali)
+            ->orderByRaw('data_inserimento_pratica IS NULL')
+            ->orderByDesc('data_inserimento_pratica')
+            ->orderByDesc('id')
+            ->first();
+    }
+
     /** Soggetti collegati a una persona giuridica: soci, amministratori, titolari effettivi. */
     public function soci(): HasMany
     {

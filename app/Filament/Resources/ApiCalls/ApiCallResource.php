@@ -31,7 +31,7 @@ class ApiCallResource extends Resource
 
     protected static ?string $slug = 'chiamate-api';
 
-    protected static string|UnitEnum|null $navigationGroup = 'Configurazione';
+    protected static string|UnitEnum|null $navigationGroup = 'Settings';
 
     protected static ?string $navigationLabel = 'Registro chiamate API';
 

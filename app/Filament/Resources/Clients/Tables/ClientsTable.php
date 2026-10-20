@@ -19,226 +19,300 @@ class ClientsTable
     {
         return $table
             ->columns([
-                TextColumn::make('company.name')
-                    ->label('Società')
-                    ->searchable(),
-                IconColumn::make('is_person')
-                    ->label('Persona fisica')
-                    ->boolean(),
                 TextColumn::make('name')
                     ->label('Cognome / Ragione sociale')
+                    ->searchable()
+                    ->sortable(),
+                TextColumn::make('tipo_prodotto')
+                    ->label('Tipo prodotto')
+                    ->state(fn (Client $record): ?string => $record->praticaDiRiferimento()?->tipo_prodotto)
+                    ->placeholder('—'),
+                TextColumn::make('email')
+                    ->label('Email')
+                    ->searchable(),
+                TextColumn::make('phone')
+                    ->label('Cellulare')
+                    ->searchable(),
+                TextColumn::make('banca')
+                    ->label('Banca')
+                    ->state(fn (Client $record): ?string => $record->praticaDiRiferimento()?->denominazione_banca)
+                    ->placeholder('—'),
+                TextColumn::make('agente')
+                    ->label('Agente')
+                    ->state(fn (Client $record): ?string => $record->praticaDiRiferimento()?->fornitori?->name)
+                    ->placeholder('—'),
+                TextColumn::make('status')
+                    ->label('Stato verifica')
                     ->searchable(),
                 TextColumn::make('first_name')
                     ->label('Nome')
                     ->searchable(),
                 TextColumn::make('tax_code')
                     ->label('Codice fiscale / P.IVA')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('clientType.name')
+                    ->label('Tipo cliente')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                IconColumn::make('is_pep')
+                    ->label('PEP')
+                    ->boolean()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                IconColumn::make('is_sanctioned')
+                    ->label('Sanzionato / blacklist')
+                    ->boolean()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('company.name')
+                    ->label('Società')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                IconColumn::make('is_person')
+                    ->label('Persona fisica')
+                    ->boolean()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('vat_number')
                     ->label('Partita IVA')
-                    ->searchable(),
-                TextColumn::make('email')
-                    ->label('Email')
-                    ->searchable(),
-                TextColumn::make('phone')
-                    ->label('Telefono')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('iban')
                     ->label('IBAN')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('employer.name')
                     ->label('Datore di lavoro')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('employment_typology')
                     ->label('Tipologia di rapporto')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('profession')
                     ->label('Professione')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('hiring_date')
                     ->label('Data di assunzione')
                     ->date()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('website')
                     ->label('Sito web')
-                    ->searchable(),
-                IconColumn::make('is_pep')
-                    ->label('PEP')
-                    ->boolean(),
-                TextColumn::make('clientType.name')
-                    ->label('Tipo cliente')
-                    ->searchable(),
-                IconColumn::make('is_sanctioned')
-                    ->label('Sanzionato / blacklist')
-                    ->boolean(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 IconColumn::make('is_remote_interaction')
                     ->label('Interazione a distanza')
-                    ->boolean(),
+                    ->boolean()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('general_consent_at')
                     ->label('Consenso base')
                     ->dateTime()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('privacy_policy_read_at')
                     ->label('Informativa letta')
                     ->dateTime()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('consent_special_categories_at')
                     ->label('Categorie particolari')
                     ->dateTime()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('consent_sic_at')
                     ->label('Consenso SIC (CRIF)')
                     ->dateTime()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('consent_marketing_at')
                     ->label('Marketing')
                     ->dateTime()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('consent_profiling_at')
                     ->label('Profilazione')
                     ->dateTime()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('consent_group_at')
                     ->label('Comunicazione al gruppo')
                     ->dateTime()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('consent_third_parties_at')
                     ->label('Comunicazione a terzi')
                     ->dateTime()
-                    ->sortable(),
-                TextColumn::make('status')
-                    ->label('Stato verifica')
-                    ->searchable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 IconColumn::make('is_company')
                     ->label('Società')
-                    ->boolean(),
+                    ->boolean()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 IconColumn::make('is_lead')
                     ->label('Lead')
-                    ->boolean(),
+                    ->boolean()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('leadsource_id')
                     ->label('Fonte del lead')
-                    ->placeholder('—'),
+                    ->placeholder('—')
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('acquired_at')
                     ->label('Acquisito il')
                     ->dateTime()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('contoCOGE')
                     ->label('Conto COGE')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 IconColumn::make('privacy_consent')
                     ->label('Consenso privacy attivo')
-                    ->boolean(),
+                    ->boolean()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 IconColumn::make('is_client')
                     ->label('Cliente')
-                    ->boolean(),
+                    ->boolean()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 IconColumn::make('is_requiredApprovation')
                     ->label('Richiede approvazione')
-                    ->boolean(),
+                    ->boolean()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 IconColumn::make('is_approved')
                     ->label('Approvato')
-                    ->boolean(),
+                    ->boolean()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 IconColumn::make('is_anonymous')
                     ->label('Anonimo')
-                    ->boolean(),
+                    ->boolean()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('blacklist_at')
                     ->label('Data blacklist')
                     ->dateTime()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('blacklisted_by')
                     ->label('Inserito in blacklist da')
                     ->numeric()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('salary')
                     ->label('Reddito')
                     ->numeric()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('salary_quote')
                     ->label('Quota cedibile')
                     ->numeric()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 IconColumn::make('is_art108')
                     ->label('Esente art. 108 TUB')
-                    ->boolean(),
+                    ->boolean()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 IconColumn::make('is_consultant_gdpr')
                     ->label('Consulente GDPR')
-                    ->boolean(),
+                    ->boolean()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('privacy_contact_email')
                     ->label('Email contatto privacy')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('dpo_email')
                     ->label('Email DPO')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 IconColumn::make('is_iso27001_certified')
                     ->label('Certificato ISO 27001')
-                    ->boolean(),
+                    ->boolean()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 IconColumn::make('is_dummy')
                     ->label('Fittizio')
-                    ->boolean(),
+                    ->boolean()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('user.name')
                     ->label('Utente')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('birth_date')
                     ->label('Data di nascita')
                     ->date()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('birth_place')
                     ->label('Luogo di nascita')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('sex')
                     ->label('Sesso')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('citizenship')
                     ->label('Cittadinanza')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('legalRepresentative.name')
                     ->label('Legale rappresentante')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('pec')
                     ->label('PEC')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('ateco_code')
                     ->label('Codice Ateco')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('cciaa_registration')
                     ->label('Iscrizione CCIAA')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('legal_form')
                     ->label('Forma giuridica')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('sdi_code')
                     ->label('Codice SDI')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('activity_status')
                     ->label('Stato attività')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('company_started_at')
                     ->label('Inizio attività')
                     ->date()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('share_capital')
                     ->label('Capitale sociale')
                     ->numeric()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('employees')
                     ->label('Dipendenti')
                     ->numeric()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('turnover')
                     ->label('Fatturato')
                     ->numeric()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('net_worth')
                     ->label('Patrimonio netto')
                     ->numeric()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('balance_year')
                     ->label('Anno bilancio')
                     ->numeric()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('registry_updated_at')
                     ->label('Registro imprese aggiornato il')
                     ->dateTime()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('created_at')
                     ->label('Creato il')
                     ->dateTime()
@@ -251,7 +325,7 @@ class ClientsTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             // I datori di lavoro hanno la loro voce di menu: qui si vedono solo con il filtro acceso.
-            ->modifyQueryUsing(fn (Builder $query, $livewire): Builder => ($livewire->tableFilters['con_datori']['isActive'] ?? false) ? $query : $query->senzaDatoriDiLavoro())
+            ->modifyQueryUsing(fn (Builder $query, $livewire): Builder => (($livewire->tableFilters['con_datori']['isActive'] ?? false) ? $query : $query->senzaDatoriDiLavoro())->with('ultimaPratica.fornitori'))
             ->filters([
                 Filter::make('con_datori')->label('Includi i datori di lavoro')->toggle()->query(fn (Builder $query): Builder => $query),
             ])
