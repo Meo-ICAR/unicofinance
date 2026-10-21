@@ -8,6 +8,9 @@ use App\Filament\Concerns\RegistraCambioStato;
 use App\Models\Client;
 use App\Services\ContattiSocieta;
 use App\Services\Istruttoria\DatoreDiLavoro;
+use App\Services\Preventivazione\LeadSender;
+use App\Services\Preventivazione\QuoteUnavailable;
+use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Contracts\Support\Htmlable;
@@ -75,8 +78,44 @@ class EditPratica extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
+            $this->trasmettiLeadAction(),
             RinunciaClienteAction::make()->record($this->getRecord()),
         ];
+    }
+
+    /** Trasmette il lead della pratica a Mediafacile; una volta caricato con successo il tasto lo ricorda e non lo ripete. */
+    private function trasmettiLeadAction(): Action
+    {
+        $sender = app(LeadSender::class);
+        $sent = $sender->alreadySent($this->getRecord());
+
+        return Action::make('trasmettiLead')
+            ->label($sent ? 'Lead trasmesso' : 'Trasmetti lead')
+            ->icon($sent ? 'heroicon-m-check-circle' : 'heroicon-m-paper-airplane')
+            ->color($sent ? 'success' : 'primary')
+            ->tooltip($sent ? 'Trasmesso il '.$sent->created_at->format('d/m/Y H:i').($sent->iduu ? " (IDUU {$sent->iduu})" : '') : null)
+            ->disabled($sent !== null || ! $sender->isConfigured())
+            ->requiresConfirmation()
+            ->modalHeading('Trasmettere il lead a Mediafacile?')
+            ->modalDescription('Si inviano i dati del richiedente: nessun documento.')
+            ->action(function () use ($sender): void {
+                try {
+                    $lead = $sender->send($this->getRecord(), auth()->user());
+                } catch (QuoteUnavailable $e) {
+                    Notification::make()->title('Lead non trasmesso')->body($e->getMessage())->danger()->send();
+
+                    return;
+                }
+
+                if ($lead->is_ok) {
+                    Notification::make()->title('Lead trasmesso')->body($lead->iduu ? "IDUU {$lead->iduu}" : null)->success()->send();
+                    $this->redirect(static::getResource()::getUrl('edit', ['record' => $this->getRecord()]));
+
+                    return;
+                }
+
+                Notification::make()->title('Lead non accettato')->body($lead->stato)->danger()->persistent()->send();
+            });
     }
 
     protected function origineCambioStato(): string

@@ -22,7 +22,7 @@ Gestionale per **mediatori creditizi**: raccolta della documentazione, istruttor
 - **[unico-core](https://github.com/Meo-ICAR/unico-core)** (`../unico-core`, dipendenza `meo-icar/unico-core`). È il pacchetto condiviso da tutte le app: anagrafiche, pratiche, documenti, firma, mail, task e check list. **La gestione documentale sta tutta nel core.** Le funzioni utili a più app vanno lì, non in unicofinance.
 - **Due database:**
   - `mysql` (`unicofinance`): tabelle proprie dell'app, cioè utenti, listini provvigionali, blacklist istituto–produttore e `client_relations`.
-  - `core` (`unico_core_test`, condiviso tra le app): clienti, pratiche, documenti, stati, task, istituti (`clientis`) e produttori (`fornitoris`). I modelli del core usano `UsesCoreConnection`.
+  - `core` (`unicosuite`, condiviso tra le app): clienti, pratiche, documenti, stati, task, istituti (`clientis`) e produttori (`fornitoris`). I modelli del core usano `UsesCoreConnection`.
 - **Relazioni tra i due database:** una relazione eredita la connessione del modello da cui parte. Un modello di unicofinance raggiunto da un modello del core deve quindi ridefinire `getConnectionName()`, come fa `App\Models\ClientRelation`.
 
 ### Pannelli
@@ -104,16 +104,16 @@ I listini (`listini_provvigionali`) hanno una percentuale per **voce di compenso
 
 ```sh
 composer install
-cp .env.example .env    # DB_* per unicofinance, CORE_DB_* per unico_core_test
+cp .env.example .env    # DB_* per unicofinance, CORE_DB_* per unicosuite
 php artisan key:generate
 php artisan migrate     # solo le tabelle di unicofinance
 ```
 
-- **Migrazioni del core.** Stanno in `../unico-core/database/migrations`. Si applicano a `unico_core_test` con `--database=core`, usando come tabella delle migrazioni quella del core (`config('unico-core.migrations_table')`), una migrazione alla volta con `--path`.
+- **Migrazioni del core.** Stanno in `../unico-core/database/migrations`. Si applicano a `unicosuite` con `--database=core`, usando come tabella delle migrazioni quella del core (`config('unico-core.migrations_table')`), una migrazione alla volta con `--path`.
 - **Seed del core.** Contengono solo tabelle senza dati personali (tipi documento, stati, task...). **Mai dati di clienti, produttori, pratiche o istituti nei seeder.**
-- **Test.** `php artisan test`. I test dell'app usano sqlite per il database di default e la connessione `core` reale dentro una transazione (`$connectionsToTransact = [null, 'core']`). **Non eseguire la suite del core su `unico_core_test`:** svuota il database condiviso. I test del core girano solo su `unico_core_phpunit`.
+- **Test.** `php artisan test`. I test dell'app usano MySQL (`unicosuite_test`) per il database di default e la connessione `core` reale dentro una transazione (`$connectionsToTransact = [null, 'core']`). **Non eseguire la suite del core su `unicosuite`:** svuota il database condiviso. I test del core girano solo su `unicosuite_test`.
 - **Stile.** `vendor/bin/pint --dirty` prima di ogni commit.
-- **Backup.** Nel periodo di sviluppo `../backups3` fa un dump orario di `unico_core_test` e `unicofinance` (`backup:hourly`, conservazione 72 ore), più il backup notturno.
+- **Backup.** Nel periodo di sviluppo `../backups3` fa un dump orario di `unicosuite` e `unicofinance` (`backup:hourly`, conservazione 72 ore), più il backup notturno.
 
 ### Comandi utili del core
 - `unico-core:pdf-slots`: posizioni di firma nei moduli PDF.

@@ -6,14 +6,14 @@ use Illuminate\Database\Eloquent\Builder;
 use Unico\Core\Models\ChatMessage as CoreChatMessage;
 
 /**
- * Conversazione dell'assistente sul database di unicofinance (non su unico_core).
+ * Conversazione dell'assistente sul database di unicofinance (non sulla connessione core).
  * Il thread è per utente e pannello: il global scope nasconde i messaggi degli altri.
  */
 class ChatMessage extends CoreChatMessage
 {
     /**
      * Il trait del core, quando il default non è mysql (i test usano sqlite),
-     * sposterebbe il modello su unico_core. La tabella è dell'app.
+     * sposterebbe il modello sulla connessione core. La tabella è dell'app.
      */
     public function getConnectionName(): ?string
     {

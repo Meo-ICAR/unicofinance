@@ -78,7 +78,7 @@ class AppServiceProvider extends ServiceProvider
         Fornitore::resolveRelationUsing('branches', fn (Fornitore $fornitore) => $fornitore
             ->morphMany(Branch::class, 'branchable'));
 
-        // Le tabelle condivise stanno su unico_core_test. Si caricano le migration del
+        // Le tabelle condivise stanno su unicosuite. Si caricano le migration del
         // pacchetto solo se UNICO_CORE_MIGRATE=true (database proprio o test).
         if (config('database.unico_core_migrate')) {
             $this->loadMigrationsFrom(UnicoCoreServiceProvider::migrationsPath());

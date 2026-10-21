@@ -53,7 +53,7 @@ return [
         ],
 
         // Tabelle condivise del pacchetto meo-icar/unico-core.
-        // Database unico_core_test, condiviso fra le app Unico.
+        // Database unicosuite, condiviso fra le app Unico.
         'core' => [
             'driver' => 'mysql',
             'host' => env('CORE_DB_HOST', env('DB_HOST', '127.0.0.1')),
@@ -150,7 +150,7 @@ return [
     |
     */
 
-    // false: le tabelle condivise sono già in unico_core_test, le crea un'altra app.
+    // false: le tabelle condivise sono già in unicosuite, le crea un'altra app.
     'unico_core_migrate' => env('UNICO_CORE_MIGRATE', false),
 
     'migrations' => [
