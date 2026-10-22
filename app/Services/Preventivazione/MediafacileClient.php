@@ -17,15 +17,20 @@ class MediafacileClient
     {
         $url = (string) config('preventivatore.url');
         $passkey = (string) config('preventivatore.passkey');
+        $account = [
+            'Provvigione' => (string) config('preventivatore.provvigione'),
+            'ID_listino' => (string) config('preventivatore.id_listino'),
+            'ID_agente' => (string) config('preventivatore.id_agente'),
+        ];
 
-        if ($url === '' || $passkey === '') {
+        if ($url === '' || $passkey === '' || in_array('', $account, true)) {
             throw new QuoteUnavailable('Preventivatore non configurato.');
         }
 
         try {
-            $response = Http::timeout((int) config('preventivatore.timeout', 15))
-                ->withQueryParameters(['Passkey' => $passkey] + $params)
-                ->post($url);
+            $response = Http::asForm()
+                ->timeout((int) config('preventivatore.timeout', 15))
+                ->post($url, ['passkey' => $passkey] + $account + $params);
         } catch (ConnectionException $e) {
             throw new QuoteUnavailable('Servizio di preventivazione non raggiungibile.', 0, $e);
         }
@@ -38,7 +43,7 @@ class MediafacileClient
     }
 
     /**
-     * @return list<float> importi erogati delle offerte valide (Errore = 2)
+     * @return list<float> importi erogati delle offerte valide (Errore = 2) dal fmresultset FileMaker
      */
     public static function validAmounts(string $raw): array
     {
@@ -52,12 +57,20 @@ class MediafacileClient
 
         $amounts = [];
 
-        foreach ($xml->xpath('//Importo_erogato/..') ?: [] as $node) {
-            if (trim((string) $node->Errore) !== '2') {
+        $xml->registerXPathNamespace('fm', 'http://www.filemaker.com/xml/fmresultset');
+
+        foreach ($xml->xpath('//fm:record') ?: [] as $record) {
+            $fields = [];
+
+            foreach ($record->children('http://www.filemaker.com/xml/fmresultset')->field ?? [] as $field) {
+                $fields[(string) $field->attributes()['name']] = trim((string) $field->children('http://www.filemaker.com/xml/fmresultset')->data);
+            }
+
+            if (($fields['Errore'] ?? '') !== '2') {
                 continue;
             }
 
-            $amounts[] = self::number((string) $node->Importo_erogato);
+            $amounts[] = self::number($fields['Importo_erogato'] ?? '0');
         }
 
         return $amounts;

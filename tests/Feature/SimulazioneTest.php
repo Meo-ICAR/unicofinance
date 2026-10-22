@@ -49,12 +49,16 @@ class SimulazioneTest extends TestCase
     protected array $connectionsToTransact = [null, 'core'];
 
     private const XML = <<<'XML'
-<?xml version="1.0" encoding="UTF-8"?>
-<Offerte>
-  <Offerta><Importo_erogato>12.345,67</Importo_erogato><Errore>2</Errore></Offerta>
-  <Offerta><Importo_erogato>10000.50</Importo_erogato><Errore>2</Errore></Offerta>
-  <Offerta><Importo_erogato>1</Importo_erogato><Errore>1</Errore></Offerta>
-</Offerte>
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<fmresultset xmlns="http://www.filemaker.com/xml/fmresultset" version="1.0">
+  <error code="0"></error>
+  <resultset count="4" fetch-size="4">
+    <record><field name="Importo_erogato"><data>12345,67</data></field><field name="Errore"><data>2</data></field></record>
+    <record><field name="Importo_erogato"><data>10000,50</data></field><field name="Errore"><data>2</data></field></record>
+    <record><field name="Importo_erogato"><data>1</data></field><field name="Errore"><data>1</data></field></record>
+    <record><field name="Importo_erogato"><data>2131328,62</data></field><field name="Errore"><data>2</data></field></record>
+  </resultset>
+</fmresultset>
 XML;
 
     protected function setUp(): void
@@ -65,6 +69,9 @@ XML;
             'unico-core.signature.driver' => 'fake',
             'preventivatore.url' => 'https://preventivatore.test/offerte',
             'preventivatore.passkey' => 'secret',
+            'preventivatore.provvigione' => '3',
+            'preventivatore.id_listino' => '0001',
+            'preventivatore.id_agente' => '0001',
         ]);
 
         $user = User::factory()->create([
@@ -182,9 +189,12 @@ XML;
             ->assertSee('Perfeziona');
 
         Http::assertSent(function (Request $request): bool {
-            parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
+            $query = $request->data();
 
-            return $query['Passkey'] === 'secret'
+            return $query['passkey'] === 'secret'
+                && $query['Provvigione'] === '3'
+                && $query['ID_listino'] === '0001'
+                && $query['ID_agente'] === '0001'
                 && $query['Tipo_contratto'] === 'Cessione'
                 && $query['Tipo_rapporto'] === 'Statale'
                 && $query['Importo_rata'] === '280,00'

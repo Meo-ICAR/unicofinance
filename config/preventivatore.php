@@ -4,11 +4,19 @@ return [
 
     /*
     | Servizio di preventivazione Mediafacile (specifica WS Offerte).
-    | POST con Passkey e parametri nella query; la risposta è XML.
+    | POST form con passkey e parametri; la risposta è un XML fmresultset (offerte valide con Errore = 2).
     */
     'url' => env('PREVENTIVATORE_URL'),
     'passkey' => env('PREVENTIVATORE_PASSKEY'),
     'timeout' => (int) env('PREVENTIVATORE_TIMEOUT', 15),
+
+    /*
+    | Parametri di account richiesti dal servizio: percentuale di provvigione del collaboratore (0-20),
+    | listino e agente.
+    */
+    'provvigione' => env('PREVENTIVATORE_PROVVIGIONE'),
+    'id_listino' => env('PREVENTIVATORE_ID_LISTINO'),
+    'id_agente' => env('PREVENTIVATORE_ID_AGENTE'),
 
     /*
     | Servizio di caricamento lead Mediafacile (specifica 1.5): GET con Passkey e parametri, risposta XML.

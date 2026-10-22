@@ -30,7 +30,7 @@ class QuotationService
     public function quote(array $profile): array
     {
         $raw = $this->client->request($this->parameters($profile));
-        $amounts = MediafacileClient::validAmounts($raw);
+        $amounts = $this->plausible($profile, MediafacileClient::validAmounts($raw));
 
         if ($amounts === []) {
             throw new QuoteUnavailable('Nessuna offerta valida per questi dati.');
@@ -73,6 +73,24 @@ class QuotationService
         }
 
         return $params;
+    }
+
+    /**
+     * Scarta gli importi che il servizio restituisce fuori scala: su una cessione l'erogato non può superare il montante (rata × durata).
+     *
+     * @param  array<string, mixed>  $profile
+     * @param  list<float>  $amounts
+     * @return list<float>
+     */
+    private function plausible(array $profile, array $amounts): array
+    {
+        if (! SimulationContractType::from((string) $profile['contract_type'])->asksQuotaCedibile()) {
+            return $amounts;
+        }
+
+        $gross = (float) $profile['assignable_quota'] * (int) $profile['duration_months'];
+
+        return array_values(array_filter($amounts, fn (float $amount): bool => $amount <= $gross));
     }
 
     private function money(float $value): string
