@@ -2,6 +2,7 @@
 
 namespace App\Filament\Agenti\Resources\Scadenziario;
 
+use App\Filament\Actions\ExcelExportAction;
 use App\Filament\Agenti\Resources\Scadenziario\Pages\ListScadenziario;
 use App\Filament\Agenti\Widgets\ProvvigioniAgente;
 use App\Filament\Traits\HasPlanAccess;
@@ -77,6 +78,7 @@ class ScadenziarioResource extends Resource
         $agente = fn (): int => app(AgentImpersonationService::class)->agentFornitoreId() ?? 0;
 
         return $table
+            ->headerActions([ExcelExportAction::make()])
             ->defaultSort('expires_at')
             ->paginated([10, 25, 50])
             ->columns([

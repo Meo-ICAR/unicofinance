@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Solleciti;
 
+use App\Filament\Actions\ExcelExportAction;
 use App\Filament\Resources\Praticas\PraticaResource;
 use App\Filament\Resources\Solleciti\Pages\ListSolleciti;
 use App\Filament\Traits\HasPlanAccess;
@@ -96,6 +97,7 @@ class SollecitoResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->headerActions([ExcelExportAction::make()])
             ->defaultSort('id')
             ->columns([
                 TextColumn::make('documentable.employee.name')->label('Istruttore')->placeholder('—'),

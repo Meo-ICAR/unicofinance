@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Produttori;
 
+use App\Filament\Actions\ExcelExportAction;
 use App\Filament\Actions\ImpersonateFornitoreAction;
 use App\Filament\RelationManagers\BranchesRelationManager;
 use App\Filament\Resources\Produttori\Pages\ListProduttori;
@@ -100,6 +101,7 @@ class ProduttoreResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->headerActions([ExcelExportAction::make()])
             ->columns([
                 TextColumn::make('name')
                     ->label('Produttore')

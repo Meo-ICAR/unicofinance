@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\EmployeeTypes;
 
+use App\Filament\Actions\ExcelExportAction;
 use App\Filament\Resources\EmployeeTypes\Pages\ListEmployeeTypes;
 use App\Filament\Resources\EmployeeTypes\Pages\ViewEmployeeType;
 use App\Filament\Resources\EmployeeTypes\RelationManagers\PermissionsRelationManager;
@@ -74,6 +75,7 @@ class EmployeeTypeResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->headerActions([ExcelExportAction::make()])
             ->columns([
                 TextColumn::make('name')->label('Ruolo')->searchable()->sortable(),
                 TextColumn::make('companytype')->label('Tipo azienda')->sortable(),

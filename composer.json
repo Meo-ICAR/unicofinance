@@ -16,6 +16,7 @@
         "meo-icar/unico-core": "dev-main",
         "neuron-core/neuron-ai": "^3.16",
         "owenvoke/blade-fontawesome": "^3.3",
+        "pxlrbt/filament-excel": "^3.6",
         "socialiteproviders/google": "^4.1",
         "socialiteproviders/microsoft": "^4.9",
         "spatie/laravel-medialibrary": "^11.0"

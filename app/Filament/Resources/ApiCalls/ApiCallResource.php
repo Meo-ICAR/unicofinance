@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\ApiCalls;
 
+use App\Filament\Actions\ExcelExportAction;
 use App\Filament\Resources\ApiCalls\Pages\ListApiCalls;
 use App\Filament\Resources\ApiCalls\Pages\ViewApiCall;
 use App\Filament\Resources\Clients\ClientResource;
@@ -104,6 +105,7 @@ class ApiCallResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->headerActions([ExcelExportAction::make()->sumColumns(['Costo'])])
             ->columns([
                 TextColumn::make('created_at')->label('Data')->dateTime('d/m/y H:i')->sortable(),
                 TextColumn::make('provider')->label('Servizio')->badge()->sortable(),

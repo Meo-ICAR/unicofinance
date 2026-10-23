@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\ListinoProvvigionales\Tables;
 
+use App\Filament\Actions\ExcelExportAction;
 use App\Models\ListinoProvvigionale;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
@@ -16,6 +17,7 @@ class ListinoProvvigionalesTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->headerActions([ExcelExportAction::make()])
             ->columns([
                 TextColumn::make('code')
                     ->label('Codice')
