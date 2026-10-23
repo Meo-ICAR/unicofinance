@@ -9,8 +9,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 use Unico\Core\Enums\DocumentStatus;
-use Unico\Core\Models\BusinessFunction;
-use Unico\Core\Models\BusinessFunctionMember;
 use Unico\Core\Models\Document;
 use Unico\Core\Models\DocumentType;
 use Unico\Core\Models\Employee;
@@ -29,7 +27,7 @@ class InvioInIstruttoriaTest extends TestCase
 
     private function pratica(): Pratica
     {
-        $tipo = TipoProdotto::query()->firstOrCreate(['name' => 'Cessione'], ['tipo_prodotto' => 'Cessione']);
+        $tipo = TipoProdotto::query()->firstOrCreate(['tipo_prodotto' => 'Cessione'], ['name' => 'Cessione']);
         $pratica = Pratica::query()->create(['codice_pratica' => 'IST-1', 'cognome_cliente' => 'Rossi', 'nome_cliente' => 'Mario', 'tipoprodotto_id' => $tipo->getKey(), 'upload_at' => now()]);
 
         foreach (['Carta identità' => false, 'Fascicolo firmato' => true] as $nome => $firmato) {
@@ -50,10 +48,7 @@ class InvioInIstruttoriaTest extends TestCase
 
     private function istruttore(string $email): void
     {
-        $funzione = BusinessFunction::query()->firstOrCreate(['code' => 'BUS-BO'], ['name' => 'Back Office Prodotti']);
-        BusinessFunctionMember::query()->where('business_function_id', $funzione->getKey())->delete();
-        $dipendente = Employee::query()->create(['name' => 'Istruttore Prova', 'email' => $email]);
-        BusinessFunctionMember::query()->create(['business_function_id' => $funzione->getKey(), 'member_type' => 'employee', 'member_id' => $dipendente->getKey()]);
+        Employee::query()->create(['name' => 'Istruttore Prova', 'email' => $email, 'employee_roles' => [InvioInIstruttoria::RUOLO_ISTRUTTORI]]);
     }
 
     public function test_the_dossier_is_created_the_state_moves_to_istruttoria_and_the_instructors_are_notified(): void

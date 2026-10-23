@@ -8,8 +8,9 @@ use App\Services\CambioStatoPratica;
 use App\Services\Preventivazione\PracticeFinalizer;
 use Illuminate\Support\Facades\Mail;
 use Unico\Core\Documents\PracticeDossier;
-use Unico\Core\Models\BusinessFunction;
+use Unico\Core\Models\Client;
 use Unico\Core\Models\Document;
+use Unico\Core\Models\Employee;
 use Unico\Core\Signature\SignatureDemo;
 
 /**
@@ -21,7 +22,8 @@ class InvioInIstruttoria
 {
     public const STATO = 'INVIO IN ISTRUTTORIA';
 
-    public const FUNZIONE_ISTRUTTORI = 'BUS-BO';
+    /** Ruolo (employee_types) di chi riceve le pratiche in istruttoria: dipendenti ed esterni che lo hanno in `employee_roles`. */
+    public const RUOLO_ISTRUTTORI = 'istruttore';
 
     public function __construct(private PracticeDossier $plichi, private PracticeFinalizer $finalizer, private CambioStatoPratica $stati) {}
 
@@ -49,7 +51,8 @@ class InvioInIstruttoria
     }
 
     /**
-     * Email degli istruttori (membri della funzione Back Office). In dimostrazione solo l'indirizzo di prova, per non scrivere a persone vere.
+     * Email degli istruttori (chi ha il ruolo «istruttore», dipendenti ed esterni); se nessuno, `ISTRUTTORIA_EMAIL`.
+     * In dimostrazione solo l'indirizzo di prova, per non scrivere a persone vere.
      *
      * @return list<string>
      */
@@ -59,7 +62,9 @@ class InvioInIstruttoria
             return array_values(array_filter([config('istruttoria.email_demo')]));
         }
 
-        $emails = BusinessFunction::query()->where('code', self::FUNZIONE_ISTRUTTORI)->first()?->employees()->pluck('email')->filter(fn ($email) => filter_var($email, FILTER_VALIDATE_EMAIL))->unique()->values()->all() ?? [];
+        $emails = Employee::query()->whereJsonContains('employee_roles', self::RUOLO_ISTRUTTORI)->pluck('email')
+            ->merge(Client::query()->whereJsonContains('employee_roles', self::RUOLO_ISTRUTTORI)->pluck('email'))
+            ->filter(fn ($email) => filter_var($email, FILTER_VALIDATE_EMAIL))->unique()->values()->all();
 
         return $emails !== [] ? $emails : array_values(array_filter([config('istruttoria.email')]));
     }
