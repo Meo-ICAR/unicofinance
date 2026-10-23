@@ -2,8 +2,11 @@
 
 namespace App\Filament\Exports;
 
+use App\Support\TestoExcelSicuro;
+use Maatwebsite\Excel\Concerns\WithCustomValueBinder;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Events\AfterSheet;
+use PhpOffice\PhpSpreadsheet\Cell\Cell;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
@@ -14,7 +17,7 @@ use Unico\Core\Filament\Concerns\InjectsRecordByTypeInExports;
  * Esporta in Excel le colonne della tabella (filtri compresi), come in Proforma: in cima i filtri applicati, in fondo i totali
  * delle colonne indicate in `sumColumns()`, con subtotali per gruppo se c'è `groupBy()`.
  */
-class DynamicGroupExport extends ExcelExport implements WithEvents
+class DynamicGroupExport extends ExcelExport implements WithCustomValueBinder, WithEvents
 {
     use InjectsRecordByTypeInExports;
 
@@ -47,6 +50,12 @@ class DynamicGroupExport extends ExcelExport implements WithEvents
         return $this;
     }
 
+    /** I testi che iniziano con «=» restano testo (vedi TestoExcelSicuro). */
+    public function bindValue(Cell $cell, mixed $value): bool
+    {
+        return (new TestoExcelSicuro)->bindValue($cell, $value);
+    }
+
     /** @return array<class-string, callable> */
     public function registerEvents(): array
     {
@@ -63,8 +72,8 @@ class DynamicGroupExport extends ExcelExport implements WithEvents
 
         $filterStrings = [];
         foreach ($this->getLivewire()->tableFilters ?? [] as $name => $data) {
-            if (! empty($data['value'])) {
-                $value = is_array($data['value']) ? implode(', ', $data['value']) : $data['value'];
+            $value = $this->describeFilter($data);
+            if ($value !== '') {
                 $filterStrings[] = strtoupper($name).': '.$value;
             }
         }
@@ -146,6 +155,38 @@ class DynamicGroupExport extends ExcelExport implements WithEvents
         }
 
         $this->writeTotalRow($sheet, $highestRow + 1, 0, 'GRAN TOTALE COMPLESSIVO', $grandTotals, $sumIndices, $highestColumnIndex, true);
+    }
+
+    /**
+     * Il valore di un filtro: `value`/`values` per quelli semplici, «campo valore» per quelli con più campi (date da/a...).
+     */
+    protected function describeFilter(mixed $data): string
+    {
+        if (! is_array($data)) {
+            return is_scalar($data) ? trim((string) $data) : '';
+        }
+
+        if (array_key_exists('value', $data) || array_key_exists('values', $data)) {
+            $value = $data['value'] ?? $data['values'] ?? null;
+            if (empty($value)) {
+                return '';
+            }
+
+            return is_array($value) ? implode(', ', array_filter($value, fn ($item): bool => filled($item))) : trim((string) $value);
+        }
+
+        if (array_key_exists('isActive', $data)) {
+            return $data['isActive'] ? 'sì' : '';
+        }
+
+        $parts = [];
+        foreach ($data as $field => $value) {
+            if (is_scalar($value) && filled($value)) {
+                $parts[] = $field.' '.$value;
+            }
+        }
+
+        return implode(', ', $parts);
     }
 
     /** Importi formattati all'italiana ("1.234,56 €") tornano numeri. */

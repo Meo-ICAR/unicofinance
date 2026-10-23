@@ -7,6 +7,7 @@ use App\Enums\ApiProvider;
 use App\Filament\Resources\ApiCalls\Pages\ListApiCalls;
 use App\Filament\Resources\Clients\Pages\EditClient;
 use App\Filament\Resources\Praticas\Pages\EditPratica;
+use App\Filament\Resources\Praticas\Pages\ListPraticas;
 use App\Models\ApiCall;
 use App\Models\Client;
 use App\Models\User;
@@ -59,6 +60,22 @@ class ExcelExportTest extends TestCase
         $this->assertEqualsWithDelta(3.75, end($rows)[$costo], 0.001);
     }
 
+    public function test_the_filters_line_lists_the_filters_with_more_fields(): void
+    {
+        $rows = $this->scaricaExcel(Livewire::test(ListPraticas::class)->filterTable('ultimo_aggiornamento', ['dal' => '2026-01-01', 'al' => null]), TestAction::make('excelExport')->table());
+
+        $this->assertStringContainsString('ULTIMO_AGGIORNAMENTO: dal 2026-01-01', $rows[0][0]);
+    }
+
+    public function test_a_text_that_looks_like_a_formula_stays_text(): void
+    {
+        ApiCall::query()->create(['provider' => ApiProvider::Cerved, 'operation' => '=1+1', 'status' => ApiCallStatus::Success, 'cost' => 1]);
+
+        $rows = $this->scaricaExcel(Livewire::test(ListApiCalls::class)->searchTable('=1+1'), TestAction::make('excelExport')->table());
+
+        $this->assertNotEmpty(array_filter($rows, fn (array $row): bool => in_array('=1+1', $row, true)));
+    }
+
     public function test_the_documents_of_a_record_can_be_exported(): void
     {
         $societa = Client::query()->create(['name' => 'Acme Srl', 'vat_number' => '12345678903', 'tax_code' => '12345678903', 'is_person' => false]);
@@ -74,13 +91,14 @@ class ExcelExportTest extends TestCase
     {
         $pratica = Pratica::query()->create(['codice_pratica' => 'XLS-STORICO', 'upload_at' => now()]);
         PraticaStatusHistory::query()->create(['pratica_id' => $pratica->getKey(), 'status_to' => 'Inserita', 'changed_at' => now()->subDay()]);
-        PraticaStatusHistory::query()->create(['pratica_id' => $pratica->getKey(), 'status_from' => 'Inserita', 'status_to' => 'Istruttoria', 'changed_at' => now(), 'notes' => 'Documenti completi']);
+        PraticaStatusHistory::query()->create(['pratica_id' => $pratica->getKey(), 'status_from' => 'Inserita', 'status_to' => 'Istruttoria', 'changed_at' => now(), 'notes' => '=HYPERLINK("http://x")', 'source' => 'agenti']);
 
         $rows = $this->scaricaExcel(Livewire::test(EditPratica::class, ['record' => $pratica->getKey()]), ['cronologiaStati', 'scaricaCronologia']);
 
         $this->assertSame('Pratica XLS-STORICO', $rows[0][0]);
         $this->assertSame(['Inserita', 'Istruttoria'], [$rows[3][1], $rows[3][2]]);
-        $this->assertSame('Documenti completi', $rows[3][7]);
+        $this->assertSame('=HYPERLINK("http://x")', $rows[3][7]);
+        $this->assertSame(['Sì', 'No'], [$rows[3][8], $rows[4][8]]);
         $this->assertSame('Inserita', $rows[4][2]);
     }
 
