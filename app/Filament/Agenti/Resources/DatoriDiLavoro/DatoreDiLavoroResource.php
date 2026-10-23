@@ -2,6 +2,7 @@
 
 namespace App\Filament\Agenti\Resources\DatoriDiLavoro;
 
+use App\Filament\Actions\ExcelExportAction;
 use App\Filament\Agenti\Resources\DatoriDiLavoro\Pages\ListDatoriDiLavoro;
 use App\Filament\Agenti\Resources\DatoriDiLavoro\Pages\ViewDatoreDiLavoro;
 use App\Filament\Agenti\Resources\DatoriDiLavoro\RelationManagers\DipendentiRelationManager;
@@ -81,6 +82,7 @@ class DatoreDiLavoroResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->headerActions([ExcelExportAction::make()])
             ->defaultSort('name')
             ->columns([
                 TextColumn::make('name')->label('Datore di lavoro')->searchable()->sortable(),

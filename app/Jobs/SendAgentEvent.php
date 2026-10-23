@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\ApiClient;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldBeEncrypted;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Http\Client\ConnectionException;
@@ -17,7 +18,7 @@ use RuntimeException;
  * Consegna un avviso all'app (POST su `webhook_url`), firmato come le richieste che l'app manda qui: HMAC-SHA256 di
  * «timestamp.POST.percorso.sha256-del-corpo» con il segreto dell'app. Ritenta su rete, 5xx e 408/425/429; gli altri 4xx sono definitivi.
  */
-class SendAgentEvent implements ShouldQueue
+class SendAgentEvent implements ShouldBeEncrypted, ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
@@ -26,15 +27,20 @@ class SendAgentEvent implements ShouldQueue
     /** @var array<int, int> */
     public array $backoff = [60, 300, 900, 3600];
 
-    /** @param  array<string, mixed>  $payload */
-    public function __construct(public int $apiClientId, public array $payload) {}
+    /**
+     * Il nome serve se nel frattempo le credenziali sono state rigenerate (nuova riga): l'avviso va all'app con il nuovo segreto.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    public function __construct(public int $apiClientId, public array $payload, public ?string $apiClientName = null) {}
 
     public function handle(): void
     {
-        $client = ApiClient::query()->where('is_active', true)->find($this->apiClientId);
+        $client = ApiClient::query()->where('is_active', true)->find($this->apiClientId)
+            ?? ($this->apiClientName === null ? null : ApiClient::query()->where('is_active', true)->where('name', $this->apiClientName)->first());
         $url = (string) $client?->webhook_url;
 
-        if ($client === null || ! (str_starts_with($url, 'https://') || (str_starts_with($url, 'http://') && app()->environment(['local', 'testing'])))) {
+        if ($client === null || ! ApiClient::isUsableWebhook($url)) {
             return;
         }
 

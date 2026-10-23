@@ -83,7 +83,8 @@ class AgentNotifications
             $status = $this->status($document);
 
             SendAgentEvent::dispatch($client->getKey(), [
-                'event_id' => "{$event}:{$document->getKey()}:{$status?->value}:".($document->updated_at?->timestamp ?? time()),
+                // Un documento del cliente può toccare più pratiche: l'id dell'evento le distingue.
+                'event_id' => "{$event}:{$pratica->getKey()}:{$document->getKey()}:{$status?->value}:".($document->updated_at?->timestamp ?? time()),
                 'evento' => $event,
                 'riferimento' => Str::after((string) $pratica->codice_pratica, (string) $client->pratica_prefix),
                 'documento' => array_filter([
@@ -95,7 +96,7 @@ class AgentNotifications
                     'motivo' => $event === 'documento.da_rifare' ? $document->rejection_note : null,
                 ], fn ($value): bool => $value !== null && $value !== []),
                 'avvenuto_il' => now()->toIso8601String(),
-            ])->afterCommit();
+            ], $client->name)->afterCommit();
         }
     }
 

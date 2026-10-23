@@ -13,6 +13,7 @@ use App\Services\Istruttoria\InvioContoEstintivo;
 use App\Services\Istruttoria\RichiedentePratica;
 use App\Services\Istruttoria\RichiestaContoEstintivo;
 use App\Services\Istruttoria\RispostaAssistente;
+use App\Support\CronologiaStatiExcel;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Forms\Components\Placeholder;
@@ -179,7 +180,14 @@ class EditPratica extends EditRecord
                     'istruttoreUserId' => $record->employee?->user_id,
                 ]))
                 ->modalSubmitAction(false)
-                ->modalCancelActionLabel('Chiudi'),
+                ->modalCancelActionLabel('Chiudi')
+                ->extraModalFooterActions([
+                    Action::make('scaricaCronologia')
+                        ->label('Scarica Excel')
+                        ->icon(Heroicon::OutlinedArrowDownTray)
+                        ->color('success')
+                        ->action(fn (Pratica $record) => CronologiaStatiExcel::scarica($record)),
+                ]),
             Action::make('cambiaOfferta')
                 ->label('Cambia offerta')
                 ->icon(Heroicon::OutlinedArrowsRightLeft)
