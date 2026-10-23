@@ -247,7 +247,8 @@ class AgentApiTest extends TestCase
         $this->assertSame('mario@example.com', $client->email);
         $response->assertJsonPath('cliente_id', $client->getKey());
 
-        $tipi = collect($response->json('documenti'))->pluck('stato', 'tipo');
+        // Il database core non è vuoto: altre check list possono aggiungere documenti, qui contano solo quelli del prodotto di prova.
+        $tipi = collect($response->json('documenti'))->pluck('stato', 'tipo')->filter(fn ($stato, $tipo): bool => str_ends_with($tipo, '-zz'));
         $this->assertEqualsCanonicalizing(['carta-identita-zz' => 'richiesto', 'busta-paga-zz' => 'richiesto'], $tipi->all());
     }
 
@@ -410,7 +411,9 @@ class AgentApiTest extends TestCase
 
         $this->signedJson('POST', '/api/agente/v1/richieste', $this->request())->assertCreated();
 
-        $this->signedJson('GET', '/api/agente/v1/richieste/FIN-2026-0001')->assertOk()->assertJsonCount(2, 'documenti');
+        $documenti = $this->signedJson('GET', '/api/agente/v1/richieste/FIN-2026-0001')->assertOk()->json('documenti');
+
+        $this->assertEqualsCanonicalizing(['carta-identita-zz', 'busta-paga-zz'], collect($documenti)->pluck('tipo')->filter(fn (string $tipo): bool => str_ends_with($tipo, '-zz'))->values()->all());
     }
 
     public function test_a_file_lands_on_the_requested_document_with_channel_and_reference(): void
