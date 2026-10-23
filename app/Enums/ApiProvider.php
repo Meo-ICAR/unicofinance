@@ -32,13 +32,17 @@ enum ApiProvider: string implements HasLabel
      */
     public function unitCost(): float
     {
+        if ($this === self::Mediafacile || $this === self::BusinessCentral) {
+            return 0.0;
+        }
+
         return (float) config(match ($this) {
             self::Cerved => 'services.cerved.cost',
             self::SanctionsIo => 'services.aml.cost',
             self::Openapi => 'services.openapi.cost_advanced',
             self::OpenapiCreditScore => 'services.openapi.cost_creditscore',
             self::Anthropic => 'services.anthropic.cost',
-            self::Mediafacile, self::BusinessCentral => 'services.api_calls.no_cost',
+            self::Mediafacile, self::BusinessCentral => throw new \LogicException('Provider senza costo'),
         }, 0);
     }
 }
