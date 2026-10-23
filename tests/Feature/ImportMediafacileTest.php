@@ -2,9 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Enums\ApiCallStatus;
+use App\Enums\ApiProvider;
+use App\Models\ApiCall;
 use App\Models\Client;
 use App\Models\Pratica;
 use App\Models\Provvigione;
+use App\Services\Importazione\MediafacileApi;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -281,5 +285,27 @@ class ImportMediafacileTest extends TestCase
         $this->artisan('pratiche:import-api', ['--no-close' => true])->assertSuccessful();
         $this->assertSame($altro->getKey(), Pratica::query()->where('codice_pratica', 'QT90030')->firstOrFail()->employee_id);
         $this->assertNotNull($impiegato);
+    }
+
+    public function test_every_download_is_recorded_in_the_api_calls_without_the_key(): void
+    {
+        Http::fake(['mediafacile.test/*' => Http::sequence()->push($this->tsv(['ID Pratica'], [['ID Pratica' => 'QT1']]))->whenEmpty(Http::response('errore', 500))]);
+
+        app(MediafacileApi::class)->scarica('pratiche', now()->subDay(), now());
+
+        try {
+            app(MediafacileApi::class)->scarica('compensi', now()->subDay(), now());
+        } catch (\RuntimeException) {
+        }
+
+        $riuscita = ApiCall::query()->where('operation', 'pratiche')->firstOrFail();
+        $fallita = ApiCall::query()->where('operation', 'compensi')->firstOrFail();
+
+        $this->assertSame(ApiProvider::Mediafacile, $riuscita->provider);
+        $this->assertSame(ApiCallStatus::Success, $riuscita->status);
+        $this->assertSame('1 righe', $riuscita->summary);
+        $this->assertSame(ApiCallStatus::Failed, $fallita->status);
+        $this->assertSame(500, $fallita->http_status);
+        $this->assertStringNotContainsString('chiave', json_encode($riuscita->request));
     }
 }

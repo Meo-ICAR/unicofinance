@@ -2,6 +2,8 @@
 
 namespace App\Services\Importazione;
 
+use App\Enums\ApiProvider;
+use App\Services\ApiCallLogger;
 use Carbon\CarbonInterface;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
@@ -14,28 +16,41 @@ use RuntimeException;
  */
 class MediafacileApi
 {
+    public function __construct(private readonly ApiCallLogger $logger) {}
+
     /**
      * @return array{intestazioni: list<string>, righe: list<list<string>>}
      */
     public function scarica(string $tabella, CarbonInterface $dal, CarbonInterface $al): array
     {
-        $risposta = Http::withHeaders([
-            'Accept' => 'application/json, */*',
-            'User-Agent' => 'UnicoFinance Import/1.0',
-            'X-Api-Key' => (string) config('services.mediafacile.header_key'),
-        ])
-            ->timeout(60)
-            ->connectTimeout(10)
-            ->withOptions(['http_errors' => false, 'verify' => false])
-            ->retry(3, 1000, fn ($eccezione): bool => $eccezione instanceof ConnectionException || $eccezione->getCode() >= 500, throw: false)
-            ->get((string) config('services.mediafacile.base_url'), [
-                'table' => $tabella,
-                'data_inizio' => $dal->format('Y-m-d'),
-                'data_fine' => $al->format('Y-m-d'),
-            ]);
+        $parametri = [
+            'table' => $tabella,
+            'data_inizio' => $dal->format('Y-m-d'),
+            'data_fine' => $al->format('Y-m-d'),
+        ];
+        $url = (string) config('services.mediafacile.base_url');
+        $inizio = microtime(true);
+
+        try {
+            $risposta = Http::withHeaders([
+                'Accept' => 'application/json, */*',
+                'User-Agent' => 'UnicoFinance Import/1.0',
+                'X-Api-Key' => (string) config('services.mediafacile.header_key'),
+            ])
+                ->timeout(60)
+                ->connectTimeout(10)
+                ->withOptions(['http_errors' => false, 'verify' => false])
+                ->retry(3, 1000, fn ($eccezione): bool => $eccezione instanceof ConnectionException || $eccezione->getCode() >= 500, throw: false)
+                ->get($url, $parametri);
+        } catch (ConnectionException $e) {
+            $this->logger->record(ApiProvider::Mediafacile, $tabella, null, ['url' => $url] + $parametri, $inizio, null, false, error: $e->getMessage());
+
+            throw $e;
+        }
 
         if (! $risposta->successful()) {
             Log::error("Mediafacile {$tabella}: errore API", ['status' => $risposta->status(), 'risposta' => substr($risposta->body(), 0, 1000)]);
+            $this->logger->record(ApiProvider::Mediafacile, $tabella, null, ['url' => $url] + $parametri, $inizio, $risposta->status(), false, error: substr($risposta->body(), 0, 500));
 
             throw new RuntimeException('La richiesta all\'API è fallita con stato '.$risposta->status().'.');
         }
@@ -43,8 +58,12 @@ class MediafacileApi
         $righe = array_values(array_filter(explode("\n", trim($risposta->body())), fn (string $riga): bool => trim($riga) !== ''));
 
         if ($righe === []) {
+            $this->logger->record(ApiProvider::Mediafacile, $tabella, null, ['url' => $url] + $parametri, $inizio, $risposta->status(), true, summary: 'Nessun dato');
+
             throw new RuntimeException('L\'API non ha restituito dati.');
         }
+
+        $this->logger->record(ApiProvider::Mediafacile, $tabella, null, ['url' => $url] + $parametri, $inizio, $risposta->status(), true, summary: (count($righe) - 1).' righe');
 
         return [
             'intestazioni' => $this->valori($righe[0]),
