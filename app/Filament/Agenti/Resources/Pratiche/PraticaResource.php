@@ -265,6 +265,7 @@ class PraticaResource extends Resource
                         ->numeric()
                         ->prefix('€')
                         ->visible(fn (Get $get): bool => ! $sulla_rata($get) && ! $impegnoDiTerzi($get)),
+                    TextInput::make('loan_purpose')->label('Finalità')->maxLength(255)->hidden($impegnoDiTerzi),
                 ]),
             Tabs::make('Altri dati')
                 ->columnSpanFull()

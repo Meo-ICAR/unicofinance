@@ -13,11 +13,13 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Unico\Core\Enums\Kinship;
 
 /** Cointestatari (coobbligati) e garanti di un mutuo, oltre al richiedente. */
 class CointestatariGarantiRelationManager extends RelationManager
@@ -44,7 +46,9 @@ class CointestatariGarantiRelationManager extends RelationManager
     {
         return $schema->components([
             ...self::campiSoggetto(),
-            Select::make('role')->label('Ruolo')->options(self::RUOLI)->required(),
+            Select::make('role')->label('Ruolo')->options(self::RUOLI)->required()->live(),
+            Select::make('kinship')->label('Grado di parentela con il richiedente')->options(Kinship::class)
+                ->visible(fn (Get $get): bool => $get('role') === 'coobbligato'),
             TextInput::make('share_percent')->label('Quota %')->numeric()->minValue(0)->maxValue(100)->suffix('%'),
             Textarea::make('notes')->label('Note')->columnSpanFull(),
         ])->columns(2);
@@ -58,6 +62,7 @@ class CointestatariGarantiRelationManager extends RelationManager
             ->columns([
                 TextColumn::make('role')->label('Ruolo')->badge()->formatStateUsing(fn (string $state): string => self::RUOLI[$state] ?? $state),
                 TextColumn::make('client.name')->label('Cognome / Ragione sociale')->searchable(),
+                TextColumn::make('kinship')->label('Parentela')->placeholder('—'),
                 TextColumn::make('client.first_name')->label('Nome')->placeholder('—'),
                 TextColumn::make('client.tax_code')->label('Codice fiscale / P.IVA')->placeholder('—'),
                 TextColumn::make('share_percent')->label('Quota')->suffix('%')->placeholder('—'),
@@ -76,6 +81,7 @@ class CointestatariGarantiRelationManager extends RelationManager
                         return $livewire->getOwnerRecord()->praticaClients()->create([
                             'client_id' => $client->getKey(),
                             'role' => $data['role'],
+                            'kinship' => $data['role'] === 'coobbligato' ? ($data['kinship'] ?? null) : null,
                             'share_percent' => $data['share_percent'] ?? null,
                             'notes' => $data['notes'] ?? null,
                         ]);
@@ -88,6 +94,7 @@ class CointestatariGarantiRelationManager extends RelationManager
                         'nome' => $record->client?->first_name,
                         'codice_fiscale' => $record->client?->tax_code,
                         'role' => $record->role,
+                        'kinship' => $record->kinship?->value,
                         'share_percent' => $record->share_percent,
                         'notes' => $record->notes,
                     ]))
@@ -96,6 +103,7 @@ class CointestatariGarantiRelationManager extends RelationManager
                         $record->update([
                             'client_id' => $client->getKey(),
                             'role' => $data['role'],
+                            'kinship' => $data['role'] === 'coobbligato' ? ($data['kinship'] ?? null) : null,
                             'share_percent' => $data['share_percent'] ?? null,
                             'notes' => $data['notes'] ?? null,
                         ]);

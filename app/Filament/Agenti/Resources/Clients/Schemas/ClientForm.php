@@ -20,6 +20,10 @@ use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
+use Illuminate\Database\Eloquent\Builder;
+use Unico\Core\Enums\IbanHolder;
+use Unico\Core\Enums\MaritalStatus;
+use Unico\Core\Enums\PaymentMethod;
 
 /**
  * Anagrafica, valutazione AML e KYC del richiedente: la stessa scheda nel form della pratica (relazione `richiedente`)
@@ -82,6 +86,9 @@ class ClientForm
                             TextInput::make('birth_place')->label('Luogo di nascita')->maxLength(100),
                             Select::make('sex')->label('Sesso')->options(['M' => 'M', 'F' => 'F']),
                             TextInput::make('citizenship')->label('Cittadinanza')->maxLength(60),
+                            Select::make('marital_status')->label('Stato civile')->options(MaritalStatus::class),
+                            TextInput::make('family_members')->label('Numero familiari')->numeric()->integer()->minValue(0)->maxValue(30),
+                            TextInput::make('family_members_with_income')->label('Familiari con reddito')->numeric()->integer()->minValue(0)->maxValue(30),
                         ]),
                 ]),
             Section::make('Lavoro e reddito')
@@ -98,6 +105,24 @@ class ClientForm
                         ->createOptionForm(AdminClientForm::datoreDiLavoroForm())
                         ->createOptionUsing(fn (array $data, ?Client $record): int => (int) app(DatoreDiLavoro::class)->crea($record, $data)->getKey())
                         ->visible(fn (?Client $record): bool => app(DatoreDiLavoro::class)->richiesto($record)),
+                    Select::make('occupation_type_id')->label('Tipo occupazione')
+                        ->relationship('occupationType', 'name', fn (Builder $query) => $query->orderBy('sort_order'))
+                        ->searchable()->preload(),
+                    Select::make('hiring_type_id')->label('Tipo assunzione')
+                        ->relationship('hiringType', 'name', fn (Builder $query) => $query->orderBy('sort_order'))
+                        ->preload(),
+                    Select::make('income_type_id')->label('Tipo reddito')
+                        ->relationship('incomeType', 'name', fn (Builder $query) => $query->orderBy('sort_order'))
+                        ->preload(),
+                    TextInput::make('salary_months')->label('Numero mensilità')->numeric()->integer()->minValue(1)->maxValue(24),
+                    TextInput::make('salary_day')->label('Giorno ricezione stipendio')->numeric()->integer()->minValue(1)->maxValue(31),
+                    Select::make('payment_method')->label('Modalità di pagamento')->options(PaymentMethod::class),
+                    Select::make('iban_holder')->label('Intestatario conto corrente')->options(IbanHolder::class),
+                    Select::make('preferred_bank_id')
+                        ->label('Banca preferita nuovi finanziamenti')
+                        ->relationship('preferredBank', 'name', fn (Builder $query) => $query->where('is_active', true)->orderBy('name'))
+                        ->searchable()
+                        ->preload(),
                 ]),
             Section::make('Valutazione rischio (AML)')
                 ->key('valutazioneAml')
