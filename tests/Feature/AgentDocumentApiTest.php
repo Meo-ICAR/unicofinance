@@ -82,11 +82,14 @@ class AgentDocumentApiTest extends TestCase
 
     private int $signed = 0;
 
+    /** Ora di partenza dei timestamp firmati: fissa per tutto il test, così due firme non coincidono mai. */
+    private ?int $signedAt = null;
+
     /** @return array<string, string> */
     private function signature(string $method, string $path, string $contentHash): array
     {
         // Ogni richiesta ha un timestamp diverso: la stessa firma ripresentata è un replay e verrebbe rifiutata.
-        $timestamp = time() - ($this->signed++ % 200);
+        $timestamp = ($this->signedAt ??= time()) - $this->signed++;
 
         return ['X-Timestamp' => (string) $timestamp, 'X-Signature' => hash_hmac('sha256', implode('.', [$timestamp, $method, $path, $contentHash]), $this->issued['secret'])];
     }

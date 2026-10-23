@@ -66,9 +66,15 @@ class AttivitaAgenteRelationManager extends RelationManager
         $parti = array_filter([
             isset($properties['importo_fascia']) ? "Importo: {$properties['importo_fascia']}" : null,
             isset($properties['durata_mesi']) ? "Durata: {$properties['durata_mesi']} mesi" : null,
-            isset($properties['agente']['whatsapp']) ? "WhatsApp agente: {$properties['agente']['whatsapp']}" : null,
+            filled($properties['agente'] ?? null) ? 'Agente: '.implode(' · ', array_filter([
+                $properties['agente']['nome'] ?? null,
+                isset($properties['agente']['sigla']) ? "sigla {$properties['agente']['sigla']}" : null,
+                isset($properties['agente']['whatsapp']) ? "WhatsApp {$properties['agente']['whatsapp']}" : null,
+            ])) : null,
             array_key_exists('contatto_diretto', $properties) ? 'Contatto diretto: '.($properties['contatto_diretto'] ? 'sì' : 'no') : null,
             collect((array) ($properties['risposte'] ?? []))->map(fn ($v, $k): string => "{$k}: ".(is_scalar($v) ? $v : json_encode($v)))->implode(' · ') ?: null,
+            collect((array) ($properties['documenti'] ?? []))->map(fn (array $d): string => implode(' ', array_filter([$d['nome'] ?? $d['codice'] ?? null, isset($d['obbligo']) ? "({$d['obbligo']})" : null, $d['stato'] ?? null])))
+                ->filter()->whenNotEmpty(fn ($docs) => collect(['Documenti attesi: '.$docs->implode(' · ')]))->first(),
         ]);
 
         return $parti === [] ? null : implode(' — ', $parti);

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Agenti\Resources\Clients;
 
+use App\Filament\Actions\ExcelExportAction;
 use App\Filament\Agenti\Resources\Clients\Pages\EditClient;
 use App\Filament\Agenti\Resources\Clients\Pages\ListClients;
 use App\Filament\Agenti\Resources\Clients\Schemas\ClientForm;
@@ -102,6 +103,7 @@ class ClientResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->headerActions([ExcelExportAction::make()])
             ->defaultSort('name')
             ->columns([
                 TextColumn::make('name')->label('Cognome / ragione sociale')->searchable()->sortable(),

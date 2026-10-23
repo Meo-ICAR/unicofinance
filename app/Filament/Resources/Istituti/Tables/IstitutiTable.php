@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Istituti\Tables;
 
+use App\Filament\Actions\ExcelExportAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -13,6 +14,7 @@ class IstitutiTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->headerActions([ExcelExportAction::make()])
             ->columns([
                 TextColumn::make('name')
                     ->label('Istituto')

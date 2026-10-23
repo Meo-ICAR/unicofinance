@@ -18,8 +18,16 @@ return new class extends Migration
                 ->comment('Prefisso del codice delle pratiche create dall\'app: l\'app raggiunge solo quelle');
         });
 
-        DB::table('api_clients')->orderBy('id')->get(['id', 'name'])->each(function (object $client): void {
-            DB::table('api_clients')->where('id', $client->id)->update(['pratica_prefix' => $client->name === 'unicoagent' ? 'WA-' : "API{$client->id}-"]);
+        // Stesso schema delle app nuove (ApiClient::defaultPrefix): il nome in maiuscolo; se due nomi danno lo stesso prefisso,
+        // il secondo prende l'id. WA- resta riservato a unicoagent.
+        $used = ['WA-' => true];
+        DB::table('api_clients')->orderBy('id')->get(['id', 'name'])->each(function (object $client) use (&$used): void {
+            $prefix = $client->name === 'unicoagent' ? 'WA-' : substr(strtoupper((string) preg_replace('/[^A-Za-z0-9]/', '', (string) $client->name)), 0, 19).'-';
+            if ($client->name !== 'unicoagent' && ($prefix === '-' || isset($used[$prefix]))) {
+                $prefix = "API{$client->id}-";
+            }
+            $used[$prefix] = true;
+            DB::table('api_clients')->where('id', $client->id)->update(['pratica_prefix' => $prefix]);
         });
     }
 

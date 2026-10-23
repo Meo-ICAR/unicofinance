@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\DatoriDiLavoro;
 
+use App\Filament\Actions\ExcelExportAction;
 use App\Filament\RelationManagers\AddressesRelationManager;
 use App\Filament\RelationManagers\BranchesRelationManager;
 use App\Filament\Resources\Clients\Schemas\ClientForm;
@@ -74,6 +75,7 @@ class DatoreDiLavoroResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->headerActions([ExcelExportAction::make()])
             ->columns([
                 TextColumn::make('name')->label('Datore di lavoro')->searchable()->sortable(),
                 TextColumn::make('tax_code')->label('Codice fiscale / P.IVA')->searchable(),

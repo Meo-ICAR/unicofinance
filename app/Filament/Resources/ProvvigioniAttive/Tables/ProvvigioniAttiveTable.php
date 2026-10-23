@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\ProvvigioniAttive\Tables;
 
+use App\Filament\Actions\ExcelExportAction;
 use App\Filament\Resources\ProvvigioniAttive\Schemas\ProvvigioneAttivaForm;
 use App\Jobs\ImportaDaMediafacile;
 use Filament\Actions\Action;
@@ -21,6 +22,7 @@ class ProvvigioniAttiveTable
     public static function configure(Table $table, bool $conBanca = true): Table
     {
         return $table
+            ->headerActions([ExcelExportAction::make()])
             ->modifyQueryUsing(fn ($query) => $query->with(['tipoprodotto', 'clienti']))
             ->columns([
                 TextColumn::make('tipoprodotto.name')->label('Prodotto')->placeholder('Tutti i prodotti')->sortable(),

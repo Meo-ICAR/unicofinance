@@ -2,6 +2,7 @@
 
 namespace App\Filament\Agenti\Resources\Pratiche;
 
+use App\Filament\Actions\ExcelExportAction;
 use App\Filament\Agenti\Actions\RinunciaClienteAction;
 use App\Filament\Agenti\Resources\Clients\Schemas\ClientForm;
 use App\Filament\Agenti\Resources\Pratiche\Pages\EditPratica;
@@ -328,6 +329,7 @@ class PraticaResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->headerActions([ExcelExportAction::make()->sumColumns(['Importo'])])
             ->defaultSort('data_inserimento_pratica', 'desc')
             ->columns([
                 TextColumn::make('codice_pratica')->label('Codice')->searchable()->sortable(),

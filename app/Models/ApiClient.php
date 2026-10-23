@@ -24,8 +24,21 @@ class ApiClient extends Model
         $praticaPrefix ??= static::defaultPrefix($name);
 
         // Lettere e cifre e un solo trattino finale: così nessun prefisso è l'inizio di un altro.
-        if (preg_match('/^[A-Z0-9]+-$/', $praticaPrefix) !== 1) {
-            throw new InvalidArgumentException("Prefisso «{$praticaPrefix}» non valido: lettere maiuscole e cifre seguite da un trattino.");
+        if (preg_match('/\A[A-Z0-9]{1,19}-\z/', $praticaPrefix) !== 1) {
+            throw new InvalidArgumentException("Prefisso «{$praticaPrefix}» non valido: da 1 a 19 lettere maiuscole o cifre seguite da un trattino.");
+        }
+
+        if ($name !== 'unicoagent' && $praticaPrefix === config('agent_api.pratica_prefix')) {
+            throw new InvalidArgumentException("Prefisso «{$praticaPrefix}» riservato a unicoagent: scegline un altro con --prefisso.");
+        }
+
+        if (static::query()->where('pratica_prefix', $praticaPrefix)->exists()) {
+            throw new InvalidArgumentException("Prefisso «{$praticaPrefix}» già usato da un'altra app: scegline un altro con --prefisso.");
+        }
+
+        // Un indirizzo che SendAgentEvent non userebbe farebbe sparire gli avvisi senza errori: meglio rifiutarlo subito.
+        if ($webhookUrl !== null && (strlen($webhookUrl) > 255 || ! static::isUsableWebhook($webhookUrl))) {
+            throw new InvalidArgumentException("Webhook «{$webhookUrl}» non valido: serve un indirizzo https di al massimo 255 caratteri.");
         }
 
         $token = Str::random(48);
@@ -36,10 +49,18 @@ class ApiClient extends Model
         return ['client' => $client, 'token' => $token, 'secret' => $secret];
     }
 
+    /** Solo https; http solo in sviluppo e nei test. */
+    public static function isUsableWebhook(string $url): bool
+    {
+        $scheme = filter_var($url, FILTER_VALIDATE_URL) === false ? null : parse_url($url, PHP_URL_SCHEME);
+
+        return $scheme === 'https' || ($scheme === 'http' && app()->environment(['local', 'testing']));
+    }
+
     /** unicoagent tiene il prefisso storico (`agent_api.pratica_prefix`), le altre app il proprio nome in maiuscolo. */
     public static function defaultPrefix(string $name): string
     {
-        return $name === 'unicoagent' ? (string) config('agent_api.pratica_prefix') : Str::upper(Str::slug($name, '')).'-';
+        return $name === 'unicoagent' ? (string) config('agent_api.pratica_prefix') : Str::limit(Str::upper(Str::slug($name, '')), 19, '').'-';
     }
 
     public static function findByToken(string $token): ?self

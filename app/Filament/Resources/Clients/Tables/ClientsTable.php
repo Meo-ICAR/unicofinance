@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Clients\Tables;
 
+use App\Filament\Actions\ExcelExportAction;
 use App\Filament\Resources\Clients\ClientResource;
 use App\Models\Client;
 use Filament\Actions\BulkActionGroup;
@@ -18,6 +19,7 @@ class ClientsTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->headerActions([ExcelExportAction::make()])
             ->columns([
                 TextColumn::make('name')
                     ->label('Cognome / Ragione sociale')

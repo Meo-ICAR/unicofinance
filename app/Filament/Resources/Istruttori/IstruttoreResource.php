@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Istruttori;
 
 use App\Filament\Actions\CreaUtenteIstruttoreAction;
+use App\Filament\Actions\ExcelExportAction;
 use App\Filament\Actions\ImpersonateIstruttoreAction;
 use App\Filament\Resources\Istruttori\Pages\ListIstruttori;
 use App\Filament\Traits\HasPlanAccess;
@@ -65,6 +66,7 @@ class IstruttoreResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->headerActions([ExcelExportAction::make()])
             ->defaultSort('name')
             ->columns([
                 TextColumn::make('name')->label('Nome')->searchable()->sortable(),

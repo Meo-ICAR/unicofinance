@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Praticas\Tables;
 
+use App\Filament\Actions\ExcelExportAction;
 use App\Filament\Resources\Praticas\PraticaResource;
 use App\Models\Pratica;
 use App\Services\CambioStatoPratica;
@@ -29,6 +30,7 @@ class PraticasTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->headerActions([ExcelExportAction::make()])
             ->columns([
                 TextColumn::make('denominazione_banca')
                     ->label('Banca')
