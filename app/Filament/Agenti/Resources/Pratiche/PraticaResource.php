@@ -301,8 +301,9 @@ class PraticaResource extends Resource
                             Section::make('Avanzamento')
                                 ->collapsed()
                                 ->columnSpanFull()
-                                ->columns(['default' => 3])
+                                ->columns(['default' => 4])
                                 ->schema([
+                                    DatePicker::make('data_inserimento_pratica')->label('Data inserimento')->native(false)->displayFormat('d/m/Y')->disabled(),
                                     DatePicker::make('presa_in_carico_at')->label('Data presa in carico')->native(false)->displayFormat('d/m/Y'),
                                     DatePicker::make('lavorazione_at')->label('Data lavorazione')->native(false)->displayFormat('d/m/Y'),
                                     DatePicker::make('sended_at')->label('Data invio istruttoria')->native(false)->displayFormat('d/m/Y'),

@@ -200,8 +200,10 @@ class PraticaForm
                                 Section::make('Avanzamento')
                                     ->collapsed()
                                     ->columnSpanFull()
-                                    ->columns(['default' => 3])
+                                    ->columns(['default' => 4])
                                     ->schema([
+                                        // La data di inserimento è quella della richiesta (campo sopra): qui è l'inizio dell'avanzamento, in sola lettura.
+                                        DatePicker::make('data_inserimento_pratica')->label('Data inserimento')->disabled(),
                                         DatePicker::make('presa_in_carico_at')->label('Data presa in carico'),
                                         DatePicker::make('lavorazione_at')->label('Data lavorazione'),
                                         DatePicker::make('sended_at')->label('Data invio istruttoria'),

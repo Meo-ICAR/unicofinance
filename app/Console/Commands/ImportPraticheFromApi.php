@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Client;
 use App\Models\Pratica;
 use App\Services\Importazione\MediafacileApi;
+use App\Services\Istruttoria\IstruttoreDelProduttore;
 use App\Services\Istruttoria\PresaInCarico;
 use App\Services\Istruttoria\RichiedentePratica;
 use App\Services\Provvigioni\PercentualeProvvigione;
@@ -93,6 +94,7 @@ class ImportPraticheFromApi extends Command
 
                 if ($pratica === null) {
                     $pratica = Pratica::query()->create($dati);
+                    app(IstruttoreDelProduttore::class)->forza($pratica);
                     $this->registraStato($pratica, null);
                     $this->collegaRichiedente($pratica);
                     $importate++;
@@ -113,6 +115,7 @@ class ImportPraticheFromApi extends Command
                 }
 
                 $pratica->update($dati);
+                app(IstruttoreDelProduttore::class)->forza($pratica);
                 $this->registraStato($pratica, $statoPrecedente);
                 $this->collegaRichiedente($pratica);
                 $aggiornate++;

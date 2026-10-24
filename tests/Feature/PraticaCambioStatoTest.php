@@ -56,19 +56,11 @@ class PraticaCambioStatoTest extends TestCase
             ->assertActionNotMounted('motivoCambioStato');
         $this->assertSame(0, $pratica->praticaStatusHistory()->count());
 
-        // Con il cambio di stato il salvataggio si ferma e chiede la motivazione.
+        // Con il cambio di stato il salvataggio si ferma e chiede la motivazione (facoltativa).
         $page = Livewire::test(EditPratica::class, ['record' => $pratica->getKey()])
             ->fillForm(['pratica_stato_id' => $a->getKey()])
             ->call('save')
             ->assertActionMounted('motivoCambioStato');
-        $this->assertSame($da->getKey(), $pratica->fresh()->pratica_stato_id);
-
-        // La motivazione è obbligatoria: senza, lo stato non cambia.
-        Livewire::test(EditPratica::class, ['record' => $pratica->getKey()])
-            ->fillForm(['pratica_stato_id' => $a->getKey()])
-            ->call('save')
-            ->setActionData(['motivazione' => ''])->callMountedAction()
-            ->assertHasActionErrors(['motivazione' => 'required']);
         $this->assertSame($da->getKey(), $pratica->fresh()->pratica_stato_id);
 
         $page->setActionData(['motivazione' => 'Documenti completi, passa in istruttoria'])->callMountedAction()->assertHasNoActionErrors();
@@ -82,6 +74,27 @@ class PraticaCambioStatoTest extends TestCase
         $this->assertSame('Documenti completi, passa in istruttoria', $voce->notes);
         $this->assertSame('admin', $voce->source);
         $this->assertSame($user->id, $voce->user_id);
+    }
+
+    public function test_the_reason_is_optional_and_an_empty_one_is_stored_as_null(): void
+    {
+        Filament::setCurrentPanel('admin');
+        $this->actingAs(User::factory()->create(['role' => 'super_admin']));
+
+        $da = $this->stato('Inserita');
+        $a = $this->stato('Richiesta Istruttoria');
+        $pratica = Pratica::query()->create(['codice_pratica' => 'ZZST-'.Str::upper(Str::random(4)), 'cognome_cliente' => 'Rossi', 'pratica_stato_id' => $da->getKey(), 'upload_at' => now()]);
+
+        Livewire::test(EditPratica::class, ['record' => $pratica->getKey()])
+            ->fillForm(['pratica_stato_id' => $a->getKey()])
+            ->call('save')
+            ->assertActionMounted('motivoCambioStato')
+            ->setActionData(['motivazione' => '  '])->callMountedAction()
+            ->assertHasNoActionErrors();
+
+        $pratica->refresh();
+        $this->assertSame($a->getKey(), $pratica->pratica_stato_id, 'Senza motivazione il cambio avviene lo stesso.');
+        $this->assertNull($pratica->praticaStatusHistory()->firstOrFail()->notes);
     }
 
     public function test_the_edit_page_title_is_the_applicant_with_the_product_type_in_small(): void

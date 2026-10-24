@@ -14,6 +14,12 @@ return [
     */
     'stati_modificabili_dal_produttore' => ['PREVENTIVO', 'PERFEZIONARE', 'FASCICOLO COMPLETO', 'INVIO IN ISTRUTTORIA', 'INSERITA', 'SOSPESA'],
 
+    /*
+    | Produttori che sono anche dipendenti e istruttori delle proprie pratiche: l'istruttore è sempre loro (nome del produttore = nome del
+    | dipendente), anche se ne era indicato un altro. Si applica all'import da Mediafacile e con `pratiche:forza-istruttori-produttore`.
+    */
+    'istruttore_forzato_dal_produttore' => ['FUMMO BRIGIDA', 'ZACCARIA LOREDANA'],
+
     'stati_controllati' => ['FASCICOLO COMPLETO', 'INVIO IN ISTRUTTORIA', 'INVIO IN BANCA', 'Caricata Banca'],
 
     /*

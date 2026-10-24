@@ -124,7 +124,7 @@ class RisposteBancaInSospeso extends CollapsibleTableWidget implements EspostoIn
                     ->options(self::stati($record))
                     ->searchable()
                     ->required(),
-                Textarea::make('motivazione')->label('Motivazione')->required()->maxLength(1000)->rows(3),
+                Textarea::make('motivazione')->label('Motivazione (facoltativa)')->maxLength(1000)->rows(3),
             ])
             ->action(function (Pratica $record, array $data): void {
                 $servizio = app(CambioStatoPratica::class);

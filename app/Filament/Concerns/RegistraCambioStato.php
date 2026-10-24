@@ -16,6 +16,9 @@ trait RegistraCambioStato
 {
     public ?string $motivoCambioStato = null;
 
+    /** Il motivo (facoltativo) è già stato chiesto per questo salvataggio: non si richiede di nuovo. */
+    public bool $motivoChiesto = false;
+
     protected ?int $statoPrecedenteId = null;
 
     /** Origine scritta nello storico: admin, agenti... */
@@ -32,7 +35,7 @@ trait RegistraCambioStato
             $this->halt();
         }
 
-        if ($this->statoCambiato() && blank($this->motivoCambioStato)) {
+        if ($this->statoCambiato() && ! $this->motivoChiesto) {
             $this->mountAction('motivoCambioStato');
             $this->halt();
         }
@@ -75,6 +78,7 @@ trait RegistraCambioStato
         }
 
         $this->motivoCambioStato = null;
+        $this->motivoChiesto = false;
         $this->statoPrecedenteId = null;
     }
 
@@ -83,13 +87,14 @@ trait RegistraCambioStato
         return Action::make('motivoCambioStato')
             ->label('Motivo del cambio di stato')
             ->modalHeading('Motivo del cambio di stato')
-            ->modalDescription('Lo stato della pratica sta cambiando: indica il motivo, resta nello storico degli stati.')
+            ->modalDescription('Lo stato della pratica sta cambiando: il motivo è facoltativo, se lo scrivi resta nello storico degli stati.')
             ->modalSubmitActionLabel('Salva')
             ->schema([
-                Textarea::make('motivazione')->label('Motivazione')->required()->maxLength(1000)->rows(3),
+                Textarea::make('motivazione')->label('Motivazione (facoltativa)')->maxLength(1000)->rows(3),
             ])
             ->action(function (array $data): void {
-                $this->motivoCambioStato = $data['motivazione'];
+                $this->motivoCambioStato = filled($data['motivazione'] ?? null) ? trim($data['motivazione']) : null;
+                $this->motivoChiesto = true;
                 $this->save();
             });
     }

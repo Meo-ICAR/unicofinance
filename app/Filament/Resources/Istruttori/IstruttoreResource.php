@@ -77,7 +77,7 @@ class IstruttoreResource extends Resource
             ->defaultSort('name')
             ->columns([
                 TextColumn::make('name')->label('Nome')->searchable()->sortable(),
-                TextColumn::make('role_title')->label('Ruolo')->wrap()->placeholder('—'),
+                TextColumn::make('employee_roles')->label('Ruolo')->badge()->placeholder('—'),
                 TextColumn::make('employee_types')->label('Tipo')->badge()->placeholder('—'),
                 TextColumn::make('email')->label('Email')->placeholder('—'),
                 TextColumn::make('tipoprodotto_ids')

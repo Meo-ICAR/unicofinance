@@ -49,7 +49,7 @@ class PraticheInCorsoApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('meta.count', 1)
             ->assertJsonPath('data.0.codice_pratica', 'CORSO-1')
-            ->assertJsonPath('data.0.stato_pratica', 'Stato CORSO-1');
+            ->assertJsonPath('data.0.stato_pratica', 'STATO CORSO-1');
     }
 
     public function test_the_employee_parameter_limits_the_table_to_that_instructor(): void

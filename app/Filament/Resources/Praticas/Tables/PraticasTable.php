@@ -7,7 +7,6 @@ use App\Filament\Resources\Praticas\PraticaResource;
 use App\Models\Pratica;
 use App\Services\CambioStatoPratica;
 use App\Services\Istruttoria\CompletezzaDocumentale;
-use App\Support\CompensoMediazione;
 use App\Support\Istruttori;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
@@ -59,11 +58,6 @@ class PraticasTable
                         return $presenti >= $totale ? 'success' : 'warning';
                     })
                     ->tooltip('Documenti obbligatori presenti sul totale richiesto dal prodotto'),
-                TextColumn::make('mediazione')
-                    ->label('Mediazione')
-                    ->state(fn (Pratica $record): string => CompensoMediazione::formatta($record->mediation_fee_amount, $record->mediation_fee_percent, $record->amount))
-                    ->tooltip('Importo di mediazione chiesto al cliente')
-                    ->toggleable(),
                 TextColumn::make('tipoprodotto.name')
                     ->label('Tipo prodotto')
                     ->sortable(),
@@ -126,6 +120,7 @@ class PraticasTable
                 SelectFilter::make('pratica_stato_id')
                     ->label('Stato pratica')
                     ->relationship('praticaStato', 'name')
+                    ->multiple()
                     ->searchable()
                     ->preload(),
                 Filter::make('ultimo_aggiornamento')
@@ -137,17 +132,19 @@ class PraticasTable
                     ->query(fn (Builder $query, array $data): Builder => $query
                         ->when($data['dal'] ?? null, fn (Builder $query, string $date): Builder => $query->whereDate('updated_at', '>=', $date))
                         ->when($data['al'] ?? null, fn (Builder $query, string $date): Builder => $query->whereDate('updated_at', '<=', $date))),
+                // Predefinito: NO, le pratiche sospese (stato con `is_suspended`) non si vedono.
                 TernaryFilter::make('sospese')
-                    ->label('Pratiche sospese')
+                    ->label('SOSPESA')
                     ->placeholder('Tutte')
-                    ->trueLabel('Solo sospese')
-                    ->falseLabel('Escluse le sospese')
+                    ->trueLabel('Sì')
+                    ->falseLabel('No')
+                    ->default(false)
                     ->queries(
                         true: fn (Builder $query): Builder => $query->whereHas('praticaStato', fn (Builder $stato) => $stato->where('is_suspended', true)),
                         false: fn (Builder $query): Builder => $query->whereDoesntHave('praticaStato', fn (Builder $stato) => $stato->where('is_suspended', true)),
                         blank: fn (Builder $query): Builder => $query,
                     ),
-                // Predefinito: solo le pratiche in lavorazione (`is_working` dello stato); senza stato conta come in lavorazione.
+                // Predefinito: solo le pratiche in lavorazione (`is_working` dello stato), escluse tutte le SOSPESA; senza stato conta come in lavorazione.
                 TernaryFilter::make('in_lavorazione')
                     ->label('In lavorazione')
                     ->placeholder('Tutte')
@@ -155,7 +152,7 @@ class PraticasTable
                     ->falseLabel('Solo concluse')
                     ->default(true)
                     ->queries(
-                        true: fn (Builder $query): Builder => $query->whereDoesntHave('praticaStato', fn (Builder $stato) => $stato->where('is_working', false)),
+                        true: fn (Builder $query): Builder => $query->whereDoesntHave('praticaStato', fn (Builder $stato) => $stato->where('is_working', false)->orWhere('is_suspended', true)),
                         false: fn (Builder $query): Builder => $query->whereHas('praticaStato', fn (Builder $stato) => $stato->where('is_working', false)),
                         blank: fn (Builder $query): Builder => $query,
                     ),
@@ -191,7 +188,7 @@ class PraticasTable
     {
         return [
             Select::make('stato')->label('Nuovo stato')->options(self::stati($pratica))->searchable()->required(),
-            Textarea::make('motivazione')->label('Motivazione')->required()->maxLength(1000)->rows(3),
+            Textarea::make('motivazione')->label('Motivazione (facoltativa)')->maxLength(1000)->rows(3),
         ];
     }
 

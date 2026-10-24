@@ -165,7 +165,7 @@ class CambioStatoPratica
             'status_to' => $nuovo === null ? '' : (string) PraticaStato::query()->whereKey($nuovo)->value('name'),
             'changed_at' => now(),
             'source' => $origine,
-            'notes' => $motivo,
+            'notes' => filled($motivo) ? trim($motivo) : null,
             'user_id' => auth()->id(),
         ]);
 

@@ -90,7 +90,7 @@ class ProvvigioniAgenteTest extends TestCase
             ->assertCanSeeTableRecords([$maturata])
             ->assertCanNotSeeTableRecords([$inMaturazione, $pagata, $entrata, $altrui])
             ->assertSee('Rossi')
-            ->assertSee('Erogata test')
+            ->assertSee('EROGATA TEST')
             ->removeTableFilter('maturazione')
             ->assertCanSeeTableRecords([$maturata, $inMaturazione, $pagata])
             ->assertCanNotSeeTableRecords([$entrata, $altrui]);

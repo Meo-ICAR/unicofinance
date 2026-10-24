@@ -58,7 +58,7 @@ class ImportMediafacileTest extends TestCase
 
         $pratica = Pratica::query()->where('codice_pratica', 'QT90001')->firstOrFail();
         $this->assertSame($prodotto->getKey(), $pratica->tipoprodotto_id);
-        $this->assertSame('Inserita', $pratica->praticaStato->codice);
+        $this->assertSame('INSERITA', $pratica->praticaStato->codice);
         $this->assertSame('Cessione', $pratica->praticaStato->tipo_finanziamento);
         $this->assertSame('AGENTE IMPORT', Fornitore::query()->find($pratica->fornitori_id)->name);
         $this->assertSame('BANCA IMPORT', Cliente::query()->find($pratica->clienti_id)->name);
@@ -126,7 +126,7 @@ class ImportMediafacileTest extends TestCase
         $this->assertSame('LIQUIDATA', $pratica->praticaStato->codice);
         $this->assertSame('2026-09-05', $pratica->erogated_at->toDateString());
         $this->assertSame(2, $pratica->praticaStatusHistory()->count());
-        $this->assertSame('Inserita', $pratica->praticaStatusHistory()->orderByDesc('id')->first()->status_from);
+        $this->assertSame('INSERITA', $pratica->praticaStatusHistory()->orderByDesc('id')->first()->status_from);
     }
 
     public function test_the_commissions_are_linked_to_the_practice_by_code_and_aligned(): void
@@ -335,5 +335,27 @@ class ImportMediafacileTest extends TestCase
 
         $this->artisan('pratiche:import-api')->assertSuccessful();
         $this->assertSame('CARICATA BANCA', $pratica->fresh()->praticaStato->codice, 'Gli stati successivi si applicano.');
+    }
+
+    public function test_the_import_forces_the_instructor_for_the_listed_producers(): void
+    {
+        TipoProdotto::query()->firstOrCreate(['name' => 'Cessione'], ['tipo_prodotto' => 'Cessione']);
+        $fummo = Employee::query()->create(['name' => 'FUMMO BRIGIDA', 'is_active' => true]);
+        $altro = Employee::query()->create(['name' => 'Altro Istruttore', 'is_active' => true]);
+        $intestazioni = ['ID Pratica', 'Denominazione Agente', 'Partita IVA Agente', 'Denominazione Banca', 'Tipo Prodotto', 'Stato Pratica', 'Pratica_terzi'];
+        $riga = fn (string $id, string $agente) => ['ID Pratica' => $id, 'Denominazione Agente' => $agente, 'Partita IVA Agente' => '---', 'Denominazione Banca' => 'BANCA IMPORT', 'Tipo Prodotto' => 'Cessione', 'Stato Pratica' => 'Inserita', 'Pratica_terzi' => 'NO'];
+
+        Http::fake(['mediafacile.test/*' => Http::response($this->tsv($intestazioni, [$riga('QT95001', 'FUMMO BRIGIDA'), $riga('QT95002', 'ALTRO AGENTE')]))]);
+
+        $this->artisan('pratiche:import-api')->assertSuccessful();
+
+        $this->assertSame($fummo->getKey(), Pratica::query()->where('codice_pratica', 'QT95001')->value('employee_id'));
+        $this->assertNull(Pratica::query()->where('codice_pratica', 'QT95002')->value('employee_id'));
+
+        Pratica::query()->where('codice_pratica', 'QT95001')->update(['employee_id' => $altro->getKey()]);
+        Http::fake(['mediafacile.test/*' => Http::response($this->tsv($intestazioni, [$riga('QT95001', 'FUMMO BRIGIDA')]))]);
+        $this->artisan('pratiche:import-api')->assertSuccessful();
+
+        $this->assertSame($fummo->getKey(), Pratica::query()->where('codice_pratica', 'QT95001')->value('employee_id'), 'Al reimport si forza di nuovo.');
     }
 }
