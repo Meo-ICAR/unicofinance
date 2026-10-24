@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Services\CambioStatoPratica;
 use App\Services\Istruttoria\CambioOfferta;
 use App\Services\Istruttoria\InvioContoEstintivo;
+use App\Services\Istruttoria\PresaInCarico;
 use App\Services\Istruttoria\RichiedentePratica;
 use App\Services\Istruttoria\RichiestaContoEstintivo;
 use App\Services\Istruttoria\RispostaAssistente;
@@ -44,6 +45,13 @@ class EditPratica extends EditRecord
 
     public function mount(int|string $record): void
     {
+        // La presa in carico va fatta prima di riempire il modulo, che altrimenti porterebbe ancora il vecchio stato e al salvataggio lo ripristinerebbe.
+        $pratica = Pratica::query()->find($record);
+
+        if ($pratica !== null) {
+            app(PresaInCarico::class)->allApertura(auth()->user(), $pratica);
+        }
+
         parent::mount($record);
 
         $this->avvisaDeiCambiStatoDaVisionare();

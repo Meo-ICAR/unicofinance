@@ -20,6 +20,7 @@ use App\Models\Pratica;
 use App\Models\Provvigione;
 use App\Services\Agenti\AgentImpersonationService;
 use App\Services\CodiceFiscaleDecoder;
+use App\Services\Istruttoria\PresaInCarico;
 use App\Services\PortaleBanca;
 use BackedEnum;
 use Filament\Actions\Action;
@@ -73,10 +74,10 @@ class PraticaResource extends Resource
         return false;
     }
 
-    /** Una pratica presa in carico da un istruttore (`employee_id`) non si modifica più dall'agente. */
+    /** Da «PRESA IN CARICO» in poi la pratica non si modifica più dall'agente (`PresaInCarico::modificabileDalProduttore`). */
     public static function canEdit(Model $record): bool
     {
-        return blank($record->employee_id) && static::hasPlanFeatureAccess(write: true);
+        return app(PresaInCarico::class)->modificabileDalProduttore($record) && static::hasPlanFeatureAccess(write: true);
     }
 
     public static function canDelete(Model $record): bool
@@ -261,6 +262,7 @@ class PraticaResource extends Resource
                                 ->visible(fn (Get $get): bool => static::portaleBanca($get('clienti_id')) !== null),
                         ),
                     TextInput::make('codice_pratica_banca')->label('Codice pratica banca')->helperText('Assegnato dalla banca sul suo portale')->maxLength(100)->hidden($impegnoDiTerzi),
+                    TextInput::make('campagna_lead')->label('Campagna lead')->maxLength(255),
                     TextInput::make('amount')
                         ->label('Importo richiesto')
                         ->numeric()

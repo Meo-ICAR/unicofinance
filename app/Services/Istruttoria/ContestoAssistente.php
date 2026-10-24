@@ -18,6 +18,9 @@ use Unico\Core\Models\DocumentType;
  */
 class ContestoAssistente
 {
+    /** Caratteri massimi di ciascun manuale nel prompt dell'assistente. */
+    private const LIMITE_MANUALE = 30000;
+
     public function __construct(private CompletezzaDocumentale $completezza) {}
 
     public function pratica(Pratica $pratica): string
@@ -90,19 +93,35 @@ class ContestoAssistente
         return implode("\n", $righe);
     }
 
+    /** Manuale utente e manuale tecnico (senza l'appendice generata dal codice), come testo, per l'assistente. */
     public function manuale(): string
     {
-        $path = resource_path('manuals/manuale-utente.html');
+        $parti = [];
 
+        foreach (['manuale-utente' => 'Manuale utente', 'manuale-tecnico' => 'Manuale tecnico'] as $file => $titolo) {
+            $testo = $this->testoManuale(resource_path("manuals/{$file}.html"));
+
+            if ($testo !== '') {
+                $parti[] = $titolo.":\n".$testo;
+            }
+        }
+
+        return implode("\n\n", $parti);
+    }
+
+    private function testoManuale(string $path): string
+    {
         if (! is_file($path)) {
             return '';
         }
 
-        $testo = html_entity_decode(strip_tags(File::get($path)));
+        $html = (string) preg_replace('/<!-- facts:start -->.*?<!-- facts:end -->/s', '', File::get($path));
+        $html = (string) preg_replace('/<(style|script)\b[^>]*>.*?<\/\1>/is', ' ', $html);
+        $testo = html_entity_decode(strip_tags($html));
         $testo = (string) preg_replace("/[ \t]+/", ' ', $testo);
         $testo = (string) preg_replace("/\n{3,}/", "\n\n", $testo);
 
-        return Str::limit(trim($testo), 12000, '…');
+        return Str::limit(trim($testo), self::LIMITE_MANUALE, '…');
     }
 
     public function pulisci(string $testo): string

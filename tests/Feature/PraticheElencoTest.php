@@ -100,4 +100,25 @@ class PraticheElencoTest extends TestCase
             ->assertCanSeeTableRecords([$pratica])
             ->assertCanNotSeeTableRecords([$altra]);
     }
+
+    public function test_the_lead_campaign_is_optional_and_saved_with_the_practice(): void
+    {
+        Filament::setCurrentPanel('admin');
+        $this->actingAs(User::factory()->create(['role' => 'super_admin']));
+        $pratica = Pratica::query()->create(['codice_pratica' => 'ELE-CAMP', 'upload_at' => now()]);
+
+        Livewire::test(EditPratica::class, ['record' => $pratica->getKey()])
+            ->fillForm(['campagna_lead' => 'Facebook ottobre'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame('Facebook ottobre', $pratica->fresh()->campagna_lead);
+
+        Livewire::test(EditPratica::class, ['record' => $pratica->getKey()])
+            ->fillForm(['campagna_lead' => null])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertNull($pratica->fresh()->campagna_lead);
+    }
 }

@@ -159,6 +159,7 @@ class PraticaForm
                                             ),
                                         Hidden::make('denominazione_banca'),
                                         TextInput::make('codice_pratica_banca')->label('Codice pratica banca')->helperText('Assegnato dalla banca sul suo portale')->maxLength(100)->hidden(fn (Get $get): bool => self::impegnoDiTerzi($get)),
+                                        TextInput::make('campagna_lead')->label('Campagna lead')->maxLength(255),
                                         // Cessione e delega si calcolano sulla rata; gli altri prodotti anche sull'importo richiesto.
                                         TextInput::make('amount')->label('Importo richiesto')->numeric()->prefix('€')->live(onBlur: true)->visible(fn (Get $get): bool => ! self::sullaRata($get) && ! self::impegnoDiTerzi($get)),
                                         TextInput::make('loan_purpose')->label('Finalità')->maxLength(255)->hidden(fn (Get $get): bool => self::impegnoDiTerzi($get)),

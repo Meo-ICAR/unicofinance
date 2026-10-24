@@ -13,6 +13,7 @@ use Unico\Core\Enums\DocumentStatus;
 use Unico\Core\Models\Document;
 use Unico\Core\Models\DocumentType;
 use Unico\Core\Models\Employee;
+use Unico\Core\Models\Fornitore;
 use Unico\Core\Models\PraticaStato;
 use Unico\Core\Models\TipoProdotto;
 use ZipArchive;
@@ -109,5 +110,42 @@ class InvioInIstruttoriaTest extends TestCase
     {
         $this->assertTrue(PraticaStato::query()->where('tipo_finanziamento', 'Cessione')->where('codice', 'INVIO IN BANCA')->where('is_sended', true)->exists());
         $this->assertFalse(PraticaStato::query()->where('codice', 'INVIO IN ISTRUTTORIA')->where('is_sended', true)->exists());
+    }
+
+    public function test_the_assigned_instructor_waits_in_istruttoria_and_the_practice_is_not_yet_taken(): void
+    {
+        Mail::fake();
+        config(['unico-core.signature.demo' => false, 'unico-core.signature.driver' => 'fake']);
+        $this->istruttore('istruttore@example.test');
+        $pratica = $this->pratica();
+
+        app(InvioInIstruttoria::class)->invia($pratica);
+
+        $pratica->refresh();
+        $this->assertNotNull($pratica->employee_id, 'L\'istruttore è assegnato.');
+        $this->assertSame(InvioInIstruttoria::STATO, $pratica->praticaStato->codice, 'Ma la pratica aspetta in istruttoria finché lui non la apre.');
+        $this->assertNull($pratica->presa_in_carico_at);
+        Mail::assertSent(PraticaInIstruttoria::class);
+    }
+
+    public function test_a_producer_who_is_the_instructor_goes_straight_to_presa_in_carico(): void
+    {
+        Mail::fake();
+        config(['unico-core.signature.demo' => false, 'unico-core.signature.driver' => 'fake']);
+        $this->istruttore('istruttore@example.test');
+        $istruttore = Employee::query()->where('email', 'istruttore@example.test')->firstOrFail();
+        $produttore = Fornitore::query()->create(['name' => 'Istruttore  Prova', 'piva' => '99900000041', 'is_active' => true]);
+        $istruttore->update(['name' => 'PROVA ISTRUTTORE']);
+        $pratica = $this->pratica();
+        $pratica->update(['fornitori_id' => $produttore->getKey()]);
+
+        app(InvioInIstruttoria::class)->invia($pratica);
+
+        $pratica->refresh();
+        $this->assertSame($istruttore->getKey(), $pratica->employee_id);
+        $this->assertSame('PRESA IN CARICO', $pratica->praticaStato->codice);
+        $this->assertTrue($pratica->presa_in_carico_at->isToday());
+        $this->assertSame(1, $pratica->praticaStatusHistory()->count());
+        Mail::assertNothingSent();
     }
 }

@@ -39,10 +39,10 @@ class IstruttoreAssistant extends Agent
         return (string) new SystemPrompt(
             background: [
                 'Sei l\'assistente dell\'istruttore di UnicoFinance, applicazione per il mediatore creditizio.',
-                'Rispondi solo con il contesto operativo qui sotto e, se presente, con il manuale utente. Non interrogare il database e non inventare procedure.',
+                'Rispondi solo con il contesto operativo qui sotto e, se presenti, con il manuale utente e il manuale tecnico. Non interrogare il database e non inventare procedure.',
                 'Sei in sola lettura. Non cambi stato, non invii email, non carichi documenti e non scrivi sul portale della banca.',
                 $this->contesto !== '' ? "Contesto operativo:\n".$this->contesto : 'Nessun contesto operativo è stato preparato.',
-                $manuale !== '' ? "Manuale utente:\n".$manuale : 'Il manuale utente non è disponibile: rispondi solo sul contesto operativo.',
+                $manuale !== '' ? "Manuali (utente e tecnico):\n".$manuale : 'I manuali non sono disponibili: rispondi solo sul contesto operativo.',
             ],
             steps: [
                 'Se il contesto o il manuale non contengono la risposta, dillo invece di inventare una procedura.',

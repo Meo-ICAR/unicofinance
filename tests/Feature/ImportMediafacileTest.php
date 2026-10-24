@@ -18,6 +18,7 @@ use Unico\Core\Models\Cliente;
 use Unico\Core\Models\Company;
 use Unico\Core\Models\Employee;
 use Unico\Core\Models\Fornitore;
+use Unico\Core\Models\PraticaStato;
 use Unico\Core\Models\TipoProdotto;
 
 class ImportMediafacileTest extends TestCase
@@ -310,5 +311,29 @@ class ImportMediafacileTest extends TestCase
         $this->assertSame(ApiCallStatus::Failed, $fallita->status);
         $this->assertSame(500, $fallita->http_status);
         $this->assertStringNotContainsString('chiave', json_encode($riuscita->request));
+    }
+
+    public function test_a_practice_in_presa_in_carico_is_not_taken_back_by_the_import_but_later_states_apply(): void
+    {
+        TipoProdotto::query()->firstOrCreate(['name' => 'Cessione'], ['tipo_prodotto' => 'Cessione']);
+        $intestazioni = ['ID Pratica', 'Denominazione Agente', 'Partita IVA Agente', 'Denominazione Banca', 'Tipo Prodotto', 'Stato Pratica', 'Pratica_terzi'];
+        $base = ['ID Pratica' => 'QT90004', 'Denominazione Agente' => 'AGENTE IMPORT', 'Partita IVA Agente' => '12345678903', 'Denominazione Banca' => 'BANCA IMPORT', 'Tipo Prodotto' => 'Cessione', 'Pratica_terzi' => 'NO'];
+
+        Http::fake(['mediafacile.test/*' => Http::sequence()
+            ->push($this->tsv($intestazioni, [$base + ['Stato Pratica' => 'Inserita']]))
+            ->push($this->tsv($intestazioni, [$base + ['Stato Pratica' => 'Inserita']]))
+            ->push($this->tsv($intestazioni, [$base + ['Stato Pratica' => 'CARICATA BANCA']]))]);
+
+        $this->artisan('pratiche:import-api')->assertSuccessful();
+
+        $pratica = Pratica::query()->where('codice_pratica', 'QT90004')->firstOrFail();
+        $presa = PraticaStato::query()->firstOrCreate(['codice' => 'PRESA IN CARICO', 'tipo_finanziamento' => 'Cessione'], ['name' => 'PRESA IN CARICO', 'ordine' => 0, 'colore' => 'gray']);
+        $pratica->update(['pratica_stato_id' => $presa->getKey()]);
+
+        $this->artisan('pratiche:import-api')->assertSuccessful();
+        $this->assertSame('PRESA IN CARICO', $pratica->fresh()->praticaStato->codice, 'Mediafacile non conosce la presa in carico e non riporta indietro lo stato.');
+
+        $this->artisan('pratiche:import-api')->assertSuccessful();
+        $this->assertSame('CARICATA BANCA', $pratica->fresh()->praticaStato->codice, 'Gli stati successivi si applicano.');
     }
 }

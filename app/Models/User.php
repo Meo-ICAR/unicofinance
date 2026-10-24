@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Services\Agenti\DipendenteDelloAgente;
 use App\Services\AvatarSocialite;
+use App\Support\Istruttori;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Models\Contracts\HasAvatar;
@@ -25,10 +27,24 @@ class User extends CoreUser implements FilamentUser, HasAvatar
     public function canAccessPanel(Panel $panel): bool
     {
         if ($panel->getId() === 'agenti') {
-            return $this->fornitore()->exists();
+            return $this->fornitore()->exists() && ! $this->isProduttoreIstruttore();
         }
 
-        return $this->isStaff();
+        return $this->isStaff() || $this->isProduttoreIstruttore();
+    }
+
+    /** Un produttore che è anche istruttore (dipendente con quel ruolo) lavora solo nel pannello admin, non nel portale agenti. */
+    public function isProduttoreIstruttore(): bool
+    {
+        $produttore = $this->fornitore;
+
+        if ($produttore === null) {
+            return false;
+        }
+
+        $dipendente = app(DipendenteDelloAgente::class)->trova($produttore);
+
+        return $dipendente !== null && Istruttori::e($dipendente);
     }
 
     /** La foto dell'account Microsoft o Google, nel menu dell'utente di Filament. */

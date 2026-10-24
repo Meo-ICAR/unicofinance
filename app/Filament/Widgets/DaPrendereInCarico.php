@@ -5,6 +5,8 @@ namespace App\Filament\Widgets;
 use App\Filament\Resources\Praticas\PraticaResource;
 use App\Models\Pratica;
 use App\Services\Istruttoria\CompletezzaDocumentale;
+use App\Services\Istruttoria\InvioInIstruttoria;
+use App\Services\Istruttoria\PresaInCarico;
 use App\Support\IstruttoreCorrente;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
@@ -12,14 +14,16 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Notifications\Notification;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Unico\Core\Models\Document;
+use Unico\Core\Models\Employee;
 
-/** Pratiche senza istruttore (`employee_id`), escluse respinte, sospese e negli stati in lavorazione (`is_working`): l'istruttore le prende in carico. */
+/** Pratiche «INVIO IN ISTRUTTORIA» (non respinte né sospese) che aspettano di essere prese in carico: libere o assegnate a un istruttore che non le ha ancora aperte. */
 class DaPrendereInCarico extends CollapsibleTableWidget implements EspostoInApi
 {
     protected static ?int $sort = 1;
@@ -28,7 +32,6 @@ class DaPrendereInCarico extends CollapsibleTableWidget implements EspostoInApi
 
     protected static ?string $heading = 'Da prendere in carico';
 
-    /** Pratiche senza istruttore: non c'è un parametro che le limiti. */
     public static function parametroApi(): string
     {
         return 'employee_id';
@@ -36,7 +39,7 @@ class DaPrendereInCarico extends CollapsibleTableWidget implements EspostoInApi
 
     public static function queryApi(?int $id): Builder
     {
-        return static::baseQuery();
+        return static::baseQuery()->when($id, fn (Builder $query, int $istruttore): Builder => $query->where('employee_id', $istruttore));
     }
 
     public static function rigaApi(Model $record): array
@@ -50,6 +53,8 @@ class DaPrendereInCarico extends CollapsibleTableWidget implements EspostoInApi
             'banca' => $record->denominazione_banca,
             'stato_pratica' => $record->praticaStato?->name,
             'agente' => $record->fornitori?->name,
+            'employee_id' => $record->employee_id,
+            'assegnata_a' => $record->employee?->name,
             'data_inserimento_pratica' => $record->data_inserimento_pratica?->toDateString(),
             'giorni_attesa' => $record->data_inserimento_pratica === null ? null : (int) $record->data_inserimento_pratica->diffInDays(today()),
         ];
@@ -58,12 +63,10 @@ class DaPrendereInCarico extends CollapsibleTableWidget implements EspostoInApi
     private static function baseQuery(): Builder
     {
         return Pratica::query()
-            ->whereNull('employee_id')
             ->where('is_notowned', false)
             ->whereNull('rejected_at')
-            ->whereDoesntHave('praticaStato', fn (Builder $stato) => $stato->where('is_suspended', true))
-            ->whereHas('praticaStato', fn (Builder $stato) => $stato->where('is_working', false))
-            ->with(['tipoprodotto', 'fornitori', 'praticaStato']);
+            ->whereHas('praticaStato', fn (Builder $stato) => $stato->where('codice', InvioInIstruttoria::STATO)->where('is_suspended', false))
+            ->with(['tipoprodotto', 'fornitori', 'praticaStato', 'employee']);
     }
 
     public function table(Table $table): Table
@@ -77,6 +80,7 @@ class DaPrendereInCarico extends CollapsibleTableWidget implements EspostoInApi
                 TextColumn::make('tipoprodotto.name')->label('Prodotto')->sortable()->description(fn (Pratica $record): ?string => $record->denominazione_banca),
                 TextColumn::make('praticaStato.name')->label('Stato pratica')->placeholder('—')->badge()->sortable(),
                 TextColumn::make('fornitori.name')->label('Agente')->placeholder('—')->sortable(),
+                TextColumn::make('employee.name')->label('Assegnata a')->placeholder('Libera')->sortable(),
                 TextColumn::make('giorni_attesa')
                     ->label('Attesa')
                     ->state(fn (Pratica $record): ?int => $record->data_inserimento_pratica === null ? null : (int) $record->data_inserimento_pratica->diffInDays(today()))
@@ -97,6 +101,12 @@ class DaPrendereInCarico extends CollapsibleTableWidget implements EspostoInApi
                     )),
             ])
             ->filters([
+                // Di default le pratiche libere e quelle assegnate a me: le altre sono già di un altro istruttore.
+                Filter::make('mie_o_libere')
+                    ->label('Solo libere o mie')
+                    ->toggle()
+                    ->default()
+                    ->query(fn (Builder $query): Builder => $query->where(fn (Builder $pratiche) => $pratiche->whereNull('employee_id')->orWhere('employee_id', IstruttoreCorrente::id() ?? 0))),
                 // Le pratiche storiche sono tutte senza istruttore: di default si guarda solo il recente.
                 SelectFilter::make('recenti')
                     ->label('Inserite')
@@ -126,7 +136,7 @@ class DaPrendereInCarico extends CollapsibleTableWidget implements EspostoInApi
                     return;
                 }
 
-                $record->update(['employee_id' => $istruttore]);
+                app(PresaInCarico::class)->prendi($record, Employee::query()->findOrFail($istruttore), 'istruttoria');
                 Notification::make()->title('Pratica presa in carico')->success()->send();
             });
     }
@@ -145,7 +155,8 @@ class DaPrendereInCarico extends CollapsibleTableWidget implements EspostoInApi
                     return;
                 }
 
-                $records->each(fn (Pratica $pratica) => $pratica->update(['employee_id' => $istruttore]));
+                $dipendente = Employee::query()->findOrFail($istruttore);
+                $records->each(fn (Pratica $pratica) => app(PresaInCarico::class)->prendi($pratica, $dipendente, 'istruttoria'));
                 Notification::make()->title($records->count().' pratiche prese in carico')->success()->send();
             })
             ->deselectRecordsAfterCompletion();

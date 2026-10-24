@@ -12,6 +12,7 @@ use App\Models\KycQuestionnaire;
 use App\Models\User;
 use App\Services\CodiceFiscaleDecoder;
 use App\Services\Istruttoria\InvioInIstruttoria;
+use App\Services\Istruttoria\PresaInCarico;
 use App\Services\Preventivazione\PracticeFinalizer;
 use App\Services\Preventivazione\QuotationService;
 use App\Services\Preventivazione\QuoteUnavailable;
@@ -213,7 +214,7 @@ class Simulazione extends Page
             ->where('status', 'salvato')
             ->find($id);
 
-        if ($quote === null || $quote->pratica?->employee_id !== null) {
+        if ($quote === null || ($quote->pratica !== null && ! app(PresaInCarico::class)->modificabileDalProduttore($quote->pratica))) {
             Notification::make()->title('Preventivo non disponibile')->body('Non esiste, è già perfezionato oppure è in carico all\'istruttoria.')->warning()->send();
 
             return;
@@ -1152,7 +1153,7 @@ class Simulazione extends Page
         }
 
         $this->esitoInvio = ['plico' => $esito['plico']->name, 'destinatari' => $esito['destinatari'], 'inviata' => $esito['inviata'], 'simulazione' => $esito['simulazione']];
-        $this->statoPratica = InvioInIstruttoria::STATO;
+        $this->statoPratica = $pratica->fresh()?->praticaStato?->codice ?? InvioInIstruttoria::STATO;
         $this->fase = 'istruttoria';
         Notification::make()->title('Pratica inviata in istruttoria')->body('Plico creato'.($esito['inviata'] ? ' e avviso inviato all\'istruttoria.' : '.'))->success()->send();
     }

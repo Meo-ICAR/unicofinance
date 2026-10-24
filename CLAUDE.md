@@ -1,3 +1,37 @@
+<!-- suite-unico:start -->
+## La suite Unico (mediatori creditizi)
+
+Questa app fa parte di una suite che condivide il database `core` e la libreria `meo-icar/unico-core`:
+
+- **unicoagent**: preventivi e perfezionamento delle pratiche. App separata che parla con i vari CRM solo via API (gateway in `app/Services/Crm`: unicofinance, Mediafacile, REST generico).
+- **unicofinance**: CRM e istruttoria (pratiche, clienti, documenti, agenti, istruttori; pannelli admin e agenti). Espone le API per unicoagent (`/api/agente/v1`, token e firma) e per unicobpm (`/api`, chiave `X-Api-Key`).
+- **unicocoge** (ex Proforma): interfaccia COGE e contributi: provvigioni, proforma, fatture, prima nota.
+- **unicooam**: compliance e organigramma (Dipendenti con i ruoli in `employee_roles`, documenti e scadenziario, OAM/IVASS, audit). I ruoli della suite si definiscono qui.
+- **unicobpm**: BPM e coordinatore. Processi con RACI che chiamano via API le altre app (`config/services.php`, `apps`) e reagiscono a eventi esterni.
+- **unico-core**: libreria comune per schema condiviso, documenti, email, firma, accesso e bridge `/api/commands`.
+- Fuori da questo contesto, da non toccare: unicogdpr, ShareSync, backups3.
+
+Regole valide in tutte le app:
+- Lo schema condiviso si cambia solo in unico-core (migration con `unico-core:migrate`, protette da `hasTable`/`hasColumn`); le app non alterano a mano le tabelle del core. Id sempre interi.
+- Istruttore = dipendente con il ruolo `istruttore` in `employee_roles`, come nell'organigramma di unicooam (in unicofinance: `App\Support\Istruttori`).
+- Gli stati delle pratiche stanno in `pratica_stati` (flag `is_working`, `is_approved`, `is_rejected`, `is_suspended`...). La vecchia `pratiches_statos` non si usa più.
+- Le app si parlano via API: chiavi solo nel `.env` (mai nel codice, nei log o nei commit) e nessuna lettura diretta delle tabelle di un'altra app se esiste un'API. Niente dati personali nei log.
+- I database sono di sviluppo. Rispondi e scrivi i testi per gli utenti in italiano.
+- Se esiste `graphify-out/GRAPH_REPORT.md`, consultalo prima di cercare nel codice; si aggiorna con `graphify update .`. Per l'estrazione semantica (documenti, PDF, immagini) graphify usa `GEMINI_API_KEY` dal `.env`: non stamparla né committarla.
+
+## Questa app: unicofinance (CRM e istruttoria)
+- Lo stato della pratica cambia solo da `App\Services\CambioStatoPratica` (storico e date). `Pratica::inCorso()` è la condizione «in corso» sui flag dello stato.
+- Presa in carico: `App\Services\Istruttoria\PresaInCarico`. La pratica perfezionata aspetta in «INVIO IN ISTRUTTORIA»; quando l'istruttore la apre (o preme «Prendi in carico») passa a «PRESA IN CARICO»; se il produttore è anche l'istruttore ci va direttamente. Da lì il produttore non la modifica più (blocco per stato, non per `employee_id`). `is_working` = non concluso.
+- L'istruttore si assegna (senza prenderla in carico) da `App\Services\Istruttoria\AssegnaIstruttore` (agente che è anche dipendente, specialista della banca, del prodotto, poi chi ha meno pratiche): specializzazioni in `employees.tipoprodotto_ids` e `clienti_ids`, modificabili da Istruttori.
+- API per unicobpm in `routes/api.php`: `/api/pratiche/{id}`, `/api/pratiche/in-corso`, `/api/widgets/{widget}` (le tabelle dei widget, globali o per istruttore/agente: qui non si invia nulla, decide unicobpm), `/api/models/...`.
+- I widget della dashboard implementano `EspostoInApi`: la stessa query serve la tabella e l'API.
+
+### Manuali (consultali prima di rispondere)
+- Manuale utente: `resources/manuals/manuale-utente.html`. Manuale tecnico: `resources/manuals/manuale-tecnico.html`.
+- Ogni sezione ha un `id`: `grep -n 'id="' <file>` dà l'indice, poi leggi la sezione che serve. L'appendice «Fatti dal codice» del manuale tecnico (rotte, comandi, modelli, variabili `.env`) è generata: si rigenera con `python3 /var/www/html/unico-core/tools/manuals/gen_facts.py /var/www/html/unicofinance`; il resto è scritto a mano e va aggiornato quando cambia il comportamento.
+- L'assistente dell'istruttore (`App\Neuron\IstruttoreAssistant`) legge entrambi (`ContestoAssistente::manuale()`).
+<!-- suite-unico:end -->
+
 <laravel-boost-guidelines>
 === foundation rules ===
 

@@ -35,7 +35,7 @@
     <p>Il gestionale raccoglie la documentazione, fa firmare la modulistica e tiene la pratica fino all’esito della banca. La valutazione del credito e la perizia restano della banca: l’app conserva i dati che servono al preventivo e al portale, il resto sta nei documenti.</p>
 
     <nav>
-        <h2>Indice</h2>
+        <h2 id="indice">Indice</h2>
         <ol>
             <li><a href="#portali">I due portali</a></li>
             <li><a href="#produttore">Lavoro del produttore</a></li>
@@ -69,13 +69,14 @@
             </tr>
         </tbody>
     </table>
-    <p>Nella home del portale agenti ci sono le tabelle <strong>Preventivi da perfezionare</strong>, <strong>Le mie pratiche in corso</strong>, <strong>Documenti da consegnare</strong> e il riepilogo delle provvigioni. Nella home admin: <strong>Da prendere in carico</strong>, <strong>Pratiche in corso</strong>, <strong>Documenti da seguire</strong>, <strong>Documenti in scadenza</strong>, <strong>In attesa della banca</strong>, <strong>Documenti in firma</strong>.</p>
+    <p>Un produttore che è anche <strong>istruttore</strong> (ha il ruolo «istruttore» nell’organigramma) lavora <strong>solo nel portale admin</strong>: non entra nel portale agenti e trova la <strong>Simulazione</strong> nel menu <em>Pratiche</em> del portale admin. Un produttore che è dipendente senza quel ruolo usa il portale agenti come gli altri.</p>
+    <p>Nella home del portale agenti ci sono le tabelle <strong>Preventivi da perfezionare</strong>, <strong>Le mie pratiche in corso</strong>, <strong>Documenti da consegnare</strong> e il riepilogo delle provvigioni. Nella home admin: <strong>Da prendere in carico</strong>, <strong>Pratiche in corso</strong>, <strong>Documenti da seguire</strong>, <strong>Documenti in scadenza</strong>, <strong>In attesa della banca</strong>, <strong>Documenti in firma</strong>. Ogni tabella è una sezione <strong>chiusa</strong> all’apertura della pagina: nel titolo c’è il <strong>numero di record</strong> (secondo i filtri attivi, per esempio «Da prendere in carico (12)») e un clic la apre.</p>
     <p>Quando un istruttore ha preso in carico la pratica, nel portale agenti sparisce l’azione <strong>Perfeziona</strong> e la scheda non è più modificabile.</p>
 
     <h2 id="produttore">Lavoro del produttore</h2>
     <p>Tutto il percorso di raccolta sta nella pagina <strong>Simulazione</strong>. Un preventivo già salvato si riprende dalla home, tabella <strong>Preventivi da perfezionare</strong>, azione <strong>Perfeziona</strong>, oppure dall’elenco <strong>Pratiche</strong> con la stessa azione.</p>
 
-    <h3>1. Simulazione, senza nominativo</h3>
+    <h3 id="1-simulazione-senza-nominativo">1. Simulazione, senza nominativo</h3>
     <p>La pagina è un percorso a due passi.</p>
     <ol>
         <li><strong>Dati del cliente.</strong> Tipo contratto (per il quinto: <em>Cessione del quinto</em> o <em>Delegazione di pagamento</em>), sesso, data di nascita, <strong>Tipo amministrazione</strong> e, se non è un pensionato, data di assunzione. La delega è solo per i dipendenti: i pensionati non sono selezionabili. Non si chiede nome, cognome né codice fiscale.</li>
@@ -83,15 +84,15 @@
     </ol>
     <p>Il pulsante <strong>Preventiva</strong> mostra la sezione <strong>Esito preventivazione</strong> con la fascia di importo erogato, se il preventivatore è configurato. Altrimenti compare l’avviso che il preventivo si salva senza importo erogato. <strong>Salva preventivo</strong> crea la pratica in stato <strong>PREVENTIVO</strong>: resta nell’elenco <strong>Preventivi da perfezionare</strong> finché non si perfeziona, non si sospende o non si elimina.</p>
 
-    <h3>2. Informativa privacy</h3>
+    <h3 id="2-informativa-privacy">2. Informativa privacy</h3>
     <p>Il pulsante <strong>Perfeziona</strong> apre la sezione <strong>Informativa privacy</strong>. Si scarica il modulo <strong>Informativa privacy</strong> (link <em>Scarica il modulo</em>, se il back office ha indicato l’indirizzo del file), il cliente lo firma a mano nello spazio «Per presa visione» e il produttore carica foto o PDF con <strong>Carica l'informativa firmata</strong>.</p>
     <p>Al caricamento i controlli automatici verificano che sia quel modulo, che sia leggibile e che la firma si veda. Se un controllo non passa, la sezione <strong>Informativa da verificare</strong> elenca il problema: il percorso non si ferma, il back office ricontrollerà. <strong>Carica più tardi</strong> rimanda il file all’elenco dei documenti da caricare.</p>
     <p>Questa informativa è distinta da <strong>Informativa Privacy Compass</strong>, che si stampa solo sulle pratiche della banca Compass e fa parte della modulistica da firmare con OTP del prestito personale, non della check list di cessione e delega.</p>
 
-    <h3>3. Contatti del cliente</h3>
+    <h3 id="3-contatti-del-cliente">3. Contatti del cliente</h3>
     <p>La sezione <strong>Contatti del cliente</strong> chiede <strong>Email del cliente</strong> e <strong>Cellulare del cliente</strong>, entrambi obbligatori. Il pulsante è <strong>Conferma e perfeziona</strong>. Da qui la pratica passa allo stato di perfezionamento e compare l’elenco dei documenti del prodotto.</p>
 
-    <h3>4. Caricamento dei documenti</h3>
+    <h3 id="4-caricamento-dei-documenti">4. Caricamento dei documenti</h3>
     <p>La sezione si chiama <strong>Documenti da caricare</strong>. C’è l’elenco <strong>Documenti richiesti</strong> (le caselle si spuntano da sole quando il file è riconosciuto) e un unico campo <strong>Carica i documenti</strong>: si possono caricare più file insieme, anche uno ZIP o un PDF che contiene più documenti uno dopo l’altro.</p>
     <p>Sotto resta il testo dei file già visti, nella sezione <strong>Documenti della pratica</strong> («riconosciuto come …» oppure «tipo non riconosciuto, da verificare»).</p>
     <p>Se manca qualcosa si può usare <strong>Chiedi i documenti al cliente per email</strong>. L’email parte all’indirizzo del cliente, con il produttore in copia, e nell’oggetto c’è il codice pratica. Il cliente risponde allegando i file: la casella dell’app li acquisisce e li tratta come un caricamento.</p>
@@ -158,20 +159,33 @@
     </div>
 
     <h2 id="qav">Adeguata verifica e firma</h2>
-    <h3>Scheda Cliente</h3>
+    <h3 id="scheda-cliente">Scheda Cliente</h3>
     <p>Quando identità e codice fiscale obbligatori sono arrivati, si apre la sezione <strong>Cliente</strong>. Per cessione e delega i campi sono nome, cognome, codice fiscale, data e luogo di nascita, sesso, cittadinanza, data di assunzione (non per i pensionati), reddito netto mensile, <strong>Datore di lavoro</strong> e <strong>Quota cedibile</strong>, più la residenza. I dati già letti dai documenti sono precompilati; data, luogo di nascita e sesso si ricavano dal codice fiscale.</p>
     <p>Nella stessa scheda c’è la sezione <strong>Adeguata verifica (KYC)</strong>: è il questionario di adeguata verifica che il produttore compila qui (persona politicamente esposta, scopo del finanziamento e le altre voci del questionario). Non è un passo dell’intelligenza artificiale e non è la stampa del modulo «QAV Persona fisica». Sotto, per le persone fisiche, ci sono i <strong>Consensi privacy del cliente</strong>. Il pulsante è <strong>Salva cliente</strong>.</p>
     <p>Al salvataggio la pratica passa allo stato <strong>FASCICOLO COMPLETO</strong>.</p>
 
-    <h3>Modulistica da firmare</h3>
+    <h3 id="modulistica-da-firmare">Modulistica da firmare</h3>
     <p>La sezione <strong>Modulistica da firmare</strong> elenca i moduli del prodotto. Il campo <strong>Banca / istituto</strong> decide quali moduli di una sola banca entrano nell’elenco (gli allegati B della cessione, l’informativa Compass sul prestito).</p>
     <p><strong>Stampa e invia per la firma OTP</strong> compila i PDF con i dati della pratica e li manda al cliente, e al collaboratore dove il modulo lo prevede, con un unico codice OTP via SMS. <strong>Aggiorna stato</strong> riallinea l’elenco. In modalità dimostrazione non parte alcun SMS: a video è indicato il codice da digitare con <strong>Simula firma OTP del cliente</strong>.</p>
     <p>Quando ogni modulo è firmato (o non ha un PDF da stampare in questa pagina) compare <strong>Invio in istruttoria</strong> e il pulsante <strong>Crea il plico e invia in istruttoria</strong>. Si crea il plico con i documenti e la modulistica firmata, lo stato diventa <strong>INVIO IN ISTRUTTORIA</strong> e parte un avviso agli istruttori (funzione Back Office). In dimostrazione l’avviso va solo all’indirizzo di prova, se è configurato. La sezione <strong>Pratica in istruttoria</strong> conferma plico e destinatari. Da quel momento la pratica è tra quelle <strong>Da prendere in carico</strong>.</p>
 
     <h2 id="istruttore">Lavoro dell’istruttore</h2>
-    <p>Si entra nel pannello <strong>UnicoFinance</strong> (<code>/admin</code>). Le pratiche senza istruttore sono nella tabella <strong>Da prendere in carico</strong> (di norma quelle inserite negli ultimi 30 giorni): l’azione di presa in carico assegna la pratica all’istruttore collegato all’utente. Le proprie pratiche aperte sono in <strong>Pratiche in corso</strong> e nell’elenco <strong>Pratiche</strong>.</p>
+    <p>Si entra nel pannello <strong>UnicoFinance</strong> (<code>/admin</code>). Quando l’agente perfeziona una pratica, l’istruttore viene <strong>assegnato in automatico</strong> (vedi «Assegnazione automatica» più sotto). Le pratiche rimaste senza istruttore sono nella tabella <strong>Da prendere in carico</strong>, che elenca (di norma quelle inserite negli ultimi 30 giorni) le pratiche non respinte e non sospese nello stato INVIO IN ISTRUTTORIA, libere o assegnate (per impostazione solo le libere e le tue): la riga mostra il cliente, il prodotto con la banca sotto, lo <strong>Stato pratica</strong>, l’agente, i giorni di attesa e i documenti presenti. L’azione <strong>Prendi in carico</strong> (anche in blocco), come l’<strong>apertura</strong> della pratica, la porta nello stato PRESA IN CARICO e la assegna all’istruttore collegato all’utente. Le proprie pratiche aperte sono in <strong>Pratiche in corso</strong> e nell’elenco <strong>Pratiche</strong>.</p>
+    <h3 id="elenco-pratiche">Elenco Pratiche</h3>
+    <p>All’apertura l’elenco mostra solo le pratiche <strong>In lavorazione</strong> (il filtro è acceso): sono nascoste quelle il cui stato è concluso (per esempio chiusa, declinata, respinta, rinuncia, liquidata, estinta). Il filtro <strong>In lavorazione</strong> ha tre valori: tutte, solo in lavorazione, solo concluse. <strong>Pratiche sospese</strong> e <strong>Escludi pratiche respinte</strong> sono filtri facoltativi, spenti all’inizio. Le pratiche senza stato contano come in lavorazione.</p>
+    <h3 id="assegnazione-automatica">Assegnazione automatica</h3>
+    <p>Quando l’agente perfeziona il preventivo, e di nuovo quando la pratica va in istruttoria (la banca si sceglie lì), il sistema assegna l’istruttore così (senza ancora prenderla in carico):</p>
+    <ol>
+        <li>se l’<strong>agente è anche un dipendente</strong> (per esempio Fummo o Zaccaria), la pratica va a lui;</li>
+        <li>altrimenti a chi <strong>segue la banca</strong> della pratica (per esempio Zaccaria per Capital Fin);</li>
+        <li>poi a chi <strong>segue il prodotto</strong> (per esempio Bastione per i prestiti, Gravina per le cessioni);</li>
+        <li>poi agli istruttori senza specializzazione, scegliendo chi ha meno pratiche in corso.</li>
+    </ol>
+    <div class="nota"><strong>Assegnata non vuol dire presa in carico.</strong> Dopo l’assegnazione automatica la pratica resta in stato <strong>INVIO IN ISTRUTTORIA</strong> e il produttore può ancora modificarla. Quando l’istruttore assegnato (o, se è libera, il primo che la apre) <strong>apre la pratica</strong>, lo stato cambia in <strong>PRESA IN CARICO</strong>: da quel momento il produttore non può più modificarla dal portale agenti (sparisce l’azione <em>Perfeziona</em> e la scheda diventa di sola lettura). Se il <strong>produttore è anche l’istruttore</strong>, dopo la firma la pratica va direttamente in PRESA IN CARICO, senza attesa e senza email.</div>
+    <p>Se nessuno è idoneo la pratica resta senza istruttore e finisce in <strong>Da prendere in carico</strong>. Chi è specializzato solo su altro non riceve la pratica. Se l’istruttore era già assegnato, cambia solo quando la banca scelta ha uno specialista e l’attuale non lo è.</p>
+    <p><strong>Specializzazione (amministratori).</strong> In <strong>Configurazione → Istruttori</strong> ogni istruttore ha le colonne <em>Prodotti seguiti</em> e <em>Banche seguite</em> e un’icona <strong>Specializzazione</strong> per sceglierli (vuoto = nessuna specializzazione). L’icona compare solo per chi ha il ruolo «istruttore» nell’organigramma; le altre icone della riga sono <em>Impersonifica</em> e <em>Crea utente</em>.</p>
     <p>La scheda della pratica ha la linguetta <strong>Documenti</strong> per prima, poi <strong>Dati della richiesta</strong>, <strong>Dati di lavorazione</strong> e <strong>Dati finanziari</strong>. Sopra la tabella documenti c’è l’avanzamento della check list (obbligatori presenti, da firmare, da correggere, mancanti). Il filtro <strong>Da completare</strong> elenca mancanti, respinti, anomali e integrativi.</p>
-    <h3>Che cosa è già stato controllato</h3>
+    <h3 id="che-cosa-e-gia-stato-controllato">Che cosa è già stato controllato</h3>
     <p>Al caricamento, in automatico, risultano già fatti:</p>
     <ul>
         <li>la verifica tecnica del file (leggibilità del file, duplicato, scadenza, firma digitale già presente);</li>
@@ -179,7 +193,7 @@
         <li>la lettura dei dati e i controlli del tipo: documento leggibile, tipo coerente con quello atteso, dati coerenti con quanto già in anagrafica, documento non scaduto, e per l’informativa la corrispondenza al modulo e la firma nello spazio «Per presa visione».</li>
     </ul>
     <p>L’esito di questi controlli è visibile sulle icone della scheda <strong>Documenti</strong>. Non sostituisce la decisione dell’istruttore.</p>
-    <h3>Che cosa fa l’istruttore</h3>
+    <h3 id="che-cosa-fa-l-istruttore">Che cosa fa l’istruttore</h3>
     <p>Sulla riga del documento, o su una selezione, l’azione <strong>Esito</strong> (in blocco: <strong>Esito dell'istruttoria</strong>) assegna <strong>OK</strong>, <strong>Respinto</strong>, <strong>Anomalo</strong>, <strong>N/A</strong> o <strong>Integrativo</strong>. Per respinto, anomalo e integrativo la nota è obbligatoria. Restano registrati chi ha deciso e quando. Anomalo e integrativo continuano a essere seguiti nelle tabelle <strong>Documenti da seguire</strong> (admin) e <strong>Documenti da consegnare</strong> (portale agenti).</p>
     <p>L’intelligenza artificiale non sceglie questi esiti. Può portare un documento a <strong>OK</strong> solo se quel tipo documento è abilitato all’approvazione automatica e tutti i controlli sono superati: sulle check list di cessione e delega questa abilitazione non è impostata, quindi l’OK resta una scelta dell’istruttore.</p>
     <p>Il cambio di stato della pratica (azione <strong>Cambia stato</strong>, sull’elenco o nella scheda) chiede sempre una motivazione e scrive lo storico. Per gli stati <strong>FASCICOLO COMPLETO</strong>, <strong>INVIO IN ISTRUTTORIA</strong>, <strong>INVIO IN BANCA</strong> e <strong>Caricata Banca</strong> l’app segnala i documenti obbligatori che mancano. Oggi il passaggio non è bloccato: la pratica cambia stato e compare l’avviso. Il blocco si attiva solo se in configurazione la documentazione è dichiarata bloccante.</p>

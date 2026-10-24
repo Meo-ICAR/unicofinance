@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grafo degli stati della pratica — UnicoFinance</title>
+<style>
+body{margin:0 auto;max-width:72rem;padding:2rem 1.25rem 4rem;font:1rem/1.55 system-ui,sans-serif;color:#1c1917;background:#fff}
+h1{font-size:1.7rem} h2{margin-top:2.4rem;border-bottom:1px solid #e7e5e4;padding-bottom:.3rem} .meta{color:#57534e}
+.mermaid{background:#fafaf9;border:1px solid #e7e5e4;padding:1rem;overflow-x:auto} .nota{background:#f0f9ff;border-left:4px solid #0284c7;padding:.75rem 1rem}
+</style></head><body>
+<h1>Grafo degli stati della pratica</h1>
+<p class="meta">Generato il 24/10/2026 da <code>pratica_status_history</code> (1265 passaggi dal 2026-10-20 16:00:33 al 2026-10-23 18:00:16). I nodi riportano quante pratiche sono ora in quello stato; gli archi i passaggi osservati.</p>
+<div class="nota"><strong>Riallineamenti esclusi.</strong> 1161 righe su 1265 hanno lo stato di partenza uguale a quello di arrivo (stesso nome, stato diverso nella tabella): nascono da due importazioni massive, il 20/10 alle 16:00 e il 22/10 alle 06:00, quando gli stati sono stati ricreati per prodotto. Non sono passaggi reali e nei grafi non compaiono.</div>
+<div class="nota"><strong>Cosa c'è nello storico.</strong> Tutte le righe hanno origine <code>mediafacile</code> (importazione oraria): i passaggi del portale (PREVENTIVO, PERFEZIONARE, FASCICOLO COMPLETO) non scrivono lo storico; «PRESA IN CARICO» lo scrive dalla sua introduzione. I grafi qui sotto mostrano quindi il percorso visto da Mediafacile, per prodotto.</div>
+<h2 id="flusso-previsto">Flusso nel portale</h2>
+<p class="meta">Il passaggio «PRESA IN CARICO» è nuovo (evidenziato): finora lo stato non esisteva e nello storico compaiono solo i passaggi di Mediafacile.</p>
+<pre class="mermaid">
+flowchart LR
+  A["PREVENTIVO"] -->|"produttore perfeziona"| B["PERFEZIONARE"]
+  B -->|"cliente e KYC salvati"| C["FASCICOLO COMPLETO"]
+  C -->|"moduli firmati: plico inviato"| D["INVIO IN ISTRUTTORIA"]
+  D -->|"istruttore apre la pratica"| E["PRESA IN CARICO"]
+  C -. "produttore = istruttore: presa in carico diretta" .-> E
+  E -->|"stati di Mediafacile (non regrediscono)"| F["CARICATA BANCA, DELIBERATA, ..."]
+  classDef nuovo fill:#fff4e0,stroke:#d97706;
+  class E nuovo;
+</pre>
+<h2 id="indice">Prodotti</h2><ol><li><a href="#aziendale">Aziendale</a></li><li><a href="#cessione">Cessione</a></li><li><a href="#delega">Delega</a></li><li><a href="#microcredito">Microcredito</a></li><li><a href="#mutuo">Mutuo</a></li><li><a href="#prestito">Prestito</a></li><li><a href="#tfs">TFS</a></li><li><a href="#polizza">Polizza</a></li><li><a href="#utenza">Utenza</a></li><li><a href="#chirografario">CHIROGRAFARIO</a></li><li><a href="#leasing">LEASING</a></li><li><a href="#ipotecario">IPOTECARIO</a></li></ol>
+<h2 id="aziendale">Aziendale</h2><p class="meta">154 pratiche, 1 passaggi di stato reali nello storico.</p><pre class="mermaid">
+flowchart LR
+  n0_0["CARICATA BANCA<br/>1 ora"]
+  n0_1["DECLINATA<br/>117 ora"]
+  n0_2["LIQUIDATA<br/>2 ora"]
+  n0_3["PERFEZIONATA<br/>14 ora"]
+  n0_4["RINUNCIA CLIENTE<br/>19 ora"]
+  n0_5["SOSPESA<br/>1 ora"]
+  start0(("nuova"))
+  n0_5 -->|"1"| n0_1
+</pre><h2 id="cessione">Cessione</h2><p class="meta">1766 pratiche, 67 passaggi di stato reali nello storico.</p><pre class="mermaid">
+flowchart LR
+  n1_0["CARICATA BANCA<br/>0 ora"]
+  n1_1["CHIUSA<br/>421 ora"]
+  n1_2["Caricata Banca<br/>4 ora"]
+  n1_3["DECLINATA<br/>132 ora"]
+  n1_4["DELIBERATA<br/>12 ora"]
+  n1_5["IN ATTESA BENESTARE<br/>4 ora"]
+  n1_6["INSERITA<br/>118 ora"]
+  n1_7["INVIO IN ISTRUTTORIA<br/>1 ora"]
+  n1_8["LIQUIDATA<br/>5 ora"]
+  n1_9["NOTIFICA<br/>26 ora"]
+  n1_10["PERFEZIONATA<br/>797 ora"]
+  n1_11["PRATICA RESPINTA<br/>81 ora"]
+  n1_12["RICHIESTA POLIZZA<br/>0 ora"]
+  n1_13["RIENTRO BENESTARE<br/>8 ora"]
+  n1_14["RIENTRO POLIZZA<br/>19 ora"]
+  n1_15["RINUNCIA CLIENTE<br/>106 ora"]
+  n1_16["Richiesta Polizza<br/>8 ora"]
+  n1_17["SOSPESA<br/>23 ora"]
+  start1(("nuova"))
+  n1_13 -->|"8"| n1_10
+  start1 -->|"8"| n1_6
+  n1_4 -->|"5"| n1_12
+  n1_0 -->|"4"| n1_4
+  n1_9 -->|"4"| n1_13
+  n1_6 -->|"4"| n1_0
+  n1_0 -->|"3"| n1_12
+  n1_8 -->|"3"| n1_10
+  n1_6 -->|"2"| n1_7
+  n1_14 -->|"2"| n1_9
+  n1_7 -->|"2"| n1_4
+  n1_4 -->|"2"| n1_17
+  start1 -->|"2"| n1_0
+  n1_13 -->|"2"| n1_8
+  n1_12 -->|"2"| n1_14
+  start1 -->|"2"| n1_4
+  n1_7 -->|"1"| n1_17
+  n1_6 -->|"1"| n1_4
+  n1_6 -->|"1"| n1_17
+  n1_17 -->|"1"| n1_7
+  n1_0 -->|"1"| n1_17
+  n1_12 -->|"1"| n1_9
+  n1_4 -->|"1"| n1_14
+  n1_17 -->|"1"| n1_4
+  start1 -->|"1"| n1_17
+  start1 -->|"1"| n1_11
+  n1_17 -->|"1"| n1_0
+  n1_4 -->|"1"| n1_11
+</pre><h2 id="delega">Delega</h2><p class="meta">282 pratiche, 26 passaggi di stato reali nello storico.</p><pre class="mermaid">
+flowchart LR
+  n2_0["CARICATA BANCA<br/>1 ora"]
+  n2_1["CHIUSA<br/>52 ora"]
+  n2_2["DECLINATA<br/>33 ora"]
+  n2_3["DELIBERATA<br/>4 ora"]
+  n2_4["INSERITA<br/>16 ora"]
+  n2_5["INVIO IN ISTRUTTORIA<br/>0 ora"]
+  n2_6["NOTIFICA<br/>3 ora"]
+  n2_7["PERFEZIONATA<br/>131 ora"]
+  n2_8["PRATICA RESPINTA<br/>15 ora"]
+  n2_9["RICHIESTA POLIZZA<br/>1 ora"]
+  n2_10["RIENTRO BENESTARE<br/>4 ora"]
+  n2_11["RIENTRO POLIZZA<br/>1 ora"]
+  n2_12["RINUNCIA CLIENTE<br/>13 ora"]
+  n2_13["SOSPESA<br/>8 ora"]
+  start2(("nuova"))
+  n2_4 -->|"3"| n2_13
+  n2_10 -->|"3"| n2_7
+  n2_6 -->|"2"| n2_10
+  n2_0 -->|"2"| n2_3
+  n2_5 -->|"1"| n2_13
+  start2 -->|"1"| n2_0
+  n2_4 -->|"1"| n2_2
+  n2_0 -->|"1"| n2_9
+  start2 -->|"1"| n2_3
+  n2_13 -->|"1"| n2_10
+  start2 -->|"1"| n2_4
+  n2_4 -->|"1"| n2_5
+  n2_6 -->|"1"| n2_7
+  n2_3 -->|"1"| n2_9
+  n2_5 -->|"1"| n2_0
+  n2_9 -->|"1"| n2_6
+  n2_13 -->|"1"| n2_0
+  n2_0 -->|"1"| n2_13
+  n2_11 -->|"1"| n2_6
+  n2_13 -->|"1"| n2_5
+</pre><h2 id="microcredito">Microcredito</h2><p class="meta">24 pratiche, 1 passaggi di stato reali nello storico.</p><pre class="mermaid">
+flowchart LR
+  n3_0["CARICATA BANCA<br/>2 ora"]
+  n3_1["CHIUSA<br/>1 ora"]
+  n3_2["DECLINATA<br/>17 ora"]
+  n3_3["LIQUIDATA<br/>1 ora"]
+  n3_4["PERFEZIONATA<br/>1 ora"]
+  n3_5["RINUNCIA CLIENTE<br/>1 ora"]
+  n3_6["SOSPESA<br/>1 ora"]
+  start3(("nuova"))
+  n3_6 -->|"1"| n3_0
+</pre><h2 id="mutuo">Mutuo</h2><p class="meta">240 pratiche, 2 passaggi di stato reali nello storico.</p><pre class="mermaid">
+flowchart LR
+  n4_0["APPROVATA<br/>1 ora"]
+  n4_1["CARICATA BANCA<br/>2 ora"]
+  n4_2["CHIUSA<br/>35 ora"]
+  n4_3["DECLINATA<br/>24 ora"]
+  n4_4["DELIBERATA<br/>0 ora"]
+  n4_5["INSERITA<br/>14 ora"]
+  n4_6["INVIO IN ISTRUTTORIA<br/>2 ora"]
+  n4_7["LIQUIDATA<br/>1 ora"]
+  n4_8["PERFEZIONATA<br/>56 ora"]
+  n4_9["PERIZIA KO<br/>1 ora"]
+  n4_10["PERIZIA OK<br/>1 ora"]
+  n4_11["PRATICA RESPINTA<br/>6 ora"]
+  n4_12["RINUNCIA CLIENTE<br/>78 ora"]
+  n4_13["SOSPESA<br/>6 ora"]
+  start4(("nuova"))
+  n4_4 -->|"1"| n4_7
+  n4_6 -->|"1"| n4_13
+</pre><h2 id="prestito">Prestito</h2><p class="meta">754 pratiche, 7 passaggi di stato reali nello storico.</p><pre class="mermaid">
+flowchart LR
+  n5_0["APPROVATA<br/>2 ora"]
+  n5_1["CARICATA BANCA<br/>1 ora"]
+  n5_2["CHIUSA<br/>136 ora"]
+  n5_3["DECLINATA<br/>423 ora"]
+  n5_4["IN ATTESA DOCUMENTI ORIGINALI<br/>1 ora"]
+  n5_5["INSERITA<br/>4 ora"]
+  n5_6["LIQUIDATA<br/>4 ora"]
+  n5_7["PERFEZIONATA<br/>108 ora"]
+  n5_8["PRATICA RESPINTA<br/>3 ora"]
+  n5_9["RINUNCIA CLIENTE<br/>69 ora"]
+  n5_10["SOSPESA<br/>2 ora"]
+  n5_11["SOSPESA ISTRUTTORIA INTERNA<br/>1 ora"]
+  start5(("nuova"))
+  n5_1 -->|"3"| n5_3
+  n5_5 -->|"1"| n5_1
+  n5_5 -->|"1"| n5_3
+  start5 -->|"1"| n5_9
+  n5_1 -->|"1"| n5_9
+</pre><h2 id="tfs">TFS</h2><p class="meta">7 pratiche, 0 passaggi di stato reali nello storico.</p><p class="meta">Nessun passaggio di stato reale nello storico: i nodi sono gli stati in cui si trovano ora le pratiche.</p><pre class="mermaid">
+flowchart LR
+  n6_0["CHIUSA<br/>1 ora"]
+  n6_1["DELIBERATA<br/>1 ora"]
+  n6_2["PERFEZIONATA<br/>4 ora"]
+  n6_3["PRATICA RESPINTA<br/>1 ora"]
+</pre><h2 id="polizza">Polizza</h2><p class="meta">55 pratiche, 0 passaggi di stato reali nello storico.</p><p class="meta">Nessun passaggio di stato reale nello storico: i nodi sono gli stati in cui si trovano ora le pratiche.</p><pre class="mermaid">
+flowchart LR
+  n7_0["DECLINATA<br/>12 ora"]
+  n7_1["FASCICOLO COMPLETO<br/>2 ora"]
+  n7_2["INSERITA<br/>4 ora"]
+  n7_3["ORIGINALI IN SEDE<br/>1 ora"]
+  n7_4["PERFEZIONATA<br/>14 ora"]
+  n7_5["RICHIESTA EMISSIONE<br/>4 ora"]
+  n7_6["RINUNCIA CLIENTE<br/>18 ora"]
+</pre><h2 id="utenza">Utenza</h2><p class="meta">51 pratiche, 0 passaggi di stato reali nello storico.</p><p class="meta">Nessun passaggio di stato reale nello storico: i nodi sono gli stati in cui si trovano ora le pratiche.</p><pre class="mermaid">
+flowchart LR
+  n8_0["ACCETTATO PREVENTIVO<br/>2 ora"]
+  n8_1["INSERITA<br/>4 ora"]
+  n8_2["PERFEZIONATA<br/>42 ora"]
+  n8_3["RINUNCIA CLIENTE<br/>1 ora"]
+  n8_4["SOSPESA<br/>2 ora"]
+</pre><h2 id="chirografario">CHIROGRAFARIO</h2><p class="meta">49 pratiche, 0 passaggi di stato reali nello storico.</p><p class="meta">Nessun passaggio di stato reale nello storico: i nodi sono gli stati in cui si trovano ora le pratiche.</p><pre class="mermaid">
+flowchart LR
+  n9_0["CARICATA BANCA<br/>2 ora"]
+  n9_1["CHIUSA<br/>18 ora"]
+  n9_2["DECLINATA<br/>23 ora"]
+  n9_3["INSERITA<br/>2 ora"]
+  n9_4["RINUNCIA CLIENTE<br/>2 ora"]
+</pre><h2 id="leasing">LEASING</h2><p class="meta">4 pratiche, 0 passaggi di stato reali nello storico.</p><p class="meta">Nessun passaggio di stato reale nello storico: i nodi sono gli stati in cui si trovano ora le pratiche.</p><pre class="mermaid">
+flowchart LR
+  n10_0["CHIUSA<br/>4 ora"]
+</pre><h2 id="ipotecario">IPOTECARIO</h2><p class="meta">1 pratiche, 0 passaggi di stato reali nello storico.</p><p class="meta">Nessun passaggio di stato reale nello storico: i nodi sono gli stati in cui si trovano ora le pratiche.</p><pre class="mermaid">
+flowchart LR
+  n11_0["CHIUSA<br/>1 ora"]
+</pre>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.4.0/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true,securityLevel:'loose',flowchart:{htmlLabels:true,useMaxWidth:false}});</script>
+</body></html>

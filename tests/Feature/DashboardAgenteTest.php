@@ -73,10 +73,11 @@ class DashboardAgenteTest extends TestCase
         $daEliminare = $this->preventivo($agente, 2);
         $perfezionato = $this->preventivo($agente, 3, [], 'perfezionato');
         $altrui = $this->preventivo($altro, 1);
-        $inCarico = $this->preventivo($agente, 4, ['employee_id' => Employee::query()->create(['name' => 'Istruttore'])->getKey()]);
+        $inCarico = $this->preventivo($agente, 4, ['presa_in_carico_at' => today()]);
+        $assegnato = $this->preventivo($agente, 5, ['employee_id' => Employee::query()->create(['name' => 'Istruttore'])->getKey()]);
 
         Livewire::test(PreventiviDaPerfezionare::class)
-            ->assertCanSeeTableRecords([$mio, $daEliminare])
+            ->assertCanSeeTableRecords([$mio, $daEliminare, $assegnato])
             ->assertCanNotSeeTableRecords([$perfezionato, $altrui, $inCarico])
             ->callTableBulkAction('elimina', [$daEliminare]);
 
@@ -136,20 +137,26 @@ class DashboardAgenteTest extends TestCase
             ->assertSet('quoteId', null);
     }
 
-    public function test_a_practice_taken_over_by_an_instructor_can_no_longer_be_edited_by_the_agent(): void
+    public function test_a_practice_in_presa_in_carico_can_no_longer_be_edited_by_the_agent_but_an_assigned_one_still_can(): void
     {
         $agente = $this->agente();
+        $presa = PraticaStato::query()->create(['codice' => 'PRESA IN CARICO', 'tipo_finanziamento' => 'Test', 'name' => 'PRESA IN CARICO', 'ordine' => 0, 'colore' => 'gray']);
+        $istruttore = Employee::query()->create(['name' => 'Istruttore Prova']);
         $libera = Pratica::query()->create(['codice_pratica' => 'AGD-L', 'cognome_cliente' => 'Libera', 'fornitori_id' => $agente->getKey(), 'upload_at' => now()]);
-        $inCarico = Pratica::query()->create(['codice_pratica' => 'AGD-C', 'cognome_cliente' => 'InCarico', 'fornitori_id' => $agente->getKey(), 'employee_id' => Employee::query()->create(['name' => 'Istruttore'])->getKey(), 'upload_at' => now()]);
+        $assegnata = Pratica::query()->create(['codice_pratica' => 'AGD-A', 'cognome_cliente' => 'Assegnata', 'fornitori_id' => $agente->getKey(), 'employee_id' => $istruttore->getKey(), 'upload_at' => now()]);
+        $inCarico = Pratica::query()->create(['codice_pratica' => 'AGD-C', 'cognome_cliente' => 'InCarico', 'fornitori_id' => $agente->getKey(), 'employee_id' => $istruttore->getKey(), 'pratica_stato_id' => $presa->getKey(), 'upload_at' => now()]);
         $this->collegaProvvigioneProduttore($agente, $libera);
+        $this->collegaProvvigioneProduttore($agente, $assegnata);
         $this->collegaProvvigioneProduttore($agente, $inCarico);
 
         Livewire::test(EditPratica::class, ['record' => $libera->getKey()])->assertOk();
+        Livewire::test(EditPratica::class, ['record' => $assegnata->getKey()])->assertOk();
         Livewire::test(EditPratica::class, ['record' => $inCarico->getKey()])->assertForbidden();
 
         Livewire::test(ListPratiche::class)
-            ->assertCanSeeTableRecords([$libera, $inCarico])
+            ->assertCanSeeTableRecords([$libera, $assegnata, $inCarico])
             ->assertTableActionVisible('edit', $libera)
+            ->assertTableActionVisible('edit', $assegnata)
             ->assertTableActionHidden('edit', $inCarico);
     }
 

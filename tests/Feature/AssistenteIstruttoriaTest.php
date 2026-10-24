@@ -154,4 +154,15 @@ class AssistenteIstruttoriaTest extends TestCase
             ->assertSee('Chiave API Anthropic mancante: imposta ANTHROPIC_API_KEY nel file .env')
             ->assertSee('Chiedi all\'assistente');
     }
+
+    public function test_the_assistant_reads_both_manuals_without_the_generated_appendix(): void
+    {
+        $manuale = app(ContestoAssistente::class)->manuale();
+
+        $this->assertStringContainsString('Manuale utente:', $manuale);
+        $this->assertStringContainsString('Manuale tecnico:', $manuale);
+        $this->assertStringContainsString('Assegnazione automatica', $manuale);
+        $this->assertStringContainsString('Istruttori e assegnazione automatica', $manuale);
+        $this->assertStringNotContainsString('Sezione generata da', $manuale);
+    }
 }

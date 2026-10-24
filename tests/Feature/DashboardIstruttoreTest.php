@@ -43,23 +43,35 @@ class DashboardIstruttoreTest extends TestCase
         return PraticaStato::query()->create(['codice' => 'ST-'.uniqid(), 'tipo_finanziamento' => 'Test', 'name' => 'Stato '.uniqid(), 'ordine' => 0, 'is_working' => true, 'colore' => 'gray', ...$flags]);
     }
 
-    public function test_unassigned_practices_are_listed_and_taken_over_by_the_current_instructor(): void
+    private function inIstruttoria(): int
+    {
+        return (int) PraticaStato::query()->firstOrCreate(['codice' => 'INVIO IN ISTRUTTORIA', 'tipo_finanziamento' => 'Test'], ['name' => 'INVIO IN ISTRUTTORIA', 'ordine' => 0, 'is_working' => true, 'colore' => 'gray'])->getKey();
+    }
+
+    public function test_practices_waiting_in_istruttoria_are_listed_and_taken_over_by_the_current_instructor(): void
     {
         $istruttore = $this->istruttore();
-        $nonInLavorazione = $this->stato(['is_working' => false])->getKey();
-        $nuova = Pratica::query()->create(['codice_pratica' => 'DSH-1', 'cognome_cliente' => 'Rossi', 'data_inserimento_pratica' => now()->subDays(3)->toDateString(), 'pratica_stato_id' => $nonInLavorazione, 'upload_at' => now()]);
-        $vecchia = Pratica::query()->create(['codice_pratica' => 'DSH-2', 'cognome_cliente' => 'Storica', 'data_inserimento_pratica' => now()->subDays(400)->toDateString(), 'pratica_stato_id' => $nonInLavorazione, 'upload_at' => now()]);
-        $respinta = Pratica::query()->create(['codice_pratica' => 'DSH-3', 'cognome_cliente' => 'Respinta', 'data_inserimento_pratica' => now()->toDateString(), 'rejected_at' => now()->toDateString(), 'pratica_stato_id' => $nonInLavorazione, 'upload_at' => now()]);
-        $inLavorazione = Pratica::query()->create(['codice_pratica' => 'DSH-6', 'cognome_cliente' => 'Lavorata', 'data_inserimento_pratica' => now()->toDateString(), 'pratica_stato_id' => $this->stato(['is_working' => true])->getKey(), 'upload_at' => now()]);
+        $altro = Employee::query()->create(['name' => 'Altro istruttore']);
+        $attesa = $this->inIstruttoria();
+        $nuova = Pratica::query()->create(['codice_pratica' => 'DSH-1', 'cognome_cliente' => 'Rossi', 'data_inserimento_pratica' => now()->subDays(3)->toDateString(), 'pratica_stato_id' => $attesa, 'upload_at' => now()]);
+        $mia = Pratica::query()->create(['codice_pratica' => 'DSH-7', 'cognome_cliente' => 'Mia', 'data_inserimento_pratica' => now()->toDateString(), 'pratica_stato_id' => $attesa, 'employee_id' => $istruttore->getKey(), 'upload_at' => now()]);
+        $altrui = Pratica::query()->create(['codice_pratica' => 'DSH-8', 'cognome_cliente' => 'Altrui', 'data_inserimento_pratica' => now()->toDateString(), 'pratica_stato_id' => $attesa, 'employee_id' => $altro->getKey(), 'upload_at' => now()]);
+        $vecchia = Pratica::query()->create(['codice_pratica' => 'DSH-2', 'cognome_cliente' => 'Storica', 'data_inserimento_pratica' => now()->subDays(400)->toDateString(), 'pratica_stato_id' => $attesa, 'upload_at' => now()]);
+        $respinta = Pratica::query()->create(['codice_pratica' => 'DSH-3', 'cognome_cliente' => 'Respinta', 'data_inserimento_pratica' => now()->toDateString(), 'rejected_at' => now()->toDateString(), 'pratica_stato_id' => $attesa, 'upload_at' => now()]);
+        $inCarico = Pratica::query()->create(['codice_pratica' => 'DSH-6', 'cognome_cliente' => 'Presa', 'data_inserimento_pratica' => now()->toDateString(), 'pratica_stato_id' => $this->stato(['codice' => 'PRESA IN CARICO'])->getKey(), 'upload_at' => now()]);
         $sospesa = Pratica::query()->create(['codice_pratica' => 'DSH-4', 'cognome_cliente' => 'Sospesa', 'data_inserimento_pratica' => now()->toDateString(), 'pratica_stato_id' => $this->stato(['is_suspended' => true])->getKey(), 'upload_at' => now()]);
 
         Livewire::test(DaPrendereInCarico::class)
-            ->assertCanSeeTableRecords([$nuova])
-            ->assertCanNotSeeTableRecords([$vecchia, $respinta, $sospesa, $inLavorazione])
+            ->assertCanSeeTableRecords([$nuova, $mia])
+            ->assertCanNotSeeTableRecords([$altrui, $vecchia, $respinta, $sospesa, $inCarico])
             ->callTableAction('prendiInCarico', $nuova)
             ->assertNotified('Pratica presa in carico');
 
-        $this->assertSame($istruttore->getKey(), (int) $nuova->fresh()->employee_id);
+        $nuova->refresh();
+        $this->assertSame($istruttore->getKey(), (int) $nuova->employee_id);
+        $this->assertSame('PRESA IN CARICO', $nuova->praticaStato->codice);
+        $this->assertTrue($nuova->presa_in_carico_at->isToday());
+        $this->assertSame('INVIO IN ISTRUTTORIA', $nuova->praticaStatusHistory()->firstOrFail()->status_from);
     }
 
     public function test_waiting_days_are_an_integer_and_the_insertion_date_is_not_shown(): void
@@ -69,7 +81,7 @@ class DashboardIstruttoreTest extends TestCase
             'codice_pratica' => 'DSH-ATT',
             'cognome_cliente' => 'Attesa',
             'data_inserimento_pratica' => today()->subDays(4)->toDateString(),
-            'pratica_stato_id' => $this->stato(['is_working' => false])->getKey(),
+            'pratica_stato_id' => $this->inIstruttoria(),
             'upload_at' => now(),
         ]);
 
@@ -83,7 +95,7 @@ class DashboardIstruttoreTest extends TestCase
     {
         Filament::setCurrentPanel('admin');
         $this->actingAs(User::factory()->create(['role' => 'super_admin']));
-        $pratica = Pratica::query()->create(['codice_pratica' => 'DSH-5', 'data_inserimento_pratica' => now()->toDateString(), 'pratica_stato_id' => $this->stato(['is_working' => false])->getKey(), 'upload_at' => now()]);
+        $pratica = Pratica::query()->create(['codice_pratica' => 'DSH-5', 'data_inserimento_pratica' => now()->toDateString(), 'pratica_stato_id' => $this->inIstruttoria(), 'upload_at' => now()]);
 
         Livewire::test(DaPrendereInCarico::class)
             ->callTableAction('prendiInCarico', $pratica)

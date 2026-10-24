@@ -3,6 +3,7 @@
 namespace App\Services\Istruttoria;
 
 use App\Models\Pratica as PraticaApp;
+use App\Services\Agenti\DipendenteDelloAgente;
 use App\Support\Istruttori;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -11,8 +12,8 @@ use Unico\Core\Models\Fornitore;
 use Unico\Core\Models\Pratica;
 
 /**
- * Assegna l'istruttore a una pratica quando l'agente la perfeziona. Se l'agente è anche un dipendente (stesso utente, codice
- * fiscale o nome) la pratica va a lui; altrimenti si guarda la specializzazione registrata nell'anagrafica del dipendente (`tipoprodotto_ids` e `clienti_ids`): chi segue la banca della pratica ha la precedenza su chi segue il prodotto, e
+ * Assegna l'istruttore a una pratica quando l'agente la perfeziona. Se l'agente è anche un dipendente (`DipendenteDelloAgente`:
+ * stesso utente, codice fiscale o nome) la pratica va a lui; altrimenti si guarda la specializzazione registrata nell'anagrafica del dipendente (`tipoprodotto_ids` e `clienti_ids`): chi segue la banca della pratica ha la precedenza su chi segue il prodotto, e
  * questi su chi non ha specializzazioni. A parità va a chi ha meno pratiche in corso. Chi è specializzato solo su altro non viene
  * preso in considerazione. Se la pratica ha già un istruttore lo si cambia soltanto quando la banca, scelta dopo la perfezione,
  * ha uno specialista e l'attuale non lo è.
@@ -55,26 +56,12 @@ class AssegnaIstruttore
         return $scelto;
     }
 
-    /** Il dipendente che è anche l'agente della pratica: stesso utente di accesso o codice fiscale, altrimenti lo stesso nome. */
-    private function dipendenteDelloAgente(Pratica $pratica): ?Employee
+    /** Il dipendente che è anche l'agente della pratica (vedi DipendenteDelloAgente). */
+    public function dipendenteDelloAgente(Pratica $pratica): ?Employee
     {
         $agente = $pratica->fornitori_id === null ? null : Fornitore::query()->find($pratica->fornitori_id);
 
-        if ($agente === null) {
-            return null;
-        }
-
-        $dipendenti = Employee::query()->where('is_active', true)->orderBy('id')->get();
-
-        return $dipendenti->first(fn (Employee $dipendente): bool => ($agente->user_id !== null && $dipendente->user_id === $agente->user_id)
-                || (filled($agente->cf) && strcasecmp((string) $dipendente->cf, (string) $agente->cf) === 0))
-            ?? $dipendenti->first(fn (Employee $dipendente): bool => $this->nome($dipendente->name) !== '' && $this->nome($dipendente->name) === $this->nome($agente->name));
-    }
-
-    /** Nome senza maiuscole, spazi doppi e ordine: «FUMMO BRIGIDA» e «Brigida  Fummo» coincidono. */
-    private function nome(?string $nome): string
-    {
-        return collect(preg_split('/[^\p{L}\p{N}]+/u', mb_strtolower((string) $nome), -1, PREG_SPLIT_NO_EMPTY))->sort()->implode(' ');
+        return $agente === null ? null : app(DipendenteDelloAgente::class)->trova($agente);
     }
 
     private function scegli(Pratica $pratica): ?Employee

@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Client;
 use App\Models\Pratica;
 use App\Services\Importazione\MediafacileApi;
+use App\Services\Istruttoria\PresaInCarico;
 use App\Services\Istruttoria\RichiedentePratica;
 use App\Services\Provvigioni\PercentualeProvvigione;
 use App\Support\DenominazioneProdotto;
@@ -104,6 +105,11 @@ class ImportPraticheFromApi extends Command
                 // Un istruttore già assegnato alla pratica non si cambia.
                 if ($pratica->employee_id !== null) {
                     unset($dati['employee_id']);
+                }
+
+                // Lo stato «PRESA IN CARICO» è del portale: Mediafacile non lo conosce e non lo riporta indietro.
+                if ($this->regredisceDallaPresaInCarico($pratica, $dati)) {
+                    unset($dati['pratica_stato_id']);
                 }
 
                 $pratica->update($dati);
@@ -359,6 +365,23 @@ class ImportPraticheFromApi extends Command
         return ($valida ? Fornitore::query()->where('piva', $partitaIva)->first() : null)
             ?? Fornitore::query()->where('name', $nome)->first()
             ?? Fornitore::query()->create(['name' => $nome, 'piva' => $valida ? $partitaIva : null, 'is_active' => true]);
+    }
+
+    /**
+     * Una pratica già «PRESA IN CARICO» non torna a uno stato di prima (INSERITA, INVIO IN ISTRUTTORIA…) solo perché Mediafacile non
+     * conosce il nuovo stato; gli stati successivi (CARICATA BANCA, DELIBERATA…) invece si applicano.
+     *
+     * @param  array<string, mixed>  $dati
+     */
+    private function regredisceDallaPresaInCarico(Pratica $pratica, array $dati): bool
+    {
+        if (mb_strtoupper((string) $pratica->praticaStato?->codice) !== PresaInCarico::STATO || ! isset($dati['pratica_stato_id'])) {
+            return false;
+        }
+
+        $nuovo = mb_strtoupper((string) PraticaStato::query()->whereKey($dati['pratica_stato_id'])->value('codice'));
+
+        return in_array($nuovo, PresaInCarico::statiModificabili(), true) && $nuovo !== 'SOSPESA';
     }
 
     /** Storico degli stati: una riga alla creazione e a ogni cambio di stato. */

@@ -10,6 +10,7 @@ use App\Models\FinancingQuote;
 use App\Models\Pratica;
 use App\Services\Agenti\AgentImpersonationService;
 use App\Services\CambioStatoPratica;
+use App\Services\Istruttoria\PresaInCarico;
 use App\Services\Preventivazione\EliminaPreventivo;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
@@ -62,8 +63,8 @@ class PreventiviDaPerfezionare extends CollapsibleTableWidget implements Esposto
 
     private static function baseQuery(int $fornitoreId): Builder
     {
-        // Le pratiche stanno nel database del core: gli id di quelle già in carico all'istruttoria si leggono a parte.
-        $inCarico = Pratica::query()->where('fornitori_id', $fornitoreId)->whereNotNull('employee_id')->pluck('id');
+        // Le pratiche stanno nel database del core: gli id di quelle già in carico all'istruttoria (da «PRESA IN CARICO» in poi) si leggono a parte.
+        $inCarico = PresaInCarico::bloccateAlProduttore(Pratica::query()->where('fornitori_id', $fornitoreId))->pluck('id');
 
         return FinancingQuote::query()
             ->where('fornitore_id', $fornitoreId)
