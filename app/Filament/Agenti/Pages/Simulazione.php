@@ -42,6 +42,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\HtmlString;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Url;
 use Throwable;
 use Unico\Core\Documents\IntakeResult;
@@ -108,6 +109,8 @@ class Simulazione extends Page
     /** preventivo | informativa | contatti | perfezionare | cliente | firma | istruttoria */
     public ?string $fase = null;
 
+    /** Bloccato: arriva dal server, il browser non può sostituirlo con il preventivo di un altro agente. */
+    #[Locked]
     public ?int $quoteId = null;
 
     public ?int $preventivoNumero = null;

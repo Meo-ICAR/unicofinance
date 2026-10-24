@@ -6,9 +6,11 @@ use App\Documents\Api\LoggedCompanyDataFetcher;
 use App\Models\BlacklistClienteFornitore;
 use App\Models\ListinoProvvigionale;
 use App\Pdf\KycModuleDataProvider;
+use App\Policies\DocumentPolicy;
 use App\Services\Agenti\AgentNotifications;
 use App\Services\AiCallRegistry;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use SocialiteProviders\Google\GoogleExtendSocialite;
 use SocialiteProviders\Manager\SocialiteWasCalled;
@@ -37,6 +39,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Il download dei documenti passa dalla policy: l'agente vede solo quelli dei propri dati (vedi DocumentPolicy).
+        Gate::policy(Document::class, DocumentPolicy::class);
+
         // Le tabelle di Proforma stanno nello stesso database ma le crea l'altra app: nelle prove, con il database ricreato da zero,
         // si applicano le sue migration di schema (se l'app è accanto a questa).
         $schemaProforma = dirname(base_path()).'/proforma/database/migrations/2026_10_20_235900_ensure_proforma_schema.php';
