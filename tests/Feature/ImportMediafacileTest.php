@@ -12,6 +12,7 @@ use App\Services\Importazione\MediafacileApi;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Tests\Concerns\SeedsCoreData;
 use Tests\TestCase;
 use Unico\Core\Models\Cliente;
 use Unico\Core\Models\Company;
@@ -22,6 +23,7 @@ use Unico\Core\Models\TipoProdotto;
 class ImportMediafacileTest extends TestCase
 {
     use RefreshDatabase;
+    use SeedsCoreData;
 
     /**
      * @var array<int, string>
@@ -31,6 +33,7 @@ class ImportMediafacileTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->seedCoreData('tipoprodotto', 'tipoprodotto_sub', 'address_types', 'document_types');
 
         config(['services.mediafacile.base_url' => 'https://mediafacile.test/ws', 'services.mediafacile.header_key' => 'chiave']);
     }

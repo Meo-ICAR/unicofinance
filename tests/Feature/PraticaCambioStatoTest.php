@@ -11,6 +11,7 @@ use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
+use Tests\Concerns\SeedsCoreData;
 use Tests\TestCase;
 use Unico\Core\Models\Fornitore;
 use Unico\Core\Models\Pratica;
@@ -20,6 +21,7 @@ use Unico\Core\Models\TipoProdotto;
 class PraticaCambioStatoTest extends TestCase
 {
     use RefreshDatabase;
+    use SeedsCoreData;
 
     /**
      * @var array<int, string>
@@ -29,6 +31,12 @@ class PraticaCambioStatoTest extends TestCase
     private function stato(string $name): PraticaStato
     {
         return PraticaStato::query()->firstOrCreate(['codice' => $name, 'tipo_finanziamento' => 'Cessione'], ['name' => $name, 'ordine' => 0, 'is_rejected' => false, 'is_working' => true, 'is_estingued' => false, 'colore' => 'gray']);
+    }
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seedCoreData('tipoprodotto', 'tipoprodotto_sub');
     }
 
     public function test_changing_the_state_asks_for_a_reason_and_writes_the_status_history(): void

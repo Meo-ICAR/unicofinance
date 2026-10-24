@@ -11,6 +11,7 @@ use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
+use Tests\Concerns\SeedsCoreData;
 use Tests\TestCase;
 use Unico\Core\Models\Employee;
 use Unico\Core\Models\Fornitore;
@@ -21,11 +22,18 @@ use Unico\Core\Models\TipoProdotto;
 class RinunciaClienteTest extends TestCase
 {
     use RefreshDatabase;
+    use SeedsCoreData;
 
     /**
      * @var array<int, string>
      */
     protected array $connectionsToTransact = [null, 'core', 'proforma'];
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seedCoreData('pratica_stati', 'tipoprodotto', 'tipoprodotto_sub');
+    }
 
     public function test_the_producer_waives_the_client_and_the_instructor_sees_it_until_acknowledged(): void
     {

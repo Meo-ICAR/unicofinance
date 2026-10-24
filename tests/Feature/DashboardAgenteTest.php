@@ -15,6 +15,7 @@ use Filament\Facades\Filament;
 use Filament\Widgets\AccountWidget;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Tests\Concerns\SeedsCoreData;
 use Tests\TestCase;
 use Unico\Core\Enums\DocumentStatus;
 use Unico\Core\Models\Document;
@@ -25,6 +26,7 @@ use Unico\Core\Models\PraticaStato;
 class DashboardAgenteTest extends TestCase
 {
     use RefreshDatabase;
+    use SeedsCoreData;
 
     /**
      * @var array<int, string>
@@ -55,6 +57,12 @@ class DashboardAgenteTest extends TestCase
             'assignable_quota' => 300, 'age_at_start' => 46, 'seniority_months' => 200, 'disbursed_min' => 20000, 'disbursed_max' => 25000,
             'status' => $status, 'pratica_id' => $creata->getKey(),
         ]);
+    }
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seedCoreData('pratica_stati', 'tipoprodotto', 'tipoprodotto_sub');
     }
 
     public function test_quotes_to_perfect_are_the_agents_saved_ones_and_can_be_deleted_in_bulk(): void

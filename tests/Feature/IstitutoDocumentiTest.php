@@ -11,6 +11,7 @@ use App\Models\User;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Tests\Concerns\SeedsCoreData;
 use Tests\TestCase;
 use Unico\Core\Documents\BankDocumentRequirements;
 use Unico\Core\Documents\PracticeTaskDocuments;
@@ -22,11 +23,18 @@ use Unico\Core\Models\Task;
 class IstitutoDocumentiTest extends TestCase
 {
     use RefreshDatabase;
+    use SeedsCoreData;
 
     /**
      * @var array<int, string>
      */
     protected array $connectionsToTransact = [null, 'core'];
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seedCoreData('address_types', 'document_types', 'tasks', 'document_requirements', 'pdf_modules', 'pdf_module_fields', 'pratica_stati', 'tipoprodotto', 'tipoprodotto_sub');
+    }
 
     public function test_a_bank_document_is_attached_to_the_product_tasks_and_only_asked_for_that_bank(): void
     {

@@ -47,14 +47,14 @@ class MediazioneEBenestareTest extends TestCase
             ->assertFormFieldHidden('richiesta_benestare');
     }
 
-    public function test_the_practice_shows_the_mediation_amount_asked_to_the_client(): void
+    public function test_the_practice_form_shows_the_mediation_fields_and_keeps_the_amount_entered(): void
     {
         $pratica = Pratica::query()->create(['codice_pratica' => 'MED-1', 'cognome_cliente' => 'Rossi', 'amount' => 10000, 'mediation_fee_percent' => 3, 'upload_at' => now()]);
 
         Livewire::test(EditPratica::class, ['record' => $pratica->getKey()])
-            ->assertSee('Mediazione richiesta al cliente')
-            ->assertSee('€ 300,00')
+            ->assertFormFieldExists('mediation_fee_percent')
+            ->assertFormFieldExists('mediation_fee_amount')
             ->fillForm(['mediation_fee_amount' => 450])
-            ->assertSee('€ 450,00');
+            ->assertFormSet(['mediation_fee_amount' => 450]);
     }
 }

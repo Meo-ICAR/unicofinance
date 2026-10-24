@@ -18,6 +18,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
+use Tests\Concerns\SeedsCoreData;
 use Tests\TestCase;
 use Unico\Core\Models\Document;
 use Unico\Core\Models\Fornitore;
@@ -27,11 +28,18 @@ use Unico\Core\Models\TipoProdotto;
 class PraticheAgenteTest extends TestCase
 {
     use RefreshDatabase;
+    use SeedsCoreData;
 
     /**
      * @var array<int, string>
      */
     protected array $connectionsToTransact = [null, 'core', 'proforma'];
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seedCoreData('address_types', 'document_types', 'tasks', 'document_requirements', 'pdf_modules', 'pdf_module_fields', 'pratica_stati', 'tipoprodotto', 'tipoprodotto_sub');
+    }
 
     public function test_the_agents_panel_lists_only_the_impersonated_agents_practices(): void
     {

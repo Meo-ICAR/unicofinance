@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
+use Tests\Concerns\SeedsCoreData;
 use Tests\Support\FakeDocumentReader;
 use Tests\TestCase;
 use Unico\Core\Documents\Contracts\DocumentReader;
@@ -42,6 +43,7 @@ use Unico\Core\Seeders\PerfezionamentoDocumentiSeeder;
 class SimulazioneTest extends TestCase
 {
     use RefreshDatabase;
+    use SeedsCoreData;
 
     /**
      * @var array<int, string>
@@ -64,6 +66,7 @@ XML;
     protected function setUp(): void
     {
         parent::setUp();
+        $this->seedCoreData('address_types', 'document_types', 'tasks', 'document_requirements', 'pdf_modules', 'pdf_module_fields', 'pratica_stati', 'tipoprodotto', 'tipoprodotto_sub');
 
         config([
             'unico-core.signature.driver' => 'fake',
@@ -251,6 +254,7 @@ XML;
 
     public function test_finalizing_a_personal_loan_creates_a_perfected_practice(): void
     {
+        $this->skipWithoutPdfTemplates();
         Http::fake(['preventivatore.test/*' => Http::response(self::XML)]);
 
         $page = Livewire::test(Simulazione::class)
@@ -273,9 +277,11 @@ XML;
         $page->assertSee('Cedolino pensione 1');
 
         Http::assertSent(function (Request $request): bool {
-            parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
+            // Il preventivatore riceve i parametri in una POST (form); le altre richieste registrate non interessano.
+            $query = $request->data();
 
-            return $query['Tipo_contratto'] === 'Prestito'
+            return isset($query['Tipo_contratto'])
+                && $query['Tipo_contratto'] === 'Prestito'
                 && $query['Tipo_rapporto'] === 'Pensionato INPS'
                 && $query['Importo_richiesto'] === '15000,00'
                 && $query['Durata'] === '84'
@@ -349,8 +355,9 @@ XML;
             ->assertDontSee('Informativa Privacy Compass');
 
         // L'informativa Compass entra solo se la banca della pratica è Compass.
-        $compass = Cliente::query()->where('name', 'COMPASS BANCA S.P.A.')->first();
-        $this->assertNotNull($compass);
+        // La banca (mandante) non è un dato di base del core: si crea qui, con l'id a cui rimanda il tipo documento «Informativa Privacy Compass».
+        $compass = Cliente::query()->where('id', 50)->first() ?? (new Cliente)->forceFill(['id' => 50, 'name' => 'COMPASS BANCA S.P.A.']);
+        $compass->save();
         $page->set('moduli.banca', $compass->getKey())->assertSee('Informativa Privacy Compass');
         $this->assertSame($compass->getKey(), $pratica->fresh()->clienti_id);
         $this->assertSame('COMPASS BANCA S.P.A.', $pratica->fresh()->denominazione_banca);

@@ -26,7 +26,7 @@ class PannelloProduttoriPraticheTest extends TestCase
         $this->actingAs(User::factory()->create(['role' => 'super_admin']));
 
         $configurazione = collect(Filament::getPanel('admin')->getNavigation())
-            ->first(fn (NavigationGroup $group): bool => $group->getLabel() === 'Configurazione');
+            ->first(fn (NavigationGroup $group): bool => $group->getLabel() === 'Settings');
 
         $this->assertInstanceOf(NavigationGroup::class, $configurazione);
         $this->assertTrue($configurazione->isCollapsed());

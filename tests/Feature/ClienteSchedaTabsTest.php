@@ -11,6 +11,7 @@ use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Tests\Concerns\SeedsCoreData;
 use Tests\TestCase;
 use Unico\Core\Enums\DocumentStatus;
 use Unico\Core\Filament\RelationManagers\DocumentsRelationManager;
@@ -24,6 +25,7 @@ use Unico\Core\Pdf\PracticeModuleData;
 class ClienteSchedaTabsTest extends TestCase
 {
     use RefreshDatabase;
+    use SeedsCoreData;
 
     /**
      * @var array<int, string>
@@ -34,6 +36,12 @@ class ClienteSchedaTabsTest extends TestCase
     {
         Filament::setCurrentPanel('admin');
         $this->actingAs(User::factory()->create(['role' => 'super_admin']));
+    }
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seedCoreData('address_types', 'document_types', 'tasks', 'document_requirements', 'pdf_modules', 'pdf_module_fields', 'pratica_stati', 'tipoprodotto', 'tipoprodotto_sub');
     }
 
     public function test_info_tab_holds_privacy_lead_and_user_and_privacy_is_for_individuals_only(): void
@@ -92,6 +100,7 @@ class ClienteSchedaTabsTest extends TestCase
 
     public function test_the_printed_kyc_can_be_sent_for_otp_signature_from_the_documents_tab(): void
     {
+        $this->skipWithoutPdfTemplates();
         $this->admin();
         $persona = Client::query()->create(['name' => 'Rossi', 'first_name' => 'Mario', 'tax_code' => 'RSSMRA80A01H501U', 'is_person' => true, 'email' => 'mario.rossi@example.com', 'phone' => '3330001111']);
         Pratica::query()->create(['codice_pratica' => 'KYC-OTP-1', 'codice_fiscale' => $persona->tax_code, 'tipoprodotto_id' => TipoProdotto::query()->where('name', 'Cessione')->value('id'), 'data_inserimento_pratica' => now(), 'upload_at' => now()]);
@@ -113,6 +122,7 @@ class ClienteSchedaTabsTest extends TestCase
 
     public function test_the_documents_tab_sends_the_documents_to_sign_as_one_bundle(): void
     {
+        $this->skipWithoutPdfTemplates();
         $this->admin();
         $persona = Client::query()->create(['name' => 'Rossi', 'first_name' => 'Mario', 'tax_code' => 'RSSMRA80A01H501U', 'is_person' => true, 'email' => 'mario.rossi@example.com', 'phone' => '3330001111']);
         Pratica::query()->create(['codice_pratica' => 'KYC-PLICO-1', 'codice_fiscale' => $persona->tax_code, 'tipoprodotto_id' => TipoProdotto::query()->where('name', 'Cessione')->value('id'), 'data_inserimento_pratica' => now(), 'upload_at' => now()]);
@@ -241,6 +251,7 @@ class ClienteSchedaTabsTest extends TestCase
 
     public function test_the_card_opens_when_the_client_already_has_a_kyc_questionnaire(): void
     {
+        $this->skipWithoutPdfTemplates();
         $this->admin();
         $persona = Client::query()->create(['name' => 'Meo', 'tax_code' => 'MEOPGS64D04F839I', 'is_person' => true]);
         $persona->kycQuestionnaires()->create(['financing_purpose' => 'personale_familiare', 'status' => 'draft']);
@@ -261,6 +272,7 @@ class ClienteSchedaTabsTest extends TestCase
 
     public function test_the_documents_table_prints_the_selected_modules_and_moves_them_to_the_otp_phase(): void
     {
+        $this->skipWithoutPdfTemplates();
         $this->admin();
         $persona = Client::query()->create(['name' => 'Meo', 'tax_code' => 'MEOPGS64D04F839I', 'is_person' => true]);
         Pratica::query()->create(['codice_pratica' => 'KYC-4', 'codice_fiscale' => $persona->tax_code, 'tipoprodotto_id' => TipoProdotto::query()->where('name', 'Cessione')->value('id'), 'data_inserimento_pratica' => now(), 'upload_at' => now()]);
@@ -278,6 +290,7 @@ class ClienteSchedaTabsTest extends TestCase
 
     public function test_the_scheduled_command_moves_the_unsent_modules_to_the_print_phases(): void
     {
+        $this->skipWithoutPdfTemplates();
         $persona = Client::query()->create(['name' => 'Meo', 'tax_code' => 'MEOPGS64D04F839I', 'is_person' => true]);
         Pratica::query()->create(['codice_pratica' => 'KYC-5', 'codice_fiscale' => $persona->tax_code, 'tipoprodotto_id' => TipoProdotto::query()->where('name', 'Cessione')->value('id'), 'data_inserimento_pratica' => now(), 'upload_at' => now()]);
         $tipo = PdfModule::query()->active()->where('name', 'like', 'QAV Persona fisica%')->firstOrFail()->documentType;

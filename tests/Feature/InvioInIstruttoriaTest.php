@@ -7,6 +7,7 @@ use App\Models\Pratica;
 use App\Services\Istruttoria\InvioInIstruttoria;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
+use Tests\Concerns\SeedsCoreData;
 use Tests\TestCase;
 use Unico\Core\Enums\DocumentStatus;
 use Unico\Core\Models\Document;
@@ -19,6 +20,7 @@ use ZipArchive;
 class InvioInIstruttoriaTest extends TestCase
 {
     use RefreshDatabase;
+    use SeedsCoreData;
 
     /**
      * @var array<int, string>
@@ -49,6 +51,12 @@ class InvioInIstruttoriaTest extends TestCase
     private function istruttore(string $email): void
     {
         Employee::query()->create(['name' => 'Istruttore Prova', 'email' => $email, 'employee_roles' => [InvioInIstruttoria::RUOLO_ISTRUTTORI]]);
+    }
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seedCoreData('pratica_stati', 'tipoprodotto', 'tipoprodotto_sub');
     }
 
     public function test_the_dossier_is_created_the_state_moves_to_istruttoria_and_the_instructors_are_notified(): void

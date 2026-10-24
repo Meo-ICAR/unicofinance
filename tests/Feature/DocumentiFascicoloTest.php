@@ -13,8 +13,12 @@ use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
+use Spatie\MediaLibrary\MediaCollections\Events\MediaHasBeenAddedEvent;
+use Tests\Concerns\SeedsCoreData;
 use Tests\TestCase;
 use Unico\Core\Documents\Listeners\AnalyzeUploadedDocument;
 use Unico\Core\Documents\PracticeDocumentIntake;
@@ -35,6 +39,7 @@ use Unico\Core\Pdf\PracticeModuleData;
 class DocumentiFascicoloTest extends TestCase
 {
     use RefreshDatabase;
+    use SeedsCoreData;
 
     /**
      * @var array<int, string>
@@ -68,6 +73,12 @@ class DocumentiFascicoloTest extends TestCase
         }
 
         return [Pratica::find($pratica->getKey()), $documenti];
+    }
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seedCoreData('address_types', 'document_types', 'tasks', 'document_requirements', 'pdf_modules', 'pdf_module_fields', 'pratica_stati', 'tipoprodotto', 'tipoprodotto_sub');
     }
 
     public function test_the_header_shows_how_far_the_documents_of_the_current_task_are(): void
@@ -241,6 +252,10 @@ class DocumentiFascicoloTest extends TestCase
 
     public function test_the_corrected_file_of_a_rejected_document_becomes_a_new_version_and_the_old_keeps_its_history(): void
     {
+        // Il listener di caricamento si registra solo con l'analisi automatica attiva: qui serve, ma senza far partire l'analisi.
+        Queue::fake();
+        Event::listen(MediaHasBeenAddedEvent::class, AnalyzeUploadedDocument::class);
+
         [$pratica, $documenti] = $this->pratica();
         $vecchio = $documenti['anomalo'];
         $vecchio->forceFill(['status' => DocumentStatus::REJECTED, 'rejection_note' => 'Foto sfocata'])->saveQuietly();

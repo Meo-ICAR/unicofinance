@@ -13,6 +13,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Livewire;
 use Mockery;
+use Tests\Concerns\SeedsCoreData;
 use Tests\TestCase;
 use Unico\Core\Documents\PracticeSignaturePackage;
 use Unico\Core\Enums\DocumentStatus;
@@ -26,6 +27,7 @@ use Unico\Core\Models\Pratica;
 class ContoEstintivoTest extends TestCase
 {
     use RefreshDatabase;
+    use SeedsCoreData;
 
     /**
      * @var array<int, string>
@@ -40,6 +42,12 @@ class ContoEstintivoTest extends TestCase
     private function richieste(Pratica $pratica): int
     {
         return DocumentRequest::query()->where('requestable_type', 'pratica')->where('requestable_id', (string) $pratica->getKey())->where('name', 'Conto estintivo')->count();
+    }
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seedCoreData('companies');
     }
 
     public function test_the_payoff_statement_is_requested_only_when_the_institute_has_an_estinzioni_branch(): void

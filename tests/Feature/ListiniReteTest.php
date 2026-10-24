@@ -15,6 +15,7 @@ use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Livewire\Livewire;
+use Tests\Concerns\SeedsCoreData;
 use Tests\TestCase;
 use Unico\Core\Models\Fornitore;
 use Unico\Core\Models\Pratica;
@@ -23,6 +24,7 @@ use Unico\Core\Models\TipoProdotto;
 class ListiniReteTest extends TestCase
 {
     use RefreshDatabase;
+    use SeedsCoreData;
 
     /**
      * @var array<int, string>
@@ -32,6 +34,12 @@ class ListiniReteTest extends TestCase
     private function voci(string $nome, bool $coordinamento): array
     {
         return ListinoProvvigionale::query()->where('name', $nome)->where('coordinamento', $coordinamento)->firstOrFail()->voci->pluck('percentuale', 'voce')->map(fn ($v) => (float) $v)->sortKeys()->all();
+    }
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seedCoreData('tipoprodotto', 'tipoprodotto_sub');
     }
 
     public function test_the_network_listini_are_created_from_the_distribution_structure(): void

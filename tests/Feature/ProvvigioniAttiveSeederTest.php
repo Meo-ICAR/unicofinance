@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use Database\Seeders\ProvvigioniAttiveSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\SeedsCoreData;
 use Tests\TestCase;
 use Unico\Core\Models\Cliente;
 use Unico\Core\Models\ProvvigioniRule;
@@ -12,6 +13,7 @@ use Unico\Core\Models\TipoProdotto;
 class ProvvigioniAttiveSeederTest extends TestCase
 {
     use RefreshDatabase;
+    use SeedsCoreData;
 
     /**
      * @var array<int, string>
@@ -26,6 +28,17 @@ class ProvvigioniAttiveSeederTest extends TestCase
         return $banca === null
             ? $query->whereNull('clienti_id')->orderBy('ltv_min')->get()
             : $query->where('clienti_id', (string) Cliente::query()->where('name', $banca)->firstOrFail()->getKey())->orderBy('ltv_min')->get();
+    }
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seedCoreData('tipoprodotto', 'tipoprodotto_sub');
+
+        // Le banche (mandanti) non sono dati di base del core: il seeder le cerca per nome, le assenti le salta.
+        foreach (collect(ProvvigioniAttiveSeeder::BANCHE)->flatten()->unique() as $banca) {
+            Cliente::query()->firstOrCreate(['name' => $banca]);
+        }
     }
 
     public function test_assignment_by_product_and_bank(): void

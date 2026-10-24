@@ -13,6 +13,7 @@ use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
+use Tests\Concerns\SeedsCoreData;
 use Tests\TestCase;
 use Unico\Core\Models\Cliente;
 use Unico\Core\Models\Fornitore;
@@ -23,6 +24,7 @@ use Unico\Core\Models\TipoProdotto;
 class PraticaFormLayoutTest extends TestCase
 {
     use RefreshDatabase;
+    use SeedsCoreData;
 
     /**
      * @var array<int, string>
@@ -43,6 +45,12 @@ class PraticaFormLayoutTest extends TestCase
         $this->actingAs($agent);
 
         return [$fornitore, $agent];
+    }
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seedCoreData('tipoprodotto', 'tipoprodotto_sub');
     }
 
     public function test_the_product_section_follows_the_requested_order_and_switches_between_installment_and_amount(): void
