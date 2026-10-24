@@ -16,10 +16,11 @@ use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Unico\Core\Models\PraticaStato;
 
 /** Pratiche inviate alla banca senza esito da più giorni: l'istruttore controlla il portale e aggiorna lo stato. */
-class RisposteBancaInSospeso extends CollapsibleTableWidget
+class RisposteBancaInSospeso extends CollapsibleTableWidget implements EspostoInApi
 {
     protected static ?int $sort = 5;
 
@@ -27,17 +28,49 @@ class RisposteBancaInSospeso extends CollapsibleTableWidget
 
     protected static ?string $heading = 'In attesa della banca';
 
+    public static function parametroApi(): string
+    {
+        return 'employee_id';
+    }
+
+    public static function queryApi(?int $id): Builder
+    {
+        return static::baseQuery()->when($id, fn (Builder $query, int $istruttore): Builder => $query->where('employee_id', $istruttore));
+    }
+
+    public static function rigaApi(Model $record): array
+    {
+        /** @var Pratica $record */
+        return [
+            'id' => $record->getKey(),
+            'codice_pratica' => $record->codice_pratica,
+            'cliente' => trim($record->cognome_cliente.' '.$record->nome_cliente),
+            'prodotto' => $record->tipoprodotto?->name,
+            'banca' => $record->denominazione_banca,
+            'codice_pratica_banca' => $record->codice_pratica_banca,
+            'employee_id' => $record->employee_id,
+            'stato_pratica' => $record->praticaStato?->name,
+            'inviata_il' => $record->sended_at?->toDateString(),
+            'giorni_senza_esito' => (int) $record->sended_at?->diffInDays(now()),
+        ];
+    }
+
+    private static function baseQuery(): Builder
+    {
+        return Pratica::query()
+            ->whereNotNull('sended_at')
+            ->where('is_notowned', false)
+            ->whereNull('approved_at')
+            ->whereNull('rejected_at')
+            ->whereNull('erogated_at')
+            ->whereDoesntHave('praticaStato', fn (Builder $stato) => $stato->where('is_suspended', true))
+            ->with(['praticaStato', 'clienti', 'tipoprodotto']);
+    }
+
     public function table(Table $table): Table
     {
         return $table
-            ->query(fn (): Builder => Pratica::query()
-                ->whereNotNull('sended_at')
-                ->where('is_notowned', false)
-                ->whereNull('approved_at')
-                ->whereNull('rejected_at')
-                ->whereNull('erogated_at')
-                ->whereDoesntHave('praticaStato', fn (Builder $stato) => $stato->where('is_suspended', true))
-                ->with(['praticaStato', 'clienti', 'tipoprodotto']))
+            ->query(fn (): Builder => static::baseQuery())
             ->defaultSort('sended_at')
             ->paginated([10, 25])
             ->columns([

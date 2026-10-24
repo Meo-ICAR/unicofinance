@@ -29,7 +29,7 @@ class IstruttoriaPraticheTest extends TestCase
      */
     protected array $connectionsToTransact = [null, 'core'];
 
-    public function test_rejected_practices_are_excluded_by_default_and_included_when_the_filter_is_removed(): void
+    public function test_rejected_practices_are_excluded_only_when_the_filter_is_enabled(): void
     {
         Filament::setCurrentPanel('admin');
         $this->actingAs(User::factory()->create(['role' => 'super_admin']));
@@ -38,10 +38,10 @@ class IstruttoriaPraticheTest extends TestCase
         $rejected = Pratica::query()->create(['codice_pratica' => 'ISTR-RESPINTA', 'cognome_cliente' => 'Bianchi', 'upload_at' => now(), 'rejected_at' => now()]);
 
         Livewire::test(ListPraticas::class)
+            ->assertCanSeeTableRecords([$open, $rejected])
+            ->filterTable('escludi_respinte')
             ->assertCanSeeTableRecords([$open])
-            ->assertCanNotSeeTableRecords([$rejected])
-            ->removeTableFilter('escludi_respinte')
-            ->assertCanSeeTableRecords([$open, $rejected]);
+            ->assertCanNotSeeTableRecords([$rejected]);
     }
 
     public function test_the_status_history_slide_over_lists_changes_newest_first_with_the_employee(): void

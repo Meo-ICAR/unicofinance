@@ -5,6 +5,7 @@ namespace App\Services\Preventivazione;
 use App\Enums\SimulationContractType;
 use App\Models\FinancingQuote;
 use App\Models\User;
+use App\Services\Istruttoria\AssegnaIstruttore;
 use Unico\Core\Documents\PracticeTaskDocuments;
 use Unico\Core\Models\Fornitore;
 use Unico\Core\Models\Pratica;
@@ -40,6 +41,7 @@ class PracticeFinalizer
             'pratica_stato_id' => $this->status($productName, 'PERFEZIONARE')->getKey(),
         ]);
         app(PracticeTaskDocuments::class)->attachToPractice($pratica);
+        app(AssegnaIstruttore::class)->assegna($pratica);
         $quote->update(['status' => 'perfezionato']);
 
         return $quote->fresh(['pratica.praticaStato', 'pratica.tipoprodotto']);

@@ -25,7 +25,7 @@ class InvioInIstruttoria
     /** Ruolo (employee_types) di chi riceve le pratiche in istruttoria: dipendenti ed esterni che lo hanno in `employee_roles`. */
     public const RUOLO_ISTRUTTORI = 'istruttore';
 
-    public function __construct(private PracticeDossier $plichi, private PracticeFinalizer $finalizer, private CambioStatoPratica $stati) {}
+    public function __construct(private PracticeDossier $plichi, private PracticeFinalizer $finalizer, private CambioStatoPratica $stati, private AssegnaIstruttore $assegnatore) {}
 
     /**
      * @return array{plico: Document, destinatari: list<string>, inviata: bool, simulazione: bool}
@@ -37,6 +37,8 @@ class InvioInIstruttoria
         $prodotto = (string) $pratica->tipoprodotto?->name;
         $stato = $this->finalizer->status($prodotto, self::STATO);
         $this->stati->cambia($pratica, $stato->getKey(), 'Fascicolo firmato: plico inviato in istruttoria', $origine);
+        // La banca è scelta dopo la perfezione: se ha uno specialista, la pratica passa a lui.
+        $this->assegnatore->assegna($pratica);
 
         $simulazione = SignatureDemo::attiva();
         $destinatari = $this->destinatari($simulazione);

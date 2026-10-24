@@ -10,7 +10,9 @@ use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
+use Unico\Core\Models\Cliente;
 use Unico\Core\Models\Employee;
+use Unico\Core\Models\TipoProdotto;
 
 class IstruttoriImpersonationTest extends TestCase
 {
@@ -21,11 +23,11 @@ class IstruttoriImpersonationTest extends TestCase
      */
     protected array $connectionsToTransact = [null, 'core'];
 
-    private function istruttore(string $nome, bool $conUtente = true, string $tipo = 'istruttore'): Employee
+    private function istruttore(string $nome, bool $conUtente = true, string $ruolo = 'istruttore'): Employee
     {
         $utente = $conUtente ? User::factory()->create(['role' => 'employee']) : null;
 
-        return Employee::query()->create(['name' => $nome, 'employee_types' => $tipo, 'user_id' => $utente?->id, 'is_active' => true]);
+        return Employee::query()->create(['name' => $nome, 'employee_types' => 'dipendente', 'employee_roles' => [$ruolo], 'user_id' => $utente?->id, 'is_active' => true]);
     }
 
     public function test_an_administrator_lists_the_instructors_and_enters_as_one_of_them(): void
@@ -40,6 +42,7 @@ class IstruttoriImpersonationTest extends TestCase
         Livewire::test(ListIstruttori::class)
             ->assertCanSeeTableRecords([$istruttore, $senzaUtente])
             ->assertCanNotSeeTableRecords([$altro])
+            ->assertActionVisible(TestAction::make('specializzazione')->table($istruttore))
             ->assertActionVisible(TestAction::make('impersonateIstruttore')->table($istruttore))
             ->assertActionHidden(TestAction::make('impersonateIstruttore')->table($senzaUtente))
             ->callAction(TestAction::make('impersonateIstruttore')->table($istruttore));
@@ -87,5 +90,21 @@ class IstruttoriImpersonationTest extends TestCase
         $this->assertTrue($servizio->canImpersonate(User::factory()->create(['role' => 'admin']), $istruttore));
 
         $this->post(route('istruttori.impersonation.leave'))->assertForbidden();
+    }
+
+    public function test_an_administrator_saves_the_specialization_of_an_instructor(): void
+    {
+        Filament::setCurrentPanel('admin');
+        $this->actingAs(User::factory()->create(['role' => 'super_admin']));
+        $istruttore = $this->istruttore('Istruttore Uno');
+        $prodotto = TipoProdotto::query()->create(['name' => 'Prestito ZZ', 'is_active' => true]);
+        $banca = Cliente::query()->create(['name' => 'CAPITALFIN ZZ', 'is_active' => true]);
+
+        Livewire::test(ListIstruttori::class)
+            ->callAction(TestAction::make('specializzazione')->table($istruttore), ['tipoprodotto_ids' => [$prodotto->getKey()], 'clienti_ids' => [$banca->getKey()]])
+            ->assertHasNoFormErrors();
+
+        $this->assertSame([$prodotto->getKey()], $istruttore->fresh()->tipoprodotto_ids);
+        $this->assertSame([$banca->getKey()], $istruttore->fresh()->clienti_ids);
     }
 }

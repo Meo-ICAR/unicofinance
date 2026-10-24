@@ -40,20 +40,22 @@ class DashboardIstruttoreTest extends TestCase
 
     private function stato(array $flags = []): PraticaStato
     {
-        return PraticaStato::query()->create(['codice' => 'ST-'.uniqid(), 'tipo_finanziamento' => 'Test', 'name' => 'Stato '.uniqid(), 'ordine' => 0, 'is_working' => true, 'colore' => 'gray'] + $flags);
+        return PraticaStato::query()->create(['codice' => 'ST-'.uniqid(), 'tipo_finanziamento' => 'Test', 'name' => 'Stato '.uniqid(), 'ordine' => 0, 'is_working' => true, 'colore' => 'gray', ...$flags]);
     }
 
     public function test_unassigned_practices_are_listed_and_taken_over_by_the_current_instructor(): void
     {
         $istruttore = $this->istruttore();
-        $nuova = Pratica::query()->create(['codice_pratica' => 'DSH-1', 'cognome_cliente' => 'Rossi', 'data_inserimento_pratica' => now()->subDays(3)->toDateString(), 'upload_at' => now()]);
-        $vecchia = Pratica::query()->create(['codice_pratica' => 'DSH-2', 'cognome_cliente' => 'Storica', 'data_inserimento_pratica' => now()->subDays(400)->toDateString(), 'upload_at' => now()]);
-        $respinta = Pratica::query()->create(['codice_pratica' => 'DSH-3', 'cognome_cliente' => 'Respinta', 'data_inserimento_pratica' => now()->toDateString(), 'rejected_at' => now()->toDateString(), 'upload_at' => now()]);
+        $nonInLavorazione = $this->stato(['is_working' => false])->getKey();
+        $nuova = Pratica::query()->create(['codice_pratica' => 'DSH-1', 'cognome_cliente' => 'Rossi', 'data_inserimento_pratica' => now()->subDays(3)->toDateString(), 'pratica_stato_id' => $nonInLavorazione, 'upload_at' => now()]);
+        $vecchia = Pratica::query()->create(['codice_pratica' => 'DSH-2', 'cognome_cliente' => 'Storica', 'data_inserimento_pratica' => now()->subDays(400)->toDateString(), 'pratica_stato_id' => $nonInLavorazione, 'upload_at' => now()]);
+        $respinta = Pratica::query()->create(['codice_pratica' => 'DSH-3', 'cognome_cliente' => 'Respinta', 'data_inserimento_pratica' => now()->toDateString(), 'rejected_at' => now()->toDateString(), 'pratica_stato_id' => $nonInLavorazione, 'upload_at' => now()]);
+        $inLavorazione = Pratica::query()->create(['codice_pratica' => 'DSH-6', 'cognome_cliente' => 'Lavorata', 'data_inserimento_pratica' => now()->toDateString(), 'pratica_stato_id' => $this->stato(['is_working' => true])->getKey(), 'upload_at' => now()]);
         $sospesa = Pratica::query()->create(['codice_pratica' => 'DSH-4', 'cognome_cliente' => 'Sospesa', 'data_inserimento_pratica' => now()->toDateString(), 'pratica_stato_id' => $this->stato(['is_suspended' => true])->getKey(), 'upload_at' => now()]);
 
         Livewire::test(DaPrendereInCarico::class)
             ->assertCanSeeTableRecords([$nuova])
-            ->assertCanNotSeeTableRecords([$vecchia, $respinta, $sospesa])
+            ->assertCanNotSeeTableRecords([$vecchia, $respinta, $sospesa, $inLavorazione])
             ->callTableAction('prendiInCarico', $nuova)
             ->assertNotified('Pratica presa in carico');
 
@@ -67,6 +69,7 @@ class DashboardIstruttoreTest extends TestCase
             'codice_pratica' => 'DSH-ATT',
             'cognome_cliente' => 'Attesa',
             'data_inserimento_pratica' => today()->subDays(4)->toDateString(),
+            'pratica_stato_id' => $this->stato(['is_working' => false])->getKey(),
             'upload_at' => now(),
         ]);
 
@@ -80,7 +83,7 @@ class DashboardIstruttoreTest extends TestCase
     {
         Filament::setCurrentPanel('admin');
         $this->actingAs(User::factory()->create(['role' => 'super_admin']));
-        $pratica = Pratica::query()->create(['codice_pratica' => 'DSH-5', 'data_inserimento_pratica' => now()->toDateString(), 'upload_at' => now()]);
+        $pratica = Pratica::query()->create(['codice_pratica' => 'DSH-5', 'data_inserimento_pratica' => now()->toDateString(), 'pratica_stato_id' => $this->stato(['is_working' => false])->getKey(), 'upload_at' => now()]);
 
         Livewire::test(DaPrendereInCarico::class)
             ->callTableAction('prendiInCarico', $pratica)

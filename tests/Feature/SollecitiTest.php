@@ -66,7 +66,7 @@ class SollecitiTest extends TestCase
         Mail::fake();
         Filament::setCurrentPanel('admin');
         $this->actingAs(User::factory()->create(['role' => 'super_admin']));
-        $istruttore = Employee::query()->create(['name' => 'Istr Uno', 'email' => 'istr@races.it', 'employee_types' => 'istruttore', 'is_active' => true]);
+        $istruttore = Employee::query()->create(['name' => 'Istr Uno', 'email' => 'istr@races.it', 'employee_roles' => ['istruttore'], 'is_active' => true]);
         $cliente = Client::query()->create(['name' => 'Rossi', 'first_name' => 'Mario', 'email' => 'mario@example.test', 'is_person' => true]);
         $pratica = $this->pratica('P-MAIL', ['employee_id' => $istruttore->getKey()]);
         $uno = $this->documento($pratica, 'Busta paga', $cliente);

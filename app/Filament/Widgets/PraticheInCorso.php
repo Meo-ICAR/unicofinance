@@ -9,9 +9,10 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 
 /** Pratiche in lavorazione: non respinte, sospese, erogate o chiuse. Di default solo quelle dell'istruttore. */
-class PraticheInCorso extends CollapsibleTableWidget
+class PraticheInCorso extends CollapsibleTableWidget implements EspostoInApi
 {
     protected static ?int $sort = 2;
 
@@ -19,16 +20,47 @@ class PraticheInCorso extends CollapsibleTableWidget
 
     protected static ?string $heading = 'Pratiche in corso';
 
+    public static function parametroApi(): string
+    {
+        return 'employee_id';
+    }
+
+    public static function queryApi(?int $id): Builder
+    {
+        return static::baseQuery()->when($id, fn (Builder $query, int $istruttore): Builder => $query->where('employee_id', $istruttore));
+    }
+
+    public static function rigaApi(Model $record): array
+    {
+        /** @var Pratica $record */
+        return [
+            'id' => $record->getKey(),
+            'codice_pratica' => $record->codice_pratica,
+            'cliente' => trim($record->cognome_cliente.' '.$record->nome_cliente),
+            'prodotto' => $record->tipoprodotto?->name,
+            'banca' => $record->denominazione_banca,
+            'codice_pratica_banca' => $record->codice_pratica_banca,
+            'employee_id' => $record->employee_id,
+            'stato_pratica' => $record->praticaStato?->name,
+            'giorni_nello_stato' => (int) ($record->praticaStatusHistory->max('changed_at') ?? $record->updated_at)?->diffInDays(now()),
+        ];
+    }
+
+    private static function baseQuery(): Builder
+    {
+        return Pratica::query()
+            ->whereNotNull('employee_id')
+            ->where('is_notowned', false)
+            ->whereNull('rejected_at')
+            ->whereNull('erogated_at')
+            ->whereDoesntHave('praticaStato', fn (Builder $stato) => $stato->where('is_suspended', true)->orWhere('is_estingued', true))
+            ->with(['tipoprodotto', 'praticaStato', 'praticaStatusHistory']);
+    }
+
     public function table(Table $table): Table
     {
         return $table
-            ->query(fn (): Builder => Pratica::query()
-                ->whereNotNull('employee_id')
-                ->where('is_notowned', false)
-                ->whereNull('rejected_at')
-                ->whereNull('erogated_at')
-                ->whereDoesntHave('praticaStato', fn (Builder $stato) => $stato->where('is_suspended', true)->orWhere('is_estingued', true))
-                ->with(['tipoprodotto', 'praticaStato', 'praticaStatusHistory']))
+            ->query(fn (): Builder => static::baseQuery())
             ->defaultSort('updated_at', 'asc')
             ->paginated([10, 25])
             ->columns([

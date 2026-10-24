@@ -8,6 +8,7 @@ use App\Models\Pratica;
 use App\Services\CambioStatoPratica;
 use App\Services\Istruttoria\CompletezzaDocumentale;
 use App\Support\CompensoMediazione;
+use App\Support\Istruttori;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
@@ -106,7 +107,7 @@ class PraticasTable
                     ->searchable(),
                 SelectFilter::make('employee_id')
                     ->label('Istruttore')
-                    ->relationship('employee', 'name', fn (Builder $query) => $query->where('employee_types', 'istruttore'))
+                    ->relationship('employee', 'name', fn (Builder $query) => Istruttori::scope($query))
                     ->searchable()
                     ->preload(),
                 Filter::make('inviate_in_banca')
@@ -136,22 +137,31 @@ class PraticasTable
                     ->query(fn (Builder $query, array $data): Builder => $query
                         ->when($data['dal'] ?? null, fn (Builder $query, string $date): Builder => $query->whereDate('updated_at', '>=', $date))
                         ->when($data['al'] ?? null, fn (Builder $query, string $date): Builder => $query->whereDate('updated_at', '<=', $date))),
-                // Predefinito: le pratiche sospese sono escluse.
                 TernaryFilter::make('sospese')
                     ->label('Pratiche sospese')
                     ->placeholder('Tutte')
                     ->trueLabel('Solo sospese')
                     ->falseLabel('Escluse le sospese')
-                    ->default(false)
                     ->queries(
                         true: fn (Builder $query): Builder => $query->whereHas('praticaStato', fn (Builder $stato) => $stato->where('is_suspended', true)),
                         false: fn (Builder $query): Builder => $query->whereDoesntHave('praticaStato', fn (Builder $stato) => $stato->where('is_suspended', true)),
                         blank: fn (Builder $query): Builder => $query,
                     ),
+                // Predefinito: solo le pratiche in lavorazione (`is_working` dello stato); senza stato conta come in lavorazione.
+                TernaryFilter::make('in_lavorazione')
+                    ->label('In lavorazione')
+                    ->placeholder('Tutte')
+                    ->trueLabel('Solo in lavorazione')
+                    ->falseLabel('Solo concluse')
+                    ->default(true)
+                    ->queries(
+                        true: fn (Builder $query): Builder => $query->whereDoesntHave('praticaStato', fn (Builder $stato) => $stato->where('is_working', false)),
+                        false: fn (Builder $query): Builder => $query->whereHas('praticaStato', fn (Builder $stato) => $stato->where('is_working', false)),
+                        blank: fn (Builder $query): Builder => $query,
+                    ),
                 Filter::make('escludi_respinte')
                     ->label('Escludi pratiche respinte')
                     ->toggle()
-                    ->default()
                     ->query(fn (Builder $query): Builder => $query->whereNull('rejected_at')),
             ])
             ->recordActions([

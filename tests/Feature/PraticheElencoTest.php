@@ -23,10 +23,10 @@ class PraticheElencoTest extends TestCase
 
     private function stato(string $name, array $flags = []): PraticaStato
     {
-        return PraticaStato::query()->firstOrCreate(['codice' => $name, 'tipo_finanziamento' => 'Cessione'], ['name' => $name, 'ordine' => 0, 'is_working' => true, 'is_estingued' => false, 'colore' => 'gray'] + $flags);
+        return PraticaStato::query()->firstOrCreate(['codice' => $name, 'tipo_finanziamento' => 'Cessione'], ['name' => $name, 'ordine' => 0, 'is_working' => true, 'is_estingued' => false, 'colore' => 'gray', ...$flags]);
     }
 
-    public function test_suspended_practices_are_hidden_by_default_and_the_ternary_filter_shows_them(): void
+    public function test_the_suspended_ternary_filter_excludes_or_shows_only_suspended_practices(): void
     {
         Filament::setCurrentPanel('admin');
         $this->actingAs(User::factory()->create(['role' => 'super_admin']));
@@ -35,6 +35,8 @@ class PraticheElencoTest extends TestCase
         $sospesa = Pratica::query()->create(['codice_pratica' => 'ELE-SOSPESA', 'pratica_stato_id' => $this->stato('SOSPESA-TEST', ['is_suspended' => true])->getKey(), 'upload_at' => now()]);
 
         Livewire::test(ListPraticas::class)
+            ->assertCanSeeTableRecords([$attiva, $sospesa])
+            ->filterTable('sospese', false)
             ->assertCanSeeTableRecords([$attiva])
             ->assertCanNotSeeTableRecords([$sospesa])
             ->filterTable('sospese', true)
@@ -42,6 +44,22 @@ class PraticheElencoTest extends TestCase
             ->assertCanNotSeeTableRecords([$attiva])
             ->removeTableFilter('sospese')
             ->assertCanSeeTableRecords([$attiva, $sospesa]);
+    }
+
+    public function test_only_practices_in_progress_are_shown_by_default(): void
+    {
+        Filament::setCurrentPanel('admin');
+        $this->actingAs(User::factory()->create(['role' => 'super_admin']));
+
+        $inLavorazione = Pratica::query()->create(['codice_pratica' => 'ELE-LAV', 'pratica_stato_id' => $this->stato('Inserita')->getKey(), 'upload_at' => now()]);
+        $senzaStato = Pratica::query()->create(['codice_pratica' => 'ELE-SENZA', 'upload_at' => now()]);
+        $conclusa = Pratica::query()->create(['codice_pratica' => 'ELE-CONCLUSA', 'pratica_stato_id' => $this->stato('CONCLUSA-TEST', ['is_working' => false])->getKey(), 'upload_at' => now()]);
+
+        Livewire::test(ListPraticas::class)
+            ->assertCanSeeTableRecords([$inLavorazione, $senzaStato])
+            ->assertCanNotSeeTableRecords([$conclusa])
+            ->removeTableFilter('in_lavorazione')
+            ->assertCanSeeTableRecords([$inLavorazione, $senzaStato, $conclusa]);
     }
 
     public function test_the_state_can_be_changed_from_the_table_with_history_and_dates(): void

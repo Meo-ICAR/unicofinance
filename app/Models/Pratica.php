@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Services\Agenti\AgentRequestDetails;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
@@ -18,6 +20,21 @@ class Pratica extends CorePratica
     public function getMorphClass(): string
     {
         return 'pratica';
+    }
+
+    /**
+     * Pratiche in corso: lo stato è in lavorazione e non è né approvato, né respinto, né sospeso.
+     *
+     * @param  Builder<Pratica>  $query
+     */
+    #[Scope]
+    protected function inCorso(Builder $query): void
+    {
+        $query->whereHas('praticaStato', fn (Builder $stato) => $stato
+            ->where('is_working', true)
+            ->where('is_approved', false)
+            ->where('is_rejected', false)
+            ->where('is_suspended', false));
     }
 
     public function documents(): MorphMany

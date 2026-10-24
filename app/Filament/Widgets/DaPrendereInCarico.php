@@ -15,11 +15,12 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Unico\Core\Models\Document;
 
-/** Pratiche senza istruttore (`employee_id`), escluse respinte e sospese: l'istruttore le prende in carico. */
-class DaPrendereInCarico extends CollapsibleTableWidget
+/** Pratiche senza istruttore (`employee_id`), escluse respinte, sospese e negli stati in lavorazione (`is_working`): l'istruttore le prende in carico. */
+class DaPrendereInCarico extends CollapsibleTableWidget implements EspostoInApi
 {
     protected static ?int $sort = 1;
 
@@ -27,22 +28,54 @@ class DaPrendereInCarico extends CollapsibleTableWidget
 
     protected static ?string $heading = 'Da prendere in carico';
 
+    /** Pratiche senza istruttore: non c'è un parametro che le limiti. */
+    public static function parametroApi(): string
+    {
+        return 'employee_id';
+    }
+
+    public static function queryApi(?int $id): Builder
+    {
+        return static::baseQuery();
+    }
+
+    public static function rigaApi(Model $record): array
+    {
+        /** @var Pratica $record */
+        return [
+            'id' => $record->getKey(),
+            'codice_pratica' => $record->codice_pratica,
+            'cliente' => trim($record->cognome_cliente.' '.$record->nome_cliente),
+            'prodotto' => $record->tipoprodotto?->name,
+            'banca' => $record->denominazione_banca,
+            'stato_pratica' => $record->praticaStato?->name,
+            'agente' => $record->fornitori?->name,
+            'data_inserimento_pratica' => $record->data_inserimento_pratica?->toDateString(),
+            'giorni_attesa' => $record->data_inserimento_pratica === null ? null : (int) $record->data_inserimento_pratica->diffInDays(today()),
+        ];
+    }
+
+    private static function baseQuery(): Builder
+    {
+        return Pratica::query()
+            ->whereNull('employee_id')
+            ->where('is_notowned', false)
+            ->whereNull('rejected_at')
+            ->whereDoesntHave('praticaStato', fn (Builder $stato) => $stato->where('is_suspended', true))
+            ->whereHas('praticaStato', fn (Builder $stato) => $stato->where('is_working', false))
+            ->with(['tipoprodotto', 'fornitori', 'praticaStato']);
+    }
+
     public function table(Table $table): Table
     {
         return $table
-            ->query(fn (): Builder => Pratica::query()
-                ->whereNull('employee_id')
-                ->where('is_notowned', false)
-                ->whereNull('rejected_at')
-                ->whereDoesntHave('praticaStato', fn (Builder $stato) => $stato->where('is_suspended', true))
-                ->with(['tipoprodotto', 'fornitori']))
+            ->query(fn (): Builder => static::baseQuery())
             ->defaultSort('data_inserimento_pratica', 'desc')
-            ->description(fn (): string => $this->getFilteredTableQuery()->count().' pratiche')
             ->paginated([10, 25])
             ->columns([
                 TextColumn::make('cognome_cliente')->label('Cliente')->searchable()->sortable()->description(fn (Pratica $record): ?string => $record->nome_cliente),
-                TextColumn::make('tipoprodotto.name')->label('Prodotto')->sortable(),
-                TextColumn::make('denominazione_banca')->label('Banca')->searchable()->sortable(),
+                TextColumn::make('tipoprodotto.name')->label('Prodotto')->sortable()->description(fn (Pratica $record): ?string => $record->denominazione_banca),
+                TextColumn::make('praticaStato.name')->label('Stato pratica')->placeholder('—')->badge()->sortable(),
                 TextColumn::make('fornitori.name')->label('Agente')->placeholder('—')->sortable(),
                 TextColumn::make('giorni_attesa')
                     ->label('Attesa')

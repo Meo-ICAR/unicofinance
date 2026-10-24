@@ -9,12 +9,13 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Unico\Core\Models\Document;
 use Unico\Core\Models\SignatureRequest;
 use Unico\Core\Models\SignatureRequestSigner;
 
 /** Richieste di firma aperte (OTP) sui documenti delle pratiche: da quanti giorni aspettano il cliente. */
-class InFirma extends CollapsibleTableWidget
+class InFirma extends CollapsibleTableWidget implements EspostoInApi
 {
     protected static ?int $sort = 6;
 
@@ -22,13 +23,48 @@ class InFirma extends CollapsibleTableWidget
 
     protected static ?string $heading = 'Documenti in firma';
 
+    public static function parametroApi(): string
+    {
+        return 'employee_id';
+    }
+
+    public static function queryApi(?int $id): Builder
+    {
+        return static::baseQuery()->when($id, fn (Builder $query, int $istruttore): Builder => static::perIstruttore($query, $istruttore));
+    }
+
+    public static function rigaApi(Model $record): array
+    {
+        /** @var SignatureRequest $record */
+        return [
+            'id' => $record->getKey(),
+            'pratica_id' => $record->document?->documentable_id,
+            'cliente' => $record->document?->documentable?->cognome_cliente,
+            'banca' => $record->document?->documentable?->denominazione_banca,
+            'documento' => $record->document?->name,
+            'firmatari' => $record->signatureRequestSigners->pluck('name')->all(),
+            'stato' => $record->status instanceof \BackedEnum ? $record->status->value : $record->status,
+            'inviata_il' => $record->sent_at?->toIso8601String(),
+        ];
+    }
+
+    private static function baseQuery(): Builder
+    {
+        return SignatureRequest::query()
+            ->open()
+            ->whereHas('document', fn (Builder $document) => $document->where('documentable_type', 'pratica'))
+            ->with(['document.documentable', 'signatureRequestSigners']);
+    }
+
+    private static function perIstruttore(Builder $query, int $istruttore): Builder
+    {
+        return $query->whereHas('document', fn (Builder $document) => $document->whereIn('documentable_id', Pratica::query()->where('employee_id', $istruttore)->select('id')));
+    }
+
     public function table(Table $table): Table
     {
         return $table
-            ->query(fn (): Builder => SignatureRequest::query()
-                ->open()
-                ->whereHas('document', fn (Builder $document) => $document->where('documentable_type', 'pratica'))
-                ->with(['document.documentable', 'signatureRequestSigners']))
+            ->query(fn (): Builder => static::baseQuery())
             ->defaultSort('sent_at')
             ->paginated([10, 25])
             ->columns([
@@ -57,7 +93,7 @@ class InFirma extends CollapsibleTableWidget
                     ->label('Solo le mie pratiche')
                     ->toggle()
                     ->default()
-                    ->query(fn (Builder $query): Builder => $query->whereHas('document', fn (Builder $document) => $document->whereIn('documentable_id', Pratica::query()->where('employee_id', IstruttoreCorrente::id() ?? 0)->select('id')))),
+                    ->query(fn (Builder $query): Builder => static::perIstruttore($query, IstruttoreCorrente::id() ?? 0)),
             ]);
     }
 }

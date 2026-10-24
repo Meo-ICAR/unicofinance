@@ -7,6 +7,7 @@ use App\Filament\Resources\Praticas\PraticaResource;
 use App\Filament\Resources\Solleciti\Pages\ListSolleciti;
 use App\Filament\Traits\HasPlanAccess;
 use App\Models\User;
+use App\Support\Istruttori;
 use BackedEnum;
 use Filament\Actions\BulkAction;
 use Filament\Forms\Components\TextInput;
@@ -116,7 +117,7 @@ class SollecitoResource extends Resource
             ->filters([
                 SelectFilter::make('istruttore')
                     ->label('Istruttore')
-                    ->options(fn (): array => Employee::query()->where('employee_types', 'istruttore')->orderBy('name')->pluck('name', 'id')->all())
+                    ->options(fn (): array => Istruttori::scope(Employee::query())->orderBy('name')->pluck('name', 'id')->all())
                     ->query(fn (Builder $query, array $data): Builder => filled($data['value'] ?? null)
                         ? $query->whereIn('documentable_id', Pratica::query()->where('employee_id', $data['value'])->select('id'))
                         : $query),

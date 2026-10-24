@@ -5,6 +5,7 @@ namespace App\Filament\Agenti\Widgets;
 use App\Enums\SimulationContractType;
 use App\Filament\Agenti\Pages\Simulazione;
 use App\Filament\Widgets\CollapsibleTableWidget;
+use App\Filament\Widgets\EspostoInApi;
 use App\Models\FinancingQuote;
 use App\Models\Pratica;
 use App\Services\Agenti\AgentImpersonationService;
@@ -19,10 +20,11 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 
 /** Preventivi salvati dall'agente e non ancora perfezionati: si perfezionano, si sospendono (la pratica passa a SOSPESA e esce dall'elenco finché non si riprende) o si eliminano, anche in blocco. */
-class PreventiviDaPerfezionare extends CollapsibleTableWidget
+class PreventiviDaPerfezionare extends CollapsibleTableWidget implements EspostoInApi
 {
     protected static ?int $sort = 1;
 
@@ -30,31 +32,61 @@ class PreventiviDaPerfezionare extends CollapsibleTableWidget
 
     protected static ?string $heading = 'Preventivi da perfezionare';
 
+    public static function parametroApi(): string
+    {
+        return 'fornitori_id';
+    }
+
+    public static function queryApi(?int $id): Builder
+    {
+        return static::senzaSospesi(static::baseQuery($id ?? 0), $id ?? 0);
+    }
+
+    public static function rigaApi(Model $record): array
+    {
+        /** @var FinancingQuote $record */
+        return [
+            'id' => $record->getKey(),
+            'numero' => $record->number,
+            'prodotto' => SimulationContractType::tryFrom((string) $record->contract_type)?->getLabel() ?? $record->contract_type,
+            'cliente' => $record->company_name,
+            'codice_pratica' => $record->pratica?->codice_pratica,
+            'importo_richiesto' => $record->requested_amount,
+            'quota_cedibile' => $record->assignable_quota,
+            'erogabile_min' => $record->disbursed_min,
+            'erogabile_max' => $record->disbursed_max,
+            'stato_pratica' => $record->pratica?->praticaStato?->name,
+            'salvato_il' => $record->created_at?->toIso8601String(),
+        ];
+    }
+
+    private static function baseQuery(int $fornitoreId): Builder
+    {
+        // Le pratiche stanno nel database del core: gli id di quelle già in carico all'istruttoria si leggono a parte.
+        $inCarico = Pratica::query()->where('fornitori_id', $fornitoreId)->whereNotNull('employee_id')->pluck('id');
+
+        return FinancingQuote::query()
+            ->where('fornitore_id', $fornitoreId)
+            ->where('status', 'salvato')
+            ->where(fn (Builder $query) => $query->whereNull('pratica_id')->orWhereNotIn('pratica_id', $inCarico))
+            ->with('pratica.praticaStato');
+    }
+
+    /** I preventivi di pratiche sospese si vedono solo accendendo il filtro «Includi i sospesi». */
+    private static function senzaSospesi(Builder $query, int $fornitoreId): Builder
+    {
+        $sospese = Pratica::query()->where('fornitori_id', $fornitoreId)->whereHas('praticaStato', fn (Builder $stato) => $stato->where('is_suspended', true))->pluck('id');
+
+        return $query->where(fn (Builder $q) => $q->whereNull('pratica_id')->orWhereNotIn('pratica_id', $sospese));
+    }
+
     public function table(Table $table): Table
     {
         return $table
-            ->query(function (): Builder {
-                $fornitoreId = app(AgentImpersonationService::class)->agentFornitoreId() ?? 0;
-
-                // Le pratiche stanno nel database del core: gli id di quelle già in carico all'istruttoria si leggono a parte.
-                $inCarico = Pratica::query()->where('fornitori_id', $fornitoreId)->whereNotNull('employee_id')->pluck('id');
-
-                return FinancingQuote::query()
-                    ->where('fornitore_id', $fornitoreId)
-                    ->where('status', 'salvato')
-                    ->where(fn (Builder $query) => $query->whereNull('pratica_id')->orWhereNotIn('pratica_id', $inCarico))
-                    ->with('pratica');
-            })
-            // I preventivi sospesi si vedono solo accendendo il filtro.
-            ->modifyQueryUsing(function (Builder $query): Builder {
-                if ($this->tableFilters['sospesi']['isActive'] ?? false) {
-                    return $query;
-                }
-
-                $sospese = Pratica::query()->where('fornitori_id', app(AgentImpersonationService::class)->agentFornitoreId() ?? 0)->whereHas('praticaStato', fn (Builder $stato) => $stato->where('is_suspended', true))->pluck('id');
-
-                return $query->where(fn (Builder $q) => $q->whereNull('pratica_id')->orWhereNotIn('pratica_id', $sospese));
-            })
+            ->query(fn (): Builder => static::baseQuery(app(AgentImpersonationService::class)->agentFornitoreId() ?? 0))
+            ->modifyQueryUsing(fn (Builder $query): Builder => ($this->tableFilters['sospesi']['isActive'] ?? false)
+                ? $query
+                : static::senzaSospesi($query, app(AgentImpersonationService::class)->agentFornitoreId() ?? 0))
             ->filters([
                 Filter::make('sospesi')->label('Includi i sospesi')->toggle()->query(fn (Builder $query): Builder => $query),
             ])
