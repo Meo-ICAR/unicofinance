@@ -5,12 +5,14 @@ namespace Tests\Feature;
 use App\Filament\Resources\Praticas\Pages\EditPratica;
 use App\Filament\Resources\Praticas\Pages\ListPraticas;
 use App\Models\User;
+use App\Support\StatiSuccessivi;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
 use Unico\Core\Models\Pratica;
 use Unico\Core\Models\PraticaStato;
+use Unico\Core\Models\TipoProdotto;
 
 class PraticheElencoTest extends TestCase
 {
@@ -23,7 +25,7 @@ class PraticheElencoTest extends TestCase
 
     private function stato(string $name, array $flags = []): PraticaStato
     {
-        return PraticaStato::query()->firstOrCreate(['codice' => $name, 'tipo_finanziamento' => 'Cessione'], ['name' => $name, 'ordine' => 0, 'is_working' => true, 'is_estingued' => false, 'colore' => 'gray', ...$flags]);
+        return PraticaStato::query()->firstOrCreate(['codice' => $name, 'tipo_finanziamento' => 'Cessione'], ['name' => $name, 'ordine' => PraticaStato::query()->count() + 1, 'is_working' => true, 'is_estingued' => false, 'colore' => 'gray', ...$flags]);
     }
 
     public function test_the_suspended_ternary_filter_defaults_to_no_and_can_show_only_suspended_practices(): void
@@ -43,6 +45,47 @@ class PraticheElencoTest extends TestCase
             ->assertCanNotSeeTableRecords([$attiva])
             ->removeTableFilter('sospese')
             ->assertCanSeeTableRecords([$attiva, $sospesa]);
+    }
+
+    private function statoDi(string $prodotto, string $name, int $ordine, bool $rifiuto = false): PraticaStato
+    {
+        return PraticaStato::query()->create(['codice' => $name, 'tipo_finanziamento' => $prodotto, 'name' => $name, 'ordine' => $ordine, 'is_rejected' => $rifiuto, 'is_working' => ! $rifiuto, 'is_estingued' => false, 'colore' => 'gray']);
+    }
+
+    public function test_the_state_choice_offers_the_following_states_and_the_rejected_ones_of_the_product(): void
+    {
+        $bozza = $this->statoDi('Cessione', 'BOZZA-T', 10);
+        $caricata = $this->statoDi('Cessione', 'CARICATA-T', 20);
+        $deliberata = $this->statoDi('Cessione', 'DELIBERATA-T', 30);
+        $rinuncia = $this->statoDi('Cessione', 'RINUNCIA-T', 5, true);
+        $mutuo = $this->statoDi('Mutuo', 'PERIZIA-T', 40);
+
+        $this->assertSame([$rinuncia->getKey(), $caricata->getKey(), $deliberata->getKey()], array_keys(StatiSuccessivi::per('Cessione', $caricata->getKey())));
+        $this->assertNotContains($bozza->getKey(), array_keys(StatiSuccessivi::per('Cessione', $caricata->getKey())));
+        $this->assertNotContains($mutuo->getKey(), array_keys(StatiSuccessivi::per('Cessione', $caricata->getKey())));
+        $this->assertContains($bozza->getKey(), array_keys(StatiSuccessivi::per('Cessione', null)));
+    }
+
+    public function test_the_bulk_state_change_skips_practices_of_another_product(): void
+    {
+        Filament::setCurrentPanel('admin');
+        $this->actingAs(User::factory()->create(['role' => 'super_admin']));
+
+        $cessione = TipoProdotto::query()->firstOrCreate(['tipo_prodotto' => 'Cessione'], ['name' => 'Cessione']);
+        $mutuo = TipoProdotto::query()->firstOrCreate(['tipo_prodotto' => 'Mutuo'], ['name' => 'Mutuo']);
+        $inserita = $this->statoDi($cessione->name, 'INSERITA-B', 10);
+        $caricata = $this->statoDi($cessione->name, 'CARICATA-B', 20);
+        $mutuoInserita = $this->statoDi($mutuo->name, 'INSERITA-BM', 10);
+
+        $inCessione = Pratica::query()->create(['codice_pratica' => 'ELE-B1', 'pratica_stato_id' => $inserita->getKey(), 'tipoprodotto_id' => $cessione->getKey(), 'upload_at' => now()]);
+        $inMutuo = Pratica::query()->create(['codice_pratica' => 'ELE-B2', 'pratica_stato_id' => $mutuoInserita->getKey(), 'tipoprodotto_id' => $mutuo->getKey(), 'upload_at' => now()]);
+
+        Livewire::test(ListPraticas::class)
+            ->callTableBulkAction('cambiaStatoMassivo', [$inCessione, $inMutuo], data: ['stato' => $caricata->getKey()])
+            ->assertHasNoTableBulkActionErrors();
+
+        $this->assertSame($caricata->getKey(), $inCessione->fresh()->pratica_stato_id);
+        $this->assertSame($mutuoInserita->getKey(), $inMutuo->fresh()->pratica_stato_id);
     }
 
     public function test_the_state_filter_accepts_several_states(): void

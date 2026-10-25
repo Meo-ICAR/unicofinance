@@ -45,6 +45,21 @@ class ImportMediafacileTest extends TestCase
         return implode("\n", [implode("\t", $intestazioni), ...array_map(fn (array $riga): string => implode("\t", array_map(fn (string $campo): string => $riga[$campo] ?? '', $intestazioni)), $righe)]);
     }
 
+    public function test_state_synonyms_are_mapped_to_the_canonical_state_without_creating_a_new_one(): void
+    {
+        TipoProdotto::query()->firstOrCreate(['name' => 'Cessione'], ['tipo_prodotto' => 'Cessione']);
+        $inserita = PraticaStato::query()->create(['codice' => 'INSERITA', 'tipo_finanziamento' => 'Cessione', 'name' => 'INSERITA', 'ordine' => 20, 'colore' => 'gray']);
+        $intestazioni = ['ID Pratica', 'Cognome Cliente', 'Codice Fiscale', 'Denominazione Agente', 'Partita IVA Agente', 'Denominazione Banca', 'Tipo Prodotto', 'Data Inserimento Pratica', 'Stato Pratica', 'Pratica_terzi'];
+        $riga = ['ID Pratica' => 'QT90010', 'Cognome Cliente' => 'Rossi', 'Codice Fiscale' => 'RSSMRA80A01H501U', 'Denominazione Agente' => 'AGENTE IMPORT', 'Partita IVA Agente' => '12345678903', 'Denominazione Banca' => 'BANCA IMPORT', 'Tipo Prodotto' => 'Cessione', 'Data Inserimento Pratica' => '10/08/2026', 'Stato Pratica' => '  Inserito ', 'Pratica_terzi' => 'NO'];
+
+        Http::fake(['mediafacile.test/*' => Http::response($this->tsv($intestazioni, [$riga]))]);
+
+        $this->artisan('pratiche:import-api', ['--start-date' => '2026-08-01', '--end-date' => '2026-08-31'])->assertSuccessful();
+
+        $this->assertSame($inserita->getKey(), Pratica::query()->where('codice_pratica', 'QT90010')->firstOrFail()->pratica_stato_id);
+        $this->assertSame(0, PraticaStato::query()->where('codice', 'INSERITO')->count());
+    }
+
     public function test_the_practices_are_imported_with_references_to_product_state_producer_and_bank(): void
     {
         $prodotto = TipoProdotto::query()->firstOrCreate(['name' => 'Cessione'], ['tipo_prodotto' => 'Cessione']);

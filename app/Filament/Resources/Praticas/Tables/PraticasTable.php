@@ -8,6 +8,7 @@ use App\Models\Pratica;
 use App\Services\CambioStatoPratica;
 use App\Services\Istruttoria\CompletezzaDocumentale;
 use App\Support\Istruttori;
+use App\Support\StatiSuccessivi;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
@@ -171,23 +172,16 @@ class PraticasTable
             ->recordUrl(fn (Pratica $record): string => PraticaResource::getUrl('edit', ['record' => $record]));
     }
 
-    /** Stati scelti in base al prodotto della pratica (i codici sono per tipo di finanziamento); senza prodotto, tutti. */
-    private static function stati(?Pratica $pratica): array
-    {
-        $query = PraticaStato::query()->orderBy('ordine')->orderBy('name');
-        $prodotto = $pratica?->tipoprodotto?->name;
-
-        if ($prodotto !== null && PraticaStato::query()->where('tipo_finanziamento', $prodotto)->exists()) {
-            $query->where('tipo_finanziamento', $prodotto);
-        }
-
-        return $query->pluck('name', 'id')->all();
-    }
-
-    private static function campiCambioStato(?Pratica $pratica = null): array
+    /** @param  Collection<int, Pratica>|null  $selezione */
+    private static function campiCambioStato(?Pratica $pratica = null, ?Collection $selezione = null): array
     {
         return [
-            Select::make('stato')->label('Nuovo stato')->options(self::stati($pratica))->searchable()->required(),
+            Select::make('stato')
+                ->label('Nuovo stato')
+                ->helperText('Gli stati successivi del tipo prodotto e quelli di rifiuto.')
+                ->options($selezione !== null ? StatiSuccessivi::perPratiche($selezione) : StatiSuccessivi::perPratica($pratica))
+                ->searchable()
+                ->required(),
             Textarea::make('motivazione')->label('Motivazione (facoltativa)')->maxLength(1000)->rows(3),
         ];
     }
@@ -226,13 +220,23 @@ class PraticasTable
             ->label('Cambia stato')
             ->icon(Heroicon::OutlinedArrowPath)
             ->modalHeading('Cambia stato delle pratiche selezionate')
-            ->schema(fn (): array => self::campiCambioStato())
+            ->accessSelectedRecords()
+            ->schema(fn (BulkAction $action): array => self::campiCambioStato(selezione: $action->getSelectedRecords()))
             ->action(function (Collection $records, array $data): void {
                 $servizio = app(CambioStatoPratica::class);
                 $incomplete = 0;
                 $aggiornate = 0;
 
+                $stato = PraticaStato::query()->findOrFail((int) $data['stato']);
+                $nonAdatte = 0;
+
                 foreach ($records as $pratica) {
+                    if (! StatiSuccessivi::adatto($pratica, $stato)) {
+                        $nonAdatte++;
+
+                        continue;
+                    }
+
                     $mancanti = $servizio->documentiMancanti($pratica, (int) $data['stato']);
 
                     if ($mancanti?->isNotEmpty()) {
@@ -248,6 +252,10 @@ class PraticasTable
                 }
 
                 Notification::make()->title($aggiornate.' pratiche aggiornate')->success()->send();
+
+                if ($nonAdatte > 0) {
+                    Notification::make()->title($nonAdatte.' pratiche non aggiornate')->body('Lo stato scelto è di un altro tipo prodotto.')->warning()->send();
+                }
 
                 if ($incomplete > 0) {
                     Notification::make()->title($incomplete.' pratiche con documentazione incompleta')->body($servizio->documentazioneBloccante() ? 'Non sono state aggiornate.' : 'Aggiornate comunque: controlla i documenti mancanti.')->warning()->send();

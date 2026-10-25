@@ -30,7 +30,7 @@ class PraticaCambioStatoTest extends TestCase
 
     private function stato(string $name): PraticaStato
     {
-        return PraticaStato::query()->firstOrCreate(['codice' => $name, 'tipo_finanziamento' => 'Cessione'], ['name' => $name, 'ordine' => 0, 'is_rejected' => false, 'is_working' => true, 'is_estingued' => false, 'colore' => 'gray']);
+        return PraticaStato::query()->firstOrCreate(['codice' => $name, 'tipo_finanziamento' => 'Cessione'], ['name' => $name, 'ordine' => PraticaStato::query()->count() + 1, 'is_rejected' => false, 'is_working' => true, 'is_estingued' => false, 'colore' => 'gray']);
     }
 
     protected function setUp(): void

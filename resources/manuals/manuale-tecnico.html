@@ -173,7 +173,7 @@
             <tr>
                 <td>Stato dal file banca</td>
                 <td><code>ListPraticas::importaAggiornamenti</code>, <code>App\Services\ImportAggiornamentiBanca</code></td>
-                <td>CSV/XLSX caricato a mano. Non è un comando Artisan e non interroga il portale. Il cambio passa da <code>CambioStatoPratica::cambia</code> con origine <code>import</code>.</td>
+                <td>CSV/XLSX caricato a mano (<code>importa($percorso)</code>). La banca si riconosce dal tracciato in <code>clientis.tracciato_import</code> (JSON con firma delle intestazioni e colonne, memorizzato al primo import riuscito), da una colonna della banca o dai voti delle pratiche già presenti. Trova la pratica dal codice banca o dal cognome tra le pratiche della banca, salva il codice banca e aggiunge lo stato mancante per il tipo prodotto (sinonimi in <code>App\Support\StatiSinonimi</code>). Non è un comando Artisan e non interroga il portale. Il cambio passa da <code>CambioStatoPratica::cambia</code> con origine <code>import</code>.</td>
             </tr>
             <tr>
                 <td>Cambio stato</td>

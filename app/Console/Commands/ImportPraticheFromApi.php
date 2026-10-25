@@ -10,6 +10,7 @@ use App\Services\Istruttoria\PresaInCarico;
 use App\Services\Istruttoria\RichiedentePratica;
 use App\Services\Provvigioni\PercentualeProvvigione;
 use App\Support\DenominazioneProdotto;
+use App\Support\StatiSinonimi;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
@@ -184,7 +185,7 @@ class ImportPraticheFromApi extends Command
     {
         $creati = 0;
 
-        $righe->map(fn (array $riga): array => [trim((string) ($riga['Stato Pratica'] ?? '')), $this->prodotto(trim((string) ($riga['Tipo Prodotto'] ?? '')))?->name ?? trim((string) ($riga['Tipo Prodotto'] ?? ''))])
+        $righe->map(fn (array $riga): array => [$this->codiceStato($riga['Stato Pratica'] ?? ''), $this->prodotto(trim((string) ($riga['Tipo Prodotto'] ?? '')))?->name ?? trim((string) ($riga['Tipo Prodotto'] ?? ''))])
             ->filter(fn (array $coppia): bool => $coppia[0] !== '')
             ->unique(fn (array $coppia): string => $coppia[1].'|'.$coppia[0])
             ->each(function (array $coppia) use (&$creati): void {
@@ -290,7 +291,7 @@ class ImportPraticheFromApi extends Command
     {
         $nomeProdotto = trim((string) ($riga['Tipo Prodotto'] ?? ''));
         $prodotto = $this->prodotto($nomeProdotto);
-        $codiceStato = trim((string) ($riga['Stato Pratica'] ?? ''));
+        $codiceStato = $this->codiceStato($riga['Stato Pratica'] ?? '');
 
         // Se chi porta la pratica è anche un istruttore (stesso nome), la pratica è sua.
         $istruttore = $this->istruttore((string) $dati['denominazione_agente']);
@@ -345,6 +346,11 @@ class ImportPraticheFromApi extends Command
 
             return tap($prodotto, fn (?TipoProdotto $trovato) => $this->prodotti->put($nome, $trovato));
         });
+    }
+
+    private function codiceStato(?string $stato): string
+    {
+        return StatiSinonimi::canonico($stato);
     }
 
     /** Gli stati dei finanziamenti sono per prodotto: se manca per questo prodotto si crea, come fa il perfezionamento. */

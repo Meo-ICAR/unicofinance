@@ -8,6 +8,7 @@ use App\Models\Pratica;
 use App\Services\Istruttoria\RichiedentePratica;
 use App\Services\PortaleBanca;
 use App\Support\ControlloRichiedente;
+use App\Support\StatiSuccessivi;
 use Closure;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
@@ -174,9 +175,12 @@ class PraticaForm
                                     ->schema([
                                         Select::make('pratica_stato_id')
                                             ->label('Stato pratica')
-                                            ->relationship('praticaStato', 'name')
-                                            ->searchable()
-                                            ->preload(),
+                                            ->helperText('Gli stati successivi del tipo prodotto e quelli di rifiuto.')
+                                            ->options(fn (Get $get, ?Pratica $record): array => StatiSuccessivi::per(
+                                                TipoProdotto::query()->whereKey($get('tipoprodotto_id'))->value('name'),
+                                                $record?->pratica_stato_id,
+                                            ))
+                                            ->searchable(),
                                         Select::make('employee_id')
                                             ->label('Istruttore')
                                             ->relationship('employee', 'name', fn (Builder $query) => $query->whereJsonContains('employee_roles', 'istruttore'))
@@ -203,7 +207,7 @@ class PraticaForm
                                     ->columns(['default' => 4])
                                     ->schema([
                                         // La data di inserimento è quella della richiesta (campo sopra): qui è l'inizio dell'avanzamento, in sola lettura.
-                                        DatePicker::make('data_inserimento_pratica')->label('Data inserimento')->disabled(),
+                                        DatePicker::make('data_inserimento_pratica')->label('Data inserimento')->disabled()->hidden(fn (Get $get): bool => self::impegnoDiTerzi($get)),
                                         DatePicker::make('presa_in_carico_at')->label('Data presa in carico'),
                                         DatePicker::make('lavorazione_at')->label('Data lavorazione'),
                                         DatePicker::make('sended_at')->label('Data invio istruttoria'),

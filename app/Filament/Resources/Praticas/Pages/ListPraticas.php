@@ -47,11 +47,11 @@ class ListPraticas extends ListRecords
     private function importaAggiornamenti(): Action
     {
         return Action::make('importaAggiornamenti')
-            ->label('Importa aggiornamenti')
+            ->label('Importa stati')
             ->icon(Heroicon::OutlinedArrowUpTray)
             ->color('gray')
-            ->modalHeading('Importa aggiornamenti dalla banca')
-            ->modalDescription('Carica il file della banca (CSV o XLSX) con le colonne: codice pratica banca, nominativo, tipo di prodotto, stato. Le pratiche si trovano dal codice banca e passano al nuovo stato.')
+            ->modalHeading('Importa gli stati dalla banca')
+            ->modalDescription('Carica il file della banca (CSV o XLSX) con almeno il cognome del cedente e lo stato attuale della pratica; facoltativi il codice pratica banca e il tipo di prodotto. La banca si riconosce dal tracciato già memorizzato o dalle pratiche del file; la pratica si trova dal codice banca o dal cognome, il codice banca si salva sulla pratica e lo stato si aggiunge se non esiste.')
             ->modalSubmitActionLabel('Importa')
             ->schema([
                 FileUpload::make('file')
@@ -72,9 +72,16 @@ class ListPraticas extends ListRecords
 
                 $anomalie = $esito['anomalie'];
 
+                $dettagli = array_filter([
+                    $esito['banca'] === null ? null : 'Banca: '.$esito['banca'].($esito['tracciato_memorizzato'] ? ' (tracciato memorizzato)' : ''),
+                    $esito['codici'] > 0 ? "{$esito['codici']} codici banca salvati" : null,
+                    $esito['stati_aggiunti'] !== [] ? 'stati aggiunti da configurare: '.implode(', ', $esito['stati_aggiunti']) : null,
+                    $anomalie === [] ? null : count($anomalie).' righe non importate: '.implode('; ', array_slice($anomalie, 0, 5)).(count($anomalie) > 5 ? '…' : ''),
+                ]);
+
                 Notification::make()
                     ->title("{$esito['aggiornate']} pratiche aggiornate, {$esito['invariate']} già nello stato indicato")
-                    ->body($anomalie === [] ? null : count($anomalie).' righe non importate: '.implode('; ', array_slice($anomalie, 0, 5)).(count($anomalie) > 5 ? '…' : ''))
+                    ->body($dettagli === [] ? null : implode('. ', $dettagli))
                     ->color($anomalie === [] ? 'success' : 'warning')
                     ->persistent($anomalie !== [])
                     ->send();
