@@ -373,4 +373,45 @@ class ImportMediafacileTest extends TestCase
 
         $this->assertSame($fummo->getKey(), Pratica::query()->where('codice_pratica', 'QT95001')->value('employee_id'), 'Al reimport si forza di nuovo.');
     }
+
+    public function test_surname_and_first_name_swapped_by_mediafacile_are_put_right_from_the_tax_code(): void
+    {
+        $intestazioni = ['ID Pratica', 'Cognome Cliente', 'Nome Cliente', 'Codice Fiscale', 'Denominazione Agente', 'Partita IVA Agente', 'Denominazione Banca', 'Data Inserimento Pratica', 'Pratica_terzi'];
+        $comuni = ['Denominazione Agente' => 'AGENTE IMPORT', 'Partita IVA Agente' => '12345678903', 'Denominazione Banca' => 'BANCA IMPORT', 'Data Inserimento Pratica' => '10/08/2026', 'Pratica_terzi' => 'NO'];
+        $righe = [
+            $comuni + ['ID Pratica' => 'QT90021', 'Cognome Cliente' => 'VALENTINA', 'Nome Cliente' => 'MERCURI', 'Codice Fiscale' => 'MRCVNT87S68G791N'],
+            $comuni + ['ID Pratica' => 'QT90022', 'Cognome Cliente' => 'ANNA MARIA', 'Nome Cliente' => 'COSMI', 'Codice Fiscale' => 'CSMNMR64L66H501X'],
+            $comuni + ['ID Pratica' => 'QT90023', 'Cognome Cliente' => 'Rossi', 'Nome Cliente' => 'Mario', 'Codice Fiscale' => 'RSSMRA80A01H501U'],
+        ];
+
+        Http::fake(['mediafacile.test/*' => Http::response($this->tsv($intestazioni, $righe))]);
+
+        $this->artisan('pratiche:import-api', ['--start-date' => '2026-08-01', '--end-date' => '2026-08-31'])->assertSuccessful();
+
+        $mercuri = Pratica::query()->where('codice_pratica', 'QT90021')->firstOrFail();
+        $this->assertSame(['MERCURI', 'VALENTINA'], [$mercuri->cognome_cliente, $mercuri->nome_cliente]);
+        $cosmi = Pratica::query()->where('codice_pratica', 'QT90022')->firstOrFail();
+        $this->assertSame(['COSMI', 'ANNA MARIA'], [$cosmi->cognome_cliente, $cosmi->nome_cliente]);
+        $rossi = Pratica::query()->where('codice_pratica', 'QT90023')->firstOrFail();
+        $this->assertSame(['Rossi', 'Mario'], [$rossi->cognome_cliente, $rossi->nome_cliente]);
+
+        $cliente = Client::query()->where('tax_code', 'MRCVNT87S68G791N')->firstOrFail();
+        $this->assertSame(['MERCURI', 'VALENTINA'], [$cliente->name, $cliente->first_name]);
+    }
+
+    public function test_the_correction_command_fixes_swapped_names_already_stored_and_dry_run_changes_nothing(): void
+    {
+        $pratica = Pratica::query()->create(['codice_pratica' => 'QT90031', 'upload_at' => now(), 'cognome_cliente' => 'VALENTINA', 'nome_cliente' => 'MERCURI', 'codice_fiscale' => 'MRCVNT87S68G791N']);
+        $giusta = Pratica::query()->create(['codice_pratica' => 'QT90032', 'upload_at' => now(), 'cognome_cliente' => 'Rossi', 'nome_cliente' => 'Mario', 'codice_fiscale' => 'RSSMRA80A01H501U']);
+        $cliente = Client::query()->create(['name' => 'VALENTINA', 'first_name' => 'MERCURI', 'tax_code' => 'MRCVNT87S68G791N', 'is_person' => true]);
+
+        $this->artisan('nominativi:correggi', ['--dry-run' => true])->assertSuccessful();
+        $this->assertSame('VALENTINA', $pratica->fresh()->cognome_cliente);
+        $this->assertSame('VALENTINA', $cliente->fresh()->name);
+
+        $this->artisan('nominativi:correggi')->assertSuccessful();
+        $this->assertSame(['MERCURI', 'VALENTINA'], [$pratica->fresh()->cognome_cliente, $pratica->fresh()->nome_cliente]);
+        $this->assertSame(['MERCURI', 'VALENTINA'], [$cliente->fresh()->name, $cliente->fresh()->first_name]);
+        $this->assertSame(['Rossi', 'Mario'], [$giusta->fresh()->cognome_cliente, $giusta->fresh()->nome_cliente]);
+    }
 }

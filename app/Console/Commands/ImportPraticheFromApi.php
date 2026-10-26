@@ -10,6 +10,7 @@ use App\Services\Istruttoria\PresaInCarico;
 use App\Services\Istruttoria\RichiedentePratica;
 use App\Services\Provvigioni\PercentualeProvvigione;
 use App\Support\DenominazioneProdotto;
+use App\Support\NominativoDalCodiceFiscale;
 use App\Support\StatiSinonimi;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
@@ -256,7 +257,7 @@ class ImportPraticheFromApi extends Command
         // Rata mensile e durata stanno nella denominazione del prodotto («Cessione - BANCA - 270 x 120 (QT00029)»): se non ci sono non si toccano.
         $prodotto = DenominazioneProdotto::leggi($riga['Descrizione Prodotto'] ?? null);
 
-        return array_filter([
+        $dati = array_filter([
             'rata' => $prodotto['rata'],
             'nrate' => $prodotto['nrate'],
         ], fn (mixed $valore): bool => $valore !== null) + [
@@ -278,6 +279,11 @@ class ImportPraticheFromApi extends Command
             'net' => $this->decimale($riga['Importo_Erogazione'] ?? null),
             'is_notowned' => ($riga['Pratica_terzi'] ?? '') === 'SI',
         ];
+
+        // Mediafacile riporta spesso cognome e nome scambiati: il codice fiscale dice qual è l'ordine giusto.
+        [$dati['cognome_cliente'], $dati['nome_cliente']] = NominativoDalCodiceFiscale::ordina($dati['cognome_cliente'], $dati['nome_cliente'], $dati['codice_fiscale']);
+
+        return $dati;
     }
 
     /**

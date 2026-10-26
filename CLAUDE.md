@@ -16,7 +16,7 @@ Regole valide in tutte le app:
 - Istruttore = dipendente con il ruolo `istruttore` in `employee_roles`, come nell'organigramma di unicooam (in unicofinance: `App\Support\Istruttori`).
 - Gli stati delle pratiche stanno in `pratica_stati` (flag `is_working`, `is_approved`, `is_rejected`, `is_suspended`...). La vecchia `pratiches_statos` non si usa più.
 - Le app si parlano via API: chiavi solo nel `.env` (mai nel codice, nei log o nei commit) e nessuna lettura diretta delle tabelle di un'altra app se esiste un'API. Niente dati personali nei log.
-- I database sono di sviluppo. Rispondi e scrivi i testi per gli utenti in italiano.
+- Esiste un ambiente di produzione con dati reali: lì è vietato `migrate:fresh` (e `migrate:refresh`, `db:wipe`) e il drop di tabelle o database; le migration in produzione solo additive, con `migrate --force`. Il database locale è di sviluppo. Rispondi e scrivi i testi per gli utenti in italiano.
 - Se esiste `graphify-out/GRAPH_REPORT.md`, consultalo prima di cercare nel codice; si aggiorna con `graphify update .`. Per l'estrazione semantica (documenti, PDF, immagini) graphify usa `GEMINI_API_KEY` dal `.env`: non stamparla né committarla.
 
 ## Questa app: unicofinance (CRM e istruttoria)
