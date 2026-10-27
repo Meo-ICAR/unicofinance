@@ -64,8 +64,10 @@ class QuotationService
             $params['Data_assunzione'] = CarbonImmutable::parse($profile['hired_at'])->format('m-d-Y');
         }
 
+        // Il servizio vuole la decorrenza anche sul prestito: senza risponde che la prima data ammissibile è un'altra.
+        $params['Data_decorrenza'] = CarbonImmutable::parse($profile['starts_at'])->format('m-d-Y');
+
         if ($contract->asksQuotaCedibile()) {
-            $params['Data_decorrenza'] = CarbonImmutable::parse($profile['starts_at'])->format('m-d-Y');
             $params['Importo_rata'] = $this->money((float) $profile['assignable_quota']);
             $params['Rinnovo'] = 'NO';
         } else {

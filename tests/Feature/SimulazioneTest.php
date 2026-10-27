@@ -38,6 +38,7 @@ use Unico\Core\Models\MailAccount;
 use Unico\Core\Models\Pratica;
 use Unico\Core\Models\PraticaClient;
 use Unico\Core\Models\SignatureRequest;
+use Unico\Core\Seeders\ComuniSeeder;
 use Unico\Core\Seeders\PerfezionamentoDocumentiSeeder;
 
 class SimulazioneTest extends TestCase
@@ -66,6 +67,7 @@ XML;
     protected function setUp(): void
     {
         parent::setUp();
+        (new ComuniSeeder)->run();
         $this->seedCoreData('address_types', 'document_types', 'tasks', 'document_requirements', 'pdf_modules', 'pdf_module_fields', 'pratica_stati', 'tipoprodotto', 'tipoprodotto_sub');
 
         config([
@@ -285,6 +287,7 @@ XML;
                 && $query['Tipo_rapporto'] === 'Pensionato INPS'
                 && $query['Importo_richiesto'] === '15000,00'
                 && $query['Durata'] === '84'
+                && $query['Data_decorrenza'] === '01-13-2027'
                 && ! array_key_exists('Data_assunzione', $query)
                 && ! array_key_exists('Importo_rata', $query);
         });
