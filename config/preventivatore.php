@@ -8,7 +8,7 @@ return [
     */
     'url' => env('PREVENTIVATORE_URL'),
     'passkey' => env('PREVENTIVATORE_PASSKEY'),
-    'timeout' => (int) env('PREVENTIVATORE_TIMEOUT', 15),
+    'timeout' => (int) env('PREVENTIVATORE_TIMEOUT', 60),
 
     /*
     | Parametri di account richiesti dal servizio: percentuale di provvigione del collaboratore (0-20),
