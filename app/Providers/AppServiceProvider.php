@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Documents\Api\LoggedCompanyDataFetcher;
+use App\Listeners\RiportaQuestionarioKyc;
 use App\Models\BlacklistClienteFornitore;
 use App\Models\ListinoProvvigionale;
 use App\Pdf\KycModuleDataProvider;
@@ -16,6 +17,7 @@ use SocialiteProviders\Google\GoogleExtendSocialite;
 use SocialiteProviders\Manager\SocialiteWasCalled;
 use SocialiteProviders\Microsoft\MicrosoftExtendSocialite;
 use Unico\Core\Documents\Contracts\AiCallLog;
+use Unico\Core\Events\DocumentAnalyzed;
 use Unico\Core\Models\Branch;
 use Unico\Core\Models\Cliente;
 use Unico\Core\Models\Document;
@@ -93,6 +95,7 @@ class AppServiceProvider extends ServiceProvider
         Document::created(fn (Document $document) => app(AgentNotifications::class)->created($document));
         Document::updated(fn (Document $document) => app(AgentNotifications::class)->updated($document));
 
+        Event::listen(DocumentAnalyzed::class, RiportaQuestionarioKyc::class);
         Event::listen(SocialiteWasCalled::class, [MicrosoftExtendSocialite::class, 'handle']);
         Event::listen(SocialiteWasCalled::class, [GoogleExtendSocialite::class, 'handle']);
     }

@@ -3,11 +3,12 @@
 namespace App\Services;
 
 use Carbon\CarbonImmutable;
+use Unico\Core\Models\Comune;
 
 /**
  * Ricava data di nascita, sesso e luogo di nascita dal codice fiscale di una persona fisica.
- * Gestisce l'omocodia. I comuni vengono risolti con database/data/comuni-catastali.json
- * (codice catastale => "Comune (SIGLA)"); per i nati all'estero (codice Z...) il dataset non
+ * Gestisce l'omocodia. I comuni vengono risolti con la tabella `comuni`
+ * (codice catastale => "Comune (SIGLA)"); per i nati all'estero (codice Z...) la tabella non
  * contiene gli stati, quindi il luogo e' un segnaposto "Estero (Z123)".
  */
 class CodiceFiscaleDecoder
@@ -17,11 +18,6 @@ class CodiceFiscaleDecoder
     private const OMOCODIA = ['L' => 0, 'M' => 1, 'N' => 2, 'P' => 3, 'Q' => 4, 'R' => 5, 'S' => 6, 'T' => 7, 'U' => 8, 'V' => 9];
 
     private const PATTERN = '/^[A-Z]{6}[0-9LMNPQRSTUV]{2}[ABCDEHLMPRST][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]$/';
-
-    /**
-     * @var array<string, string>|null
-     */
-    private static ?array $municipalities = null;
 
     private const ODD_VALUES = [1, 0, 5, 7, 9, 13, 15, 17, 19, 21, 2, 4, 18, 20, 11, 3, 6, 8, 12, 14, 16, 10, 22, 25, 24, 23];
 
@@ -113,15 +109,13 @@ class CodiceFiscaleDecoder
         return strtr($value, array_map('strval', self::OMOCODIA));
     }
 
+    /** «Polistena (RC)» dalla tabella dei comuni; l'estero (codici che cominciano per Z) e i codici sconosciuti si descrivono a parte. */
     private function placeName(string $cadastralCode): string
     {
-        self::$municipalities ??= json_decode(
-            (string) file_get_contents(database_path('data/comuni-catastali.json')),
-            true,
-        ) ?: [];
+        $comune = Comune::query()->where('cadastral_code', $cadastralCode)->first();
 
-        if (isset(self::$municipalities[$cadastralCode])) {
-            return self::$municipalities[$cadastralCode];
+        if ($comune !== null) {
+            return $comune->label();
         }
 
         return $cadastralCode[0] === 'Z'

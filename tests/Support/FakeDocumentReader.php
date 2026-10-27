@@ -26,6 +26,10 @@ class FakeDocumentReader implements DocumentReader
             'informativa' => ['matches_template' => true, 'signed' => true],
             'identita' => ['surname' => 'Rossi', 'name' => 'Mario', 'fiscal_code' => 'RSSMRA80A01H501U', 'birth_date' => '01/01/1980', 'document_type' => 'carta_identita', 'document_number' => 'AX123', 'expiry_date' => '01/01/2040'],
             'codice_fiscale' => ['surname' => 'Rossi', 'name' => 'Mario', 'fiscal_code' => 'RSSMRA80A01H501U'],
+            'questionario_kyc' => ['surname' => 'Rossi', 'name' => 'Mario', 'fiscal_code' => 'RSSMRA80A01H501U', 'birth_date' => '01/01/1980', 'birth_place' => 'Roma', 'citizenship' => 'Italia',
+                'address_street' => 'Via Verdi 7', 'address_city' => 'Roma', 'address_province' => 'RM', 'address_zip' => '00100', 'signed' => true,
+                'pep_status' => 'nessuna', 'economic_activity' => 'autonomo', 'activity_sector' => 'commercio_servizi', 'activity_location' => 'regione_residenza',
+                'financing_nature' => 'prestito_personale', 'financing_purpose' => 'personale_familiare', 'income_band' => 'fino_100k', 'wealth_band' => 'fino_500k'],
             default => [],
         };
 

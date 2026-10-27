@@ -4,14 +4,24 @@ namespace Tests\Unit;
 
 use App\Services\CodiceFiscaleDecoder;
 use Carbon\Carbon;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use Unico\Core\Seeders\ComuniSeeder;
 
 class CodiceFiscaleDecoderTest extends TestCase
 {
+    use RefreshDatabase;
+
+    /**
+     * @var array<int, string>
+     */
+    protected array $connectionsToTransact = [null, 'core'];
+
     protected function setUp(): void
     {
         parent::setUp();
 
+        (new ComuniSeeder)->run();
         Carbon::setTestNow('2026-10-06');
     }
 
