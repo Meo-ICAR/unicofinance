@@ -76,7 +76,8 @@ class QuotationService
     }
 
     /**
-     * Scarta gli importi che il servizio restituisce fuori scala: su una cessione l'erogato non può superare il montante (rata × durata).
+     * Su una cessione l'erogato non può superare il montante (rata × durata). Alcune banche, quando la rata ha la virgola, rispondono
+     * con importi 100 volte più grandi: quelli fuori scala si dividono per 100 e si tengono se tornano nel montante, altrimenti si scartano.
      *
      * @param  array<string, mixed>  $profile
      * @param  list<float>  $amounts
@@ -89,8 +90,9 @@ class QuotationService
         }
 
         $gross = (float) $profile['assignable_quota'] * (int) $profile['duration_months'];
+        $corrected = array_map(fn (float $amount): float => $amount <= $gross ? $amount : round($amount / 100, 2), $amounts);
 
-        return array_values(array_filter($amounts, fn (float $amount): bool => $amount <= $gross));
+        return array_values(array_filter($corrected, fn (float $amount): bool => $amount <= $gross));
     }
 
     private function money(float $value): string

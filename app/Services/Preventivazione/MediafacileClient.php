@@ -18,7 +18,7 @@ class MediafacileClient
         $url = (string) config('preventivatore.url');
         $passkey = (string) config('preventivatore.passkey');
         $account = [
-            'Provvigione' => (string) config('preventivatore.provvigione'),
+            'Provvigione' => self::decimal((string) config('preventivatore.provvigione')),
             'ID_listino' => (string) config('preventivatore.id_listino'),
             'ID_agente' => (string) config('preventivatore.id_agente'),
         ];
@@ -74,6 +74,12 @@ class MediafacileClient
         }
 
         return $amounts;
+    }
+
+    /** Il servizio vuole i valori numerici con due decimali e la virgola («9» diventa «9,00»); un valore vuoto resta vuoto. */
+    private static function decimal(string $value): string
+    {
+        return trim($value) === '' ? '' : number_format(self::number($value), 2, ',', '');
     }
 
     private static function number(string $value): float

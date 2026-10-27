@@ -183,7 +183,7 @@ XML;
             ->call('simulate')
             ->assertHasNoFormErrors()
             ->assertSet('esito.min', 10000.5)
-            ->assertSet('esito.max', 12345.67)
+            ->assertSet('esito.max', 21313.29)
             ->assertSee('Salva preventivo')
             ->call('salvaPreventivo')
             ->assertSet('preventivoNumero', 1)
@@ -195,7 +195,7 @@ XML;
             $query = $request->data();
 
             return $query['passkey'] === 'secret'
-                && $query['Provvigione'] === '3'
+                && $query['Provvigione'] === '3,00'
                 && $query['ID_listino'] === '0001'
                 && $query['ID_agente'] === '0001'
                 && $query['Tipo_contratto'] === 'Cessione'
