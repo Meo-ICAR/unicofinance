@@ -30,6 +30,9 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\HtmlString;
 use Livewire\Component;
 use Unico\Core\Clients\OpenApiCompanyService;
+use Unico\Core\Enums\DisbursementMethod;
+use Unico\Core\Enums\PaymentMethod;
+use Unico\Core\Enums\PeriodicCommunication;
 use Unico\Core\Models\Cliente;
 use Unico\Core\Models\Fornitore;
 use Unico\Core\Models\TipoProdotto;
@@ -164,6 +167,9 @@ class PraticaForm
                                         // Cessione e delega si calcolano sulla rata; gli altri prodotti anche sull'importo richiesto.
                                         TextInput::make('amount')->label('Importo richiesto')->numeric()->prefix('€')->live(onBlur: true)->visible(fn (Get $get): bool => ! self::sullaRata($get) && ! self::impegnoDiTerzi($get)),
                                         TextInput::make('loan_purpose')->label('Finalità')->maxLength(255)->hidden(fn (Get $get): bool => self::impegnoDiTerzi($get)),
+                                        Select::make('repayment_method')->label('Modalità di pagamento delle rate')->options(PaymentMethod::class)->hidden(fn (Get $get): bool => self::impegnoDiTerzi($get)),
+                                        Select::make('disbursement_method')->label('Modalità di erogazione')->options(DisbursementMethod::class)->hidden(fn (Get $get): bool => self::impegnoDiTerzi($get)),
+                                        Select::make('periodic_communication')->label('Comunicazioni periodiche')->options(PeriodicCommunication::class)->helperText('Come il cliente vuole ricevere le comunicazioni di trasparenza della banca')->hidden(fn (Get $get): bool => self::impegnoDiTerzi($get)),
                                     ]),
                             ]),
                         Tab::make('Dati di lavorazione')

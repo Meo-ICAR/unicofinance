@@ -44,6 +44,9 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\HtmlString;
+use Unico\Core\Enums\DisbursementMethod;
+use Unico\Core\Enums\PaymentMethod;
+use Unico\Core\Enums\PeriodicCommunication;
 use Unico\Core\Filament\RelationManagers\DocumentsRelationManager;
 use Unico\Core\Models\Cliente;
 use Unico\Core\Models\Fornitore;
@@ -269,6 +272,9 @@ class PraticaResource extends Resource
                         ->prefix('€')
                         ->visible(fn (Get $get): bool => ! $sulla_rata($get) && ! $impegnoDiTerzi($get)),
                     TextInput::make('loan_purpose')->label('Finalità')->maxLength(255)->hidden($impegnoDiTerzi),
+                    Select::make('repayment_method')->label('Modalità di pagamento delle rate')->options(PaymentMethod::class)->hidden($impegnoDiTerzi),
+                    Select::make('disbursement_method')->label('Modalità di erogazione')->options(DisbursementMethod::class)->hidden($impegnoDiTerzi),
+                    Select::make('periodic_communication')->label('Comunicazioni periodiche')->options(PeriodicCommunication::class)->hidden($impegnoDiTerzi),
                 ]),
             Tabs::make('Altri dati')
                 ->columnSpanFull()
