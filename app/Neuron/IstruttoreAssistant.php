@@ -6,7 +6,7 @@ use App\Services\Istruttoria\ContestoAssistente;
 use NeuronAI\Agent\Agent;
 use NeuronAI\Agent\SystemPrompt;
 use NeuronAI\Providers\AIProviderInterface;
-use NeuronAI\Providers\Anthropic\Anthropic;
+use Unico\Core\Ai\Neuron\RecordingAnthropic;
 use RuntimeException;
 
 /**
@@ -25,7 +25,7 @@ class IstruttoreAssistant extends Agent
             throw new RuntimeException('Chiave API Anthropic mancante: imposta ANTHROPIC_API_KEY nel file .env');
         }
 
-        return new Anthropic(
+        return new RecordingAnthropic(usageSource: 'neuron:IstruttoreAssistant',
             key: (string) $key,
             model: (string) config('services.anthropic.model', 'claude-sonnet-4-6'),
             max_tokens: 4096,
