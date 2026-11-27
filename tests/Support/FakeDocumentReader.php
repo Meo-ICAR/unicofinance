@@ -41,6 +41,11 @@ class FakeDocumentReader implements DocumentReader
         return null;
     }
 
+    public function extract(string $source, string $system, string $prompt, array $schema, string $mime, string $bytes, ?string $knownText = null, ?callable $complete = null, ?string $kind = null): ?array
+    {
+        return null;
+    }
+
     public function lastUsage(): ?array
     {
         return null;

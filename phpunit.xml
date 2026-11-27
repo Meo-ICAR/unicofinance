@@ -19,6 +19,8 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>
+        <!-- La cache di configurazione di produzione non vale nei test: userebbe il database vero -->
+        <env name="APP_CONFIG_CACHE" value="/tmp/unicofinance-test-config.php"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
@@ -27,6 +29,8 @@
         <env name="DB_DATABASE" value="unicosuite_test"/>
         <env name="CORE_DB_DATABASE" value="unicosuite_test"/>
         <env name="PROFORMA_DB_DATABASE" value="unicosuite_test"/>
+        <env name="CORE_DB_HOST" value="localhost"/>
+        <env name="PROFORMA_DB_HOST" value="localhost"/>
         <env name="UNICO_CORE_DB_CONNECTION" value="mysql"/>
         <env name="UNICO_CORE_MIGRATE" value="true"/>
         <env name="UNICO_CORE_BRIDGE" value="true"/>

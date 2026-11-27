@@ -264,7 +264,7 @@ class DocumentiFascicoloTest extends TestCase
         $vecchio->refresh()->addMediaFromString('%PDF-1.4 corretto')->usingFileName('corretto.pdf')->toMediaCollection(Document::COLLECTION);
 
         $vecchio->refresh();
-        $nuovo = Document::query()->findOrFail($vecchio->renewed_by);
+        $nuovo = Document::query()->findOrFail($vecchio->renewed_by_id);
         $this->assertSame(DocumentStatus::REJECTED, $vecchio->status, 'Il documento respinto resta com\'è, con la sua nota.');
         $this->assertSame('Foto sfocata', $vecchio->rejection_note);
         $this->assertSame(['vecchio.pdf'], $vecchio->getMedia(Document::COLLECTION)->pluck('file_name')->all());
